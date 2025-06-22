@@ -1,0 +1,236 @@
+﻿# This is a Firestore App
+I will be using it as a DB and hosting a Rent Management app.
+
+# Environment and Initialization
+
+- Use .env files for production and development configurations and setting the locale to asia-south1.
+
+# .env.production
+FIREBASE_CONFIG_PROJECTID="..."
+FIREBASE_CONFIG_APPID="..."
+...
+
+# .env.development
+FIREBASE_CONFIG_PROJECTID="..."
+FIREBASE_CONFIG_APPID="..."
+...
+$env:FIREBASE_REGION="asia-south1"; $env:FUNCTIONS_EMULATOR="true"; npm run dev:emulators
+
+# Frontend Responsibilities:
+- Data fetching and caching
+- UI state management
+- Form validation (client-side)
+- Calling cloud functions
+
+# Backend Responsibilities:
+- Data validation (server-side)
+- Business logic enforcement
+- Security rules
+- Complex transactions
+- Admin-only operations
+
+# Firestore Database Structure
+
+## config (Collection)
+- This collection holds global, slowly changing configurations.
+
+### Document ID: globalSettings
+
+- floors: ['2nd', '3rd'] (Array of Strings)
+- bedTypes: (Map of floor-specific bed rates - Your structure is good)
+  - {
+      "2nd": { "Bed": 1600, "Special Room": 1700, "Room": 3200 },
+      "3rd": { "Bed": 1600, "Room": 3200 }
+    }
+- defaultSecurityDeposit: 1000 (Number)
+- activeStudentCounts: (Map of counts, updated atomically by Cloud Functions)
+  - total: Number
+  - byFloor: Map (e.g., {"2nd": 15, "3rd": 10})
+  - wifiOptedIn: Number
+- currentBillingMonth: Timestamp
+- nextBillingMonth: Timestamp
+
+### Document ID: admins
+
+- list: Array of Strings (e.g., Firebase UIDs of admins)
+
+## students (Collection)
+- Each document represents a student. The Document ID should be the Firestore auto-generated ID for optimal performance.
+
+  - name: String
+  - phone: String (e.g., +918777529394)
+  - firebaseUid: String (nullable, links to Firebase Auth)
+  - floor: String (e.g., '2nd')
+  - bedType: String (e.g., 'Bed')
+  - moveInDate: Timestamp (The date the student moved in)
+  - securityDeposit: Number (The refundable deposit amount)
+  - rentAtJoining: Number (The first month's rent amount)
+  - advanceDeposit: Number (Also, the first month's rent amount)
+  - currentRent: Number (The student's current monthly rent, needed for updating)
+  - totalAgreedDeposit: Number (rentAtJoining + advanceDeposit + securityDeposit)
+  - outstandingBalance: Number (Single Source of Truth for the student's debt/credit. Positive means the student owes money, negative means they are in credit. Updated atomically with every transaction.)
+  - isActive: Boolean (true for current students)
+  - optedForWifi: Boolean
+  - leaveDate: Timestamp (nullable, date student vacates)
+  - ttlExpiry: Timestamp (nullable, set when isActive becomes false to trigger automatic deletion via TTL policy)
+
+### students/{studentId}/rentHistory (Subcollection)
+- Stores an immutable record of each billing event. Document ID: YYYY-MM (e.g., "2025-06").
+
+  - generatedAt: Timestamp (When this record was created)
+  - rent: Number
+  - electricity: Number
+  - wifi: Number
+  - previousOutstanding: Number (Fetched from student.outstandingBalance before this bill's charges were added)
+  - expenses: Array of Maps (Holds all expenses for the month, including any initial unpaid deposit portion)
+    - [{ "amount": 100, "description": "Repair" }]
+  - newCharges: Number (Calculated: rent + electricity + wifi + sum(expenses for this month))
+  - amountPaid: Number (Total amount paid against this specific bill)
+  - currentOutstanding: Number (Calculated: previousOutstanding + newCharges - amountPaid)
+  - status: String ('Due', 'Paid', 'Partially Paid', 'Overpaid')
+
+# Security Rules
+
+- Define Firestore security rules to protect data access.
+- Specify rules for student and admin access patterns.
+- Example: 
+  - Students can only read/write their own data.
+  - Admins can read/write all student and configuration data.
+- Regularly review and test security rules to prevent unauthorized access.
+
+# Error Handling
+
+- Implement error handling for all backend functions, especially for financial transactions.
+- Ensure transactions are atomic and handle partial failures gracefully.
+- Add retry mechanisms for network-related failures.
+- Log errors for monitoring and debugging.
+
+# Data Indexing
+
+- Create required Firestore indexes for efficient querying.
+- Specify compound indexes for complex queries (e.g., querying students by floor and isActive).
+- Regularly review Firestore's automatic index suggestions in the Firebase Console.
+- Document any custom indexes that need to be created for the project.
+
+# Workflow Mapping to Firestore
+
+## 1. Adding a Student (Admin UI & Cloud Function)
+- This is treated as the first financial transaction.
+
+- Admin UI: Captures student details (name, phone, floor, bedType, moveInDate, securityDeposit, rentAtJoining, advanceDeposit). Admin enters actualAmountPaid.
+- Backend Function (Callable Function):
+  - Receives all student data from the UI.
+  - Performs server-side validation.
+  - Runs a Firestore Transaction:
+    - Calculate Initial Balances:
+      - totalAgreedInitialDue = securityDeposit + rentAtJoining + advanceDeposit.
+      - initialOutstandingBalance = totalAgreedInitialDue - actualAmountPaid.
+      - unpaidInitialAmount = totalAgreedInitialDue - actualAmountPaid.
+    - Create student Document:
+      - Create the new student document with all details.
+      - Set outstandingBalance to the calculated initialOutstandingBalance.
+      - Set isActive to true.
+    - Create Initial rentHistory Record:
+      - In the new student's rentHistory subcollection, create a document with ID like YYYY-MM-joining.
+      - previousOutstanding: 0
+      - rent: rentAtJoining
+      - electricity: 0
+      - wifi: 0
+      - expenses: [] (if unpaidInitialAmount is 0) or [{ "amount": unpaidInitialAmount, "description": "Initial Deposit/Rent Unpaid" }]
+      - newCharges: totalAgreedInitialDue
+      - amountPaid: actualAmountPaid
+      - currentOutstanding: initialOutstandingBalance
+      - Set status accordingly ('Paid' or 'Partially Paid').
+    - Atomically Update config:
+      - Increment activeStudentCounts.total and activeStudentCounts.byFloor[student.floor].
+      - If optedForWifi is true, increment activeStudentCounts.wifiOptedIn.
+
+## 2. Generating Monthly Bills (Admin UI & Cloud Function)
+- Admin UI:
+  - Admin selects the billing month (e.g., 2025-07). There should be two billing months. The current and next billing months will be fetched from globalSettings. Selecting the currentBillingMonth will update while next billing will generate a new one.
+  - While updating, the current electric bill will be fetched from the electricBills collection.
+  - While adding new bills, add the bills per floor in the electricBills collection.
+  - Calculate the total electricity cost for each floor and the total monthly Wi-Fi cost.
+  - A selectable chips section of the names of the students, and an expense and note field to add expenses.
+  - A selectable chips section with the names of the students to add Wi-Fi. Atomic update: Selecting or deselecting will change the optedForWifi boolean.
+  - Admin clicks "Generate Bills".
+- Backend Function (Callable Function):
+  - The function receives the cost map.
+  - Fetches all isActive: true students.
+  - Calculates per-student costs:
+    - Groups students by floor to get counts for the electricity division.
+    - Counts all students with optedForWifi: true.
+    - perStudentWifiCost = wifiTotal / wifiOptedInCount.
+    - perStudentElectricityCost = floorTotalElectricity / studentsOnFloorCount.
+  - Iterates through each active student and runs a transaction for each:
+    - Read the student's current outstandingBalance. This is the previousOutstanding for this month's bill.
+    - Calculate newCharges for the month (student.currentRent + calculated electricity + wifi + sum(additional expenses for this month)).
+    - Create/Update rentHistory Document for the billing month:
+      - previousOutstanding: The value from above.
+      - newCharges: Calculated for the month.
+      - amountPaid: 0
+      - currentOutstanding: previousOutstanding + newCharges
+      - status: 'Due'
+    - Atomically update the student's main balance: student.outstandingBalance = student.outstandingBalance + newCharges
+
+## 3. Record Monthly Bills
+- A record to store the last 12 months’ monthly bills as Map: {"2nd": 1000, "3rd": 1200 }
+- Required for updating and general statistics.
+
+## 4. Recording Payments (Admin UI & Cloud Function)
+- Admin UI: Selects a student and the billing month (YYYY-MM). A switch within a dialog. If ON, the student paid the full amount. Calculate currentOutstanding accordingly. If OFF, an input to enter the paymentAmount and calculate the currentOutstanding accordingly in the backend.
+- Backend Function (Callable): Receives studentId, billingMonth, and paymentAmount.
+- Run a Firestore Transaction:
+  - Get the student document and the specific rentHistory document.
+  - Update rentHistory:
+    - Increment rentHistory.amountPaid by paymentAmount.
+    - Recalculate rentHistory.currentOutstanding.
+    - Update rentHistory.status ('Paid', 'Partially Paid', 'Overpaid').
+  - Atomically update the student's main balance.
+
+## 5. Recording Ad-hoc Expenses (Admin UI & Cloud Function)
+- This follows the same logic as payments, but adds to the current outstanding.
+- Admin UI: Selects student > opens a modal. Adds an expense item (amount, description). There will be a plus button to show on UI to add more amount, description fields.
+- Backend Function (Callable): Receives studentId, billingMonth, and expenseItem.
+- Run a Firestore Transaction:
+  - Get the student and rentHistory documents.
+  - Update rentHistory:
+    - Add the new item to the expenses array.
+    - Recalculate newCharges and currentOutstanding for this rentHistory document.
+  - Atomically update the student's main balance: outstandingBalance = outstandingBalance + expenseItem.amount.
+
+## 6. Deactivating a Student & Data Retention (Admin UI & Firestore TTL)
+- Admin UI: Finds a student and clicks "Delete". Confirms via a modal.
+- Backend Function (Callable): Receives studentId.
+- Run a Transaction:
+  - Update the student document:
+    - Set isActive to false.
+    - Set leaveDate to Timestamp.now().
+    - Set ttlExpiry to a future date (e.g., one year from now).
+    - Atomically update config: Decrement the activeStudentCounts for total, floor, and Wi-Fi.
+- Calculate Final Settlement:
+  - The function returns the final refund amount to the UI.
+  - finalOutstanding = the student's outstandingBalance.
+  - refundAmount = student.totalAgreedDeposit - finalOutstanding.
+  - (A negative refundAmount means the student still owes money).
+- Automated Deletion (Firestore TTL Policy): In the Google Cloud Console for Firestore, enable a TTL Policy on the students collection based on the ttlExpiry field. Firestore will now automatically delete any student document (and its subcollections like rentHistory) once the ttlExpiry timestamp is reached. This is more efficient and reliable than a scheduled function.
+
+## 7. Student Login Flow
+- Your flow is good. Let's refine it for security and clarity.
+- UI: User clicks "Google Sign In". Client gets the idToken from a successful Firebase Auth sign-in.
+- Backend Call: Client sends the idToken to a secure HTTP Callable Function.
+- Backend Function:
+  - Verify the idToken using the Firebase Admin SDK. This is a mandatory security step.
+  - Get the uid from the decoded token.
+  - Query students where firebaseUid == uid.
+  - If found: Login is successful. Return student data to the client.
+  - If not found (Account Linking Needed):
+    - Return a specific error code to the client (e.g., account-not-linked).
+    - UI prompts for the registered phone number.
+    - UI sends idToken and phoneNumber to another function (linkAccount).
+    - linkAccount Function:
+      - Re-verifies the idToken.
+      - Queries students where phone == phoneNumber AND firebaseUid == null.
+      - If found: Initiate OTP verification to the phoneNumber.
+        - On successful OTP verification, run a transaction to update the student document: set the firebaseUid to the user's uid. Login is now successful.
+      - If not found: Return a not-found error.
