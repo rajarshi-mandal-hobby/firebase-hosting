@@ -1,5 +1,5 @@
-import React from 'react';
-import { NumberInput } from '@mantine/core';
+import React from "react";
+import { NumberInput } from "@mantine/core";
 
 interface ConfigNumberInputProps {
   label: string;
@@ -11,7 +11,10 @@ interface ConfigNumberInputProps {
   fieldPath: string;
   placeholder: string;
   getFieldError: (path: string) => string | undefined;
-  isFieldUnset: (value: string | number | undefined, allowZero?: boolean) => boolean;
+  isFieldUnset: (
+    value: string | number | undefined,
+    allowZero?: boolean,
+  ) => boolean;
   showValidationErrors: boolean;
   allowZero?: boolean;
 }
@@ -34,7 +37,7 @@ const ConfigNumberInput: React.FC<ConfigNumberInputProps> = ({
     <NumberInput
       label={label}
       description={description}
-      value={value || ''}
+      value={value || ""}
       onChange={onChange}
       onBlur={onBlur}
       disabled={disabled}
@@ -46,7 +49,7 @@ const ConfigNumberInput: React.FC<ConfigNumberInputProps> = ({
       error={
         getFieldError(fieldPath) ||
         (isFieldUnset(value, allowZero) && showValidationErrors
-          ? 'This field is required'
+          ? "This field is required"
           : undefined)
       }
     />

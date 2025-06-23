@@ -1,6 +1,6 @@
 // Reusable Error Notification Component
-import React from 'react';
-import { showErrorNotification } from '../../utils/notifications';
+import React from "react";
+import { showErrorNotification } from "../../utils/notifications";
 
 // React component for consistent error handling in forms
 interface ErrorNotificationProps {
@@ -8,7 +8,10 @@ interface ErrorNotificationProps {
   visible: boolean;
 }
 
-export const ErrorNotification: React.FC<ErrorNotificationProps> = ({ error, visible }) => {
+export const ErrorNotification: React.FC<ErrorNotificationProps> = ({
+  error,
+  visible,
+}) => {
   React.useEffect(() => {
     if (visible && error) {
       showErrorNotification({

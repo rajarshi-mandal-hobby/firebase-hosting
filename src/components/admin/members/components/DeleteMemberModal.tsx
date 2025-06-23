@@ -1,75 +1,64 @@
-// Delete Student Modal Component - Handles student deactivation with refund calculation
-import React, { useState } from 'react';
+// Delete Member Modal Component - Handles member deactivation with refund calculation
+import { useCallback, useEffect, useMemo, useState, type FC } from 'react';
 import { Modal, Stack, Group, Text, Badge, Avatar, Button, Divider, NumberFormatter, Loader } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { IconCalendar } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { deleteStudentWithSettlement, calculateSettlementPreview } from '../../../../lib/firestore';
-import type { Student } from '../../../../types/student';
+import { useMemberOperations } from '../hooks/useMemberOperations';
+import { calculateSettlementPreview } from '../../../../lib/firestore';
+import type { Member, SettlementPreview } from '../types/member';
+import type { DeleteMemberModalProps } from '../types';
 
-interface SettlementPreview {
-  studentName: string;
-  totalDepositAgreed: number;
-  currentOutstandingBalance: number;
-  refundAmount: number;
-  status: string;
-  leaveDate: string;
-}
-
-interface DeleteStudentModalProps {
-  opened: boolean;
-  onClose: () => void;
-  student: Student | null;
-}
-
-const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({ opened, onClose, student }) => {
+const DeleteMemberModal: FC<DeleteMemberModalProps> = ({ opened, onClose, member }) => {
+  const { deactivateMember } = useMemberOperations();
   const [leaveDate, setLeaveDate] = useState<Date>(new Date());
   const [deleting, setDeleting] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [settlementPreview, setSettlementPreview] = useState<SettlementPreview | null>(null);
 
   // Calculate display data - using useMemo for performance
-  const displayData = React.useMemo(() => {
+  const displayData = useMemo(() => {
     if (settlementPreview) {
       return settlementPreview;
     }
 
-    if (!student) {
+    if (!member) {
       return {
-        totalDepositAgreed: 0,
-        currentOutstandingBalance: 0,
+        totalAgreedDeposit: 0,
+        outstandingBalance: 0,
         refundAmount: 0,
         status: 'Loading...',
       };
     }
 
     // Fallback calculation with proper number conversion
-    const totalDeposit = Number(student.totalDepositAgreed) || 0;
-    const outstanding = Number(student.currentOutstandingBalance) || 0;
+    const totalDeposit = Number(member.totalAgreedDeposit) || 0;
+    const outstanding = Number(member.outstandingBalance) || 0;
     const refund = totalDeposit - outstanding;
 
     return {
-      totalDepositAgreed: totalDeposit,
-      currentOutstandingBalance: outstanding,
+      totalAgreedDeposit: totalDeposit,
+      outstandingBalance: outstanding,
       refundAmount: refund,
       status: refund > 0 ? 'Refund Due' : refund < 0 ? 'Payment Due' : 'Settled',
     };
-  }, [settlementPreview, student]);
-  // Memoized function to fetch settlement preview - stable reference
-  const fetchSettlementPreview = React.useCallback(
-    async (currentStudent: Student, currentLeaveDate: Date) => {
-      if (!currentStudent) return;
+  }, [settlementPreview, member]);
 
-      if (!currentStudent.id) {
-        console.error('Student ID is missing for settlement preview');
+  // Memoized function to fetch settlement preview - stable reference
+  const fetchSettlementPreview = useCallback(
+    async (currentMember: Member, currentLeaveDate: Date) => {
+      if (!currentMember) return;
+
+      if (!currentMember.id) {
+        console.error('Member ID is missing for settlement preview');
         // Use fallback calculation when ID is missing
         const refundAmount =
-          (Number(currentStudent.totalDepositAgreed) || 0) - (Number(currentStudent.currentOutstandingBalance) || 0);
+          (Number(currentMember.totalAgreedDeposit) || 0) - (Number(currentMember.outstandingBalance) || 0);
 
         setSettlementPreview({
-          studentName: currentStudent.name,
-          totalDepositAgreed: Number(currentStudent.totalDepositAgreed) || 0,
-          currentOutstandingBalance: Number(currentStudent.currentOutstandingBalance) || 0,
+          memberName: currentMember.name,
+          totalAgreedDeposit: Number(currentMember.totalAgreedDeposit) || 0,
+          outstandingBalance: Number(currentMember.outstandingBalance) || 0,
           refundAmount,
           status: refundAmount > 0 ? 'Refund Due' : refundAmount < 0 ? 'Payment Due' : 'Settled',
           leaveDate: currentLeaveDate.toISOString().split('T')[0] || '',
@@ -80,7 +69,7 @@ const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({ opened, onClose
         setLoadingPreview(true);
 
         // Use the cloud function for accurate settlement calculation
-        const preview = (await calculateSettlementPreview(currentStudent.id, currentLeaveDate)) as SettlementPreview;
+        const preview = (await calculateSettlementPreview(currentMember.id, currentLeaveDate)) as SettlementPreview;
         setSettlementPreview(preview);
       } catch (error) {
         console.error('Error fetching settlement preview:', error);
@@ -102,12 +91,12 @@ const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({ opened, onClose
 
         // Fallback to basic calculation if cloud function fails
         const refundAmount =
-          (Number(currentStudent.totalDepositAgreed) || 0) - (Number(currentStudent.currentOutstandingBalance) || 0);
+          (Number(currentMember.totalAgreedDeposit) || 0) - (Number(currentMember.outstandingBalance) || 0);
 
         setSettlementPreview({
-          studentName: currentStudent.name,
-          totalDepositAgreed: Number(currentStudent.totalDepositAgreed) || 0,
-          currentOutstandingBalance: Number(currentStudent.currentOutstandingBalance) || 0,
+          memberName: currentMember.name,
+          totalAgreedDeposit: Number(currentMember.totalAgreedDeposit) || 0,
+          outstandingBalance: Number(currentMember.outstandingBalance) || 0,
           refundAmount,
           status: refundAmount > 0 ? 'Refund Due' : refundAmount < 0 ? 'Payment Due' : 'Settled',
           leaveDate: currentLeaveDate.toISOString().split('T')[0] || '',
@@ -117,62 +106,65 @@ const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({ opened, onClose
       }
     },
     [setSettlementPreview, setLoadingPreview]
-  ); // Effect for initial load when modal opens - only when modal opens or student changes  // Single effect for handling settlement preview - includes debouncing for leave date changes
-  React.useEffect(() => {
-    if (!opened || !student) return;
+  );
+
+  // Single effect for handling settlement preview - includes debouncing for leave date changes
+  useEffect(() => {
+    if (!opened || !member) return;
 
     // Debounce the settlement preview fetch to avoid excessive API calls
     const timeoutId = setTimeout(() => {
-      fetchSettlementPreview(student, leaveDate);
+      fetchSettlementPreview(member, leaveDate);
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [opened, student, leaveDate, fetchSettlementPreview]);
+  }, [opened, member, leaveDate, fetchSettlementPreview]);
 
   // Effect for resetting state when modal closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!opened) {
       setSettlementPreview(null);
       setLeaveDate(new Date());
     }
   }, [opened]);
-  const handleConfirmDelete = async () => {
-    if (!student) return;
 
-    if (!student.id) {
+  const handleConfirmDelete = async () => {
+    if (!member) return;
+
+    if (!member.id) {
       notifications.show({
         title: 'Error',
-        message: 'Student ID is missing. Cannot proceed with deletion.',
+        message: 'Member ID is missing. Cannot proceed with deletion.',
         color: 'red',
       });
       return;
     }
     try {
       setDeleting(true);
-      await deleteStudentWithSettlement(student.id, leaveDate);
+      await deactivateMember(member.id);
 
       notifications.show({
         title: 'Success',
-        message: `${student.name} has been deactivated successfully`,
+        message: `${member.name} has been deactivated successfully`,
         color: 'green',
       });
 
       onClose();
     } catch (error) {
-      console.error('Error deleting student:', error);
+      console.error('Error deleting member:', error);
 
       // Check if it's an authentication error
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('UNAUTHENTICATED') || errorMessage.includes('Authentication required')) {
         notifications.show({
           title: 'Authentication Error',
-          message: 'Please sign in to delete student. Please try again after signing in.',
+          message: 'Please sign in to delete member. Please try again after signing in.',
           color: 'red',
         });
       } else {
         notifications.show({
           title: 'Error',
-          message: 'Failed to deactivate student. Please try again.',
+          message: 'Failed to deactivate member. Please try again.',
           color: 'red',
         });
       }
@@ -180,34 +172,38 @@ const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({ opened, onClose
       setDeleting(false);
     }
   };
+
   const handleCancel = () => {
     setLeaveDate(new Date());
     setSettlementPreview(null);
     onClose();
   };
-  if (!student) return null;
+
+  if (!member) return null;
 
   return (
-    <Modal opened={opened} onClose={handleCancel} title='Delete Student' size='md' centered>
+    <Modal opened={opened} onClose={handleCancel} title='Delete Member' size='md' centered>
       <Stack gap='md'>
-        {/* Student Info */}
+        {/* Member Info */}
         <Group>
           <Avatar size='lg' radius='xl' color='blue'>
-            {(student.name?.[0] || 'S').toUpperCase()}
+            {(member.name?.[0] || 'M').toUpperCase()}
           </Avatar>
           <Stack gap={2}>
             <Text fw={500} size='lg'>
-              {student.name}
+              {member.name}
             </Text>
             <Text size='sm' c='dimmed'>
-              {student.phone}
+              {member.phone}
             </Text>
             <Badge size='sm' color='gray'>
-              {student.floor} Floor - {student.bedType}
+              {member.floor} Floor - {member.bedType}
             </Badge>
           </Stack>
         </Group>
-        <Divider /> {/* Financial Summary */}
+        <Divider />
+
+        {/* Financial Summary */}
         <Stack gap='xs'>
           <Group justify='space-between'>
             <Text fw={500} size='sm'>
@@ -217,18 +213,18 @@ const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({ opened, onClose
           </Group>
           <Group justify='space-between'>
             <Text size='sm' c='dimmed'>
-              Total Deposit Agreed:
+              Total Agreed Deposit:
             </Text>
             <Text size='sm' fw={500}>
-              <NumberFormatter value={displayData.totalDepositAgreed} prefix='₹' thousandSeparator />
+              <NumberFormatter value={displayData.totalAgreedDeposit} prefix='₹' thousandSeparator />
             </Text>
           </Group>
           <Group justify='space-between'>
             <Text size='sm' c='dimmed'>
-              Current Outstanding Balance:
+              Outstanding Balance:
             </Text>
-            <Text size='sm' fw={500} c={displayData.currentOutstandingBalance > 0 ? 'red' : 'green'}>
-              <NumberFormatter value={displayData.currentOutstandingBalance} prefix='₹' thousandSeparator />
+            <Text size='sm' fw={500} c={displayData.outstandingBalance > 0 ? 'red' : 'green'}>
+              <NumberFormatter value={displayData.outstandingBalance} prefix='₹' thousandSeparator />
             </Text>
           </Group>
           <Divider />
@@ -259,6 +255,7 @@ const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({ opened, onClose
           </Group>
         </Stack>
         <Divider />
+
         {/* Leave Date */}
         <DatePickerInput
           label='Leave Date'
@@ -273,13 +270,14 @@ const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({ opened, onClose
           leftSection={<IconCalendar size={16} />}
           required
         />
+
         {/* Action Buttons */}
         <Group justify='flex-end' gap='sm'>
           <Button variant='subtle' onClick={handleCancel}>
             Cancel
           </Button>
           <Button color='red' onClick={handleConfirmDelete} loading={deleting}>
-            Delete Student
+            Delete Member
           </Button>
         </Group>
       </Stack>
@@ -287,4 +285,4 @@ const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({ opened, onClose
   );
 };
 
-export default DeleteStudentModal;
+export default DeleteMemberModal;

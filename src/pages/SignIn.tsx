@@ -15,13 +15,13 @@ import {
   Code,
 } from "@mantine/core";
 import { IconShieldCheck, IconTestPipe } from "@tabler/icons-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "../hooks/useAuth";
 import { notifications } from "@mantine/notifications";
 
 const GoogleIcon = () => (
   <img
-    src='https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg'
-    alt='Google'
+    src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg"
+    alt="Google"
     width={18}
     height={18}
     style={{ display: "block" }}
@@ -50,59 +50,68 @@ const SignIn: React.FC = () => {
   };
 
   return (
-    <Container size='sm' style={{ minHeight: "100vh", display: "flex", alignItems: "center" }}>
-      <Paper shadow='md' radius='lg' p='xl' style={{ width: "100%", maxWidth: rem(450), margin: "0 auto" }}>
-        <Stack gap='lg' align='center'>
-          <Box ta='center'>
-            <Group justify='center' mb='xs'>
-              <IconShieldCheck size={40} color='var(--mantine-color-blue-6)' />
+    <Container
+      size="sm"
+      style={{ minHeight: "100vh", display: "flex", alignItems: "center" }}
+    >
+      <Paper
+        shadow="md"
+        radius="lg"
+        p="xl"
+        style={{ width: "100%", maxWidth: rem(450), margin: "0 auto" }}
+      >
+        <Stack gap="lg" align="center">
+          <Box ta="center">
+            <Group justify="center" mb="xs">
+              <IconShieldCheck size={40} color="var(--mantine-color-blue-6)" />
             </Group>
-            <Title order={1} c='blue.6' mb='xs'>
+            <Title order={1} c="blue.6" mb="xs">
               Rajarshi Mess
             </Title>
-            <Text c='dimmed' size='sm' mb='lg'>
+            <Text c="dimmed" size="sm" mb="lg">
               Sign in to access your account and manage your mess services
             </Text>
           </Box>
-          <Stack gap='md' style={{ width: "100%" }}>
+          <Stack gap="md" style={{ width: "100%" }}>
             <Button
-              variant='outline'
-              size='lg'
+              variant="outline"
+              size="lg"
               leftSection={<GoogleIcon />}
               onClick={handleGoogleSignIn}
               fullWidth
-              color='blue'
+              color="blue"
               styles={{
                 root: {
                   borderWidth: rem(2),
                   fontSize: rem(16),
                   height: rem(50),
                 },
-              }}>
+              }}
+            >
               Sign in with Google
             </Button>
           </Stack>{" "}
-          <Text size='xs' c='dimmed' ta='center' maw={rem(350)}>
+          <Text size="xs" c="dimmed" ta="center" maw={rem(350)}>
             By signing in, you agree to our terms of service and privacy policy.
           </Text>
           {/* Development Testing Information */}
           {import.meta.env.DEV && (
-            <Accordion variant='contained' style={{ width: "100%" }}>
-              <Accordion.Item value='test-users'>
+            <Accordion variant="contained" style={{ width: "100%" }}>
+              <Accordion.Item value="test-users">
                 <Accordion.Control icon={<IconTestPipe size={16} />}>
                   <Group>
-                    <Text size='sm'>Test Users</Text>
-                    <Badge size='xs' color='blue'>
+                    <Text size="sm">Test Users</Text>
+                    <Badge size="xs" color="blue">
                       Development
                     </Badge>
                   </Group>
                 </Accordion.Control>
                 <Accordion.Panel>
-                  <Stack gap='sm'>
-                    <Text size='sm' fw={500}>
+                  <Stack gap="sm">
+                    <Text size="sm" fw={500}>
                       Admin Users (Direct Access):
                     </Text>
-                    <List size='xs' spacing='xs'>
+                    <List size="xs" spacing="xs">
                       <List.Item>
                         <Code>rajarshhi@gmail.com</Code>
                       </List.Item>
@@ -111,10 +120,10 @@ const SignIn: React.FC = () => {
                       </List.Item>
                     </List>
 
-                    <Text size='sm' fw={500} mt='sm'>
+                    <Text size="sm" fw={500} mt="sm">
                       Regular Users (Phone Verification):
                     </Text>
-                    <List size='xs' spacing='xs'>
+                    <List size="xs" spacing="xs">
                       <List.Item>
                         <Code>user1@example.com</Code> - John Doe
                       </List.Item>
@@ -129,8 +138,9 @@ const SignIn: React.FC = () => {
                       </List.Item>
                     </List>
 
-                    <Text size='xs' c='dimmed' mt='sm'>
-                      For phone verification, use any +91 number and OTP: <Code>123456</Code>
+                    <Text size="xs" c="dimmed" mt="sm">
+                      For phone verification, use any +91 number and OTP:{" "}
+                      <Code>123456</Code>
                     </Text>
                   </Stack>
                 </Accordion.Panel>

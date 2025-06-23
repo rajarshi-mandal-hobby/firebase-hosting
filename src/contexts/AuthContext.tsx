@@ -2,8 +2,17 @@ import React, { useEffect, useState, useCallback } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
 import type { ReactNode } from "react";
-import { auth, googleProvider, createUserProfile, getUserProfile } from "../lib/firebase";
-import { AuthContext, type AuthContextType, type UserProfile } from "./AuthContextDefinition";
+import {
+  auth,
+  googleProvider,
+  createUserProfile,
+  getUserProfile,
+} from "../lib/firebase";
+import {
+  AuthContext,
+  type AuthContextType,
+  type UserProfile,
+} from "./AuthContextDefinition";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -38,26 +47,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      
+
       // In development with emulators, we might encounter OAuth popup issues
       // Let's add better error handling and fallback
       console.log("Attempting Google sign-in...");
-        const result = await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
       console.log("Google sign-in successful:", result.user.email);
       // Don't manually set loading to false here - let onAuthStateChanged handle it
     } catch (error: unknown) {
       console.error("Error signing in with Google:", error);
-      
+
       // Handle specific OAuth errors
       const authError = error as { code?: string; message?: string };
-      if (authError.code === 'auth/popup-closed-by-user') {
+      if (authError.code === "auth/popup-closed-by-user") {
         console.log("User closed the popup");
-      } else if (authError.code === 'auth/popup-blocked') {
+      } else if (authError.code === "auth/popup-blocked") {
         console.log("Popup was blocked by browser");
-      } else if (authError.code === 'auth/cancelled-popup-request') {
+      } else if (authError.code === "auth/cancelled-popup-request") {
         console.log("Popup request was cancelled");
       }
-      
+
       setLoading(false);
       throw error;
     }
@@ -81,14 +90,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Main auth state listener
   useEffect(() => {
     console.log("Setting up auth state listener...");
-    
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser?.email || "No user");
-      
+
       if (firebaseUser) {
         setUser(firebaseUser);
         setProfileLoading(true);
-        
+
         try {
           // Ensure user profile exists in Firestore
           await createUserProfile(firebaseUser);
@@ -109,7 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setProfileLoading(false);
         setLoading(false);
       }
-      
+
       // Mark auth as initialized after first state change
       if (!authInitialized) {
         setAuthInitialized(true);
@@ -119,7 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return unsubscribe;
   }, [authInitialized]); // Include authInitialized in dependencies
-  
+
   const value: AuthContextType = {
     user,
     userProfile,

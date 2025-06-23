@@ -1,10 +1,10 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useForm } from '@mantine/form';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../../../lib/firebase';
-import { useConfig } from '../../../../hooks/useConfig';
-import { handleError, handleSuccess } from '../../../../utils/notifications';
-import type { ConfigData } from '../../../../types/config';
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useForm } from "@mantine/form";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../../../../lib/firebase";
+import { useConfig } from "../../../../hooks/useConfig";
+import { handleError, handleSuccess } from "../../../../utils/notifications";
+import type { ConfigData } from "../types/config";
 
 // Form data type
 export interface ConfigFormData {
@@ -43,7 +43,9 @@ export interface UseConfigFormReturn {
   // Confirmation modal
   confirmationModal: ConfirmationModalState;
   setConfirmationModal: (
-    modal: ConfirmationModalState | ((prev: ConfirmationModalState) => ConfirmationModalState)
+    modal:
+      | ConfirmationModalState
+      | ((prev: ConfirmationModalState) => ConfirmationModalState),
   ) => void;
 
   // Computed values
@@ -53,7 +55,10 @@ export interface UseConfigFormReturn {
 
   // Helper functions
   handleNumericValue: (value: string | number) => string | number;
-  isFieldUnset: (value: string | number | undefined, allowZero?: boolean) => boolean;
+  isFieldUnset: (
+    value: string | number | undefined,
+    allowZero?: boolean,
+  ) => boolean;
   getFieldError: (fieldPath: string) => string | undefined;
   clearErrorsOnChange: (fieldPath: string) => void;
 
@@ -73,31 +78,32 @@ export const useConfigForm = (): UseConfigFormReturn => {
   const [showForm, setShowForm] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
-  const [confirmationModal, setConfirmationModal] = useState<ConfirmationModalState>({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-  });
+  const [confirmationModal, setConfirmationModal] =
+    useState<ConfirmationModalState>({
+      isOpen: false,
+      title: "",
+      message: "",
+      onConfirm: () => {},
+    });
 
   // Stable empty form values - computed once
   const emptyFormValues = useMemo(
     () => ({
       bedTypes: {
-        '2nd': {
-          Bed: '',
-          Room: '',
-          'Special Room': '',
+        "2nd": {
+          Bed: "",
+          Room: "",
+          "Special Room": "",
         },
-        '3rd': {
-          Bed: '',
-          Room: '',
+        "3rd": {
+          Bed: "",
+          Room: "",
         },
       },
-      defaultSecurityDeposit: '',
-      wifiMonthlyCharge: '',
+      defaultSecurityDeposit: "",
+      wifiMonthlyCharge: "",
     }),
-    []
+    [],
   );
 
   // Form for configuration values - stable initialization to prevent infinite loops
@@ -140,7 +146,8 @@ export const useConfigForm = (): UseConfigFormReturn => {
 
     // Quick comparison with original config values
     if (
-      currentValues.defaultSecurityDeposit !== (config.defaultSecurityDeposit || 0) ||
+      currentValues.defaultSecurityDeposit !==
+        (config.defaultSecurityDeposit || 0) ||
       currentValues.wifiMonthlyCharge !== (config.wifiMonthlyCharge || 0)
     ) {
       return true;
@@ -173,17 +180,26 @@ export const useConfigForm = (): UseConfigFormReturn => {
     return false;
   }, [configForm.values, config, shouldShowForm]);
   // Helper function to handle number input values properly
-  const handleNumericValue = useCallback((value: string | number): string | number => {
-    if (typeof value === 'number') return value;
-    if (value === '' || value === undefined || value === null) return '';
-    return value;
-  }, []);
+  const handleNumericValue = useCallback(
+    (value: string | number): string | number => {
+      if (typeof value === "number") return value;
+      if (value === "" || value === undefined || value === null) return "";
+      return value;
+    },
+    [],
+  );
   // Helper function to check if a field has empty/unset value
-  const isFieldUnset = useCallback((value: string | number | undefined, allowZero: boolean = false): boolean => {
-    if (value === '' || value === null || value === undefined) return true;
-    if (!allowZero && value === 0) return true;
-    return false;
-  }, []);
+  const isFieldUnset = useCallback(
+    (
+      value: string | number | undefined,
+      allowZero: boolean = false,
+    ): boolean => {
+      if (value === "" || value === null || value === undefined) return true;
+      if (!allowZero && value === 0) return true;
+      return false;
+    },
+    [],
+  );
   // Derived value - check if all required fields are filled (optimized with useMemo)
   const areAllFieldsFilled = useMemo(() => {
     const values = configForm.values;
@@ -194,10 +210,10 @@ export const useConfigForm = (): UseConfigFormReturn => {
 
     // Only check bed types if other fields are filled
     const bedTypes = values.bedTypes;
-    const requiredFloors = ['2nd', '3rd'];
+    const requiredFloors = ["2nd", "3rd"];
     const requiredBedTypes = {
-      '2nd': ['Bed', 'Room', 'Special Room'],
-      '3rd': ['Bed', 'Room'],
+      "2nd": ["Bed", "Room", "Special Room"],
+      "3rd": ["Bed", "Room"],
     };
 
     // Check if all required floors and bed types have values
@@ -205,7 +221,8 @@ export const useConfigForm = (): UseConfigFormReturn => {
       const floorData = bedTypes[floor];
       if (!floorData) return false;
 
-      const requiredTypes = requiredBedTypes[floor as keyof typeof requiredBedTypes];
+      const requiredTypes =
+        requiredBedTypes[floor as keyof typeof requiredBedTypes];
       for (const bedType of requiredTypes) {
         if (isFieldUnset(floorData[bedType])) return false;
       }
@@ -214,44 +231,63 @@ export const useConfigForm = (): UseConfigFormReturn => {
   }, [configForm.values, isFieldUnset]);
 
   // Lazy memoized validation error parser
-  const parseValidationError = useCallback((errorMessage: string): Record<string, string> => {
-    const errors: Record<string, string> = {};
+  const parseValidationError = useCallback(
+    (errorMessage: string): Record<string, string> => {
+      const errors: Record<string, string> = {};
 
-    // Early return for empty messages
-    if (!errorMessage || typeof errorMessage !== 'string') return errors;
+      // Early return for empty messages
+      if (!errorMessage || typeof errorMessage !== "string") return errors;
 
-    // Use lazy evaluation - only check patterns that might match
-    const errorChecks = [
-      { pattern: '2nd floor Bed rate must be at least', field: 'bedTypes.2nd.Bed', message: 'Must be at least 1000' },
-      { pattern: '2nd floor Room rate must be at least', field: 'bedTypes.2nd.Room', message: 'Must be at least 1000' },
-      {
-        pattern: '2nd floor Special Room rate must be at least',
-        field: 'bedTypes.2nd.Special Room',
-        message: 'Must be at least 1000',
-      },
-      { pattern: '3rd floor Bed rate must be at least', field: 'bedTypes.3rd.Bed', message: 'Must be at least 1000' },
-      { pattern: '3rd floor Room rate must be at least', field: 'bedTypes.3rd.Room', message: 'Must be at least 1000' },
-      {
-        pattern: 'Default security deposit must be at least',
-        field: 'defaultSecurityDeposit',
-        message: 'Must be at least 1000',
-      },
-      {
-        pattern: 'WiFi monthly charge must be a valid number',
-        field: 'wifiMonthlyCharge',
-        message: 'Must be a valid number',
-      },
-    ];
+      // Use lazy evaluation - only check patterns that might match
+      const errorChecks = [
+        {
+          pattern: "2nd floor Bed rate must be at least",
+          field: "bedTypes.2nd.Bed",
+          message: "Must be at least 1000",
+        },
+        {
+          pattern: "2nd floor Room rate must be at least",
+          field: "bedTypes.2nd.Room",
+          message: "Must be at least 1000",
+        },
+        {
+          pattern: "2nd floor Special Room rate must be at least",
+          field: "bedTypes.2nd.Special Room",
+          message: "Must be at least 1000",
+        },
+        {
+          pattern: "3rd floor Bed rate must be at least",
+          field: "bedTypes.3rd.Bed",
+          message: "Must be at least 1000",
+        },
+        {
+          pattern: "3rd floor Room rate must be at least",
+          field: "bedTypes.3rd.Room",
+          message: "Must be at least 1000",
+        },
+        {
+          pattern: "Default security deposit must be at least",
+          field: "defaultSecurityDeposit",
+          message: "Must be at least 1000",
+        },
+        {
+          pattern: "WiFi monthly charge must be a valid number",
+          field: "wifiMonthlyCharge",
+          message: "Must be a valid number",
+        },
+      ];
 
-    // Use some() for early termination when pattern found
-    errorChecks.forEach(({ pattern, field, message }) => {
-      if (errorMessage.includes(pattern)) {
-        errors[field] = message;
-      }
-    });
+      // Use some() for early termination when pattern found
+      errorChecks.forEach(({ pattern, field, message }) => {
+        if (errorMessage.includes(pattern)) {
+          errors[field] = message;
+        }
+      });
 
-    return errors;
-  }, []);
+      return errors;
+    },
+    [],
+  );
 
   // Helper function to get field-specific error message
   const getFieldError = (fieldPath: string): string | undefined => {
@@ -270,7 +306,7 @@ export const useConfigForm = (): UseConfigFormReturn => {
         return prev; // No change if error doesn't exist
       });
     },
-    [] // No dependencies needed with functional update
+    [], // No dependencies needed with functional update
   );
 
   // Optimized function to clear both field and validation errors
@@ -279,7 +315,7 @@ export const useConfigForm = (): UseConfigFormReturn => {
       clearFieldError(fieldPath);
       setShowValidationErrors(false);
     },
-    [clearFieldError]
+    [clearFieldError],
   );
 
   // Helper function to show configuration form without creating base config
@@ -297,15 +333,16 @@ export const useConfigForm = (): UseConfigFormReturn => {
       clearErrorsOnChange(`bedTypes.${floor}.Bed`);
 
       // Auto-fill room value on focus loss (double the bed value)
-      if (value && value !== '') {
-        const numValue = typeof value === 'number' ? value : parseFloat(value.toString());
+      if (value && value !== "") {
+        const numValue =
+          typeof value === "number" ? value : parseFloat(value.toString());
         if (!isNaN(numValue) && numValue > 0) {
           configForm.setFieldValue(`bedTypes.${floor}.Room`, numValue * 2);
           clearErrorsOnChange(`bedTypes.${floor}.Room`);
         }
       }
     },
-    [configForm, clearErrorsOnChange]
+    [configForm, clearErrorsOnChange],
   );
 
   // Reset form to original config values
@@ -314,9 +351,9 @@ export const useConfigForm = (): UseConfigFormReturn => {
 
     setConfirmationModal({
       isOpen: true,
-      title: 'Reset Configuration',
+      title: "Reset Configuration",
       message:
-        'Are you sure you want to reset all configuration to the original values? This will discard any unsaved changes.',
+        "Are you sure you want to reset all configuration to the original values? This will discard any unsaved changes.",
       onConfirm: () => {
         // Reset to original config values
         configForm.setValues({
@@ -327,7 +364,10 @@ export const useConfigForm = (): UseConfigFormReturn => {
         // Clear validation errors and field errors
         setShowValidationErrors(false);
         setFieldErrors({});
-        handleSuccess('All values have been reset to original configuration', 'Configuration Reset');
+        handleSuccess(
+          "All values have been reset to original configuration",
+          "Configuration Reset",
+        );
       },
     });
   }, [config, configForm]);
@@ -336,26 +376,29 @@ export const useConfigForm = (): UseConfigFormReturn => {
     // Check if all required fields are filled, if not show validation errors
     if (!areAllFieldsFilled) {
       setShowValidationErrors(true);
-      handleError('Please fill in all required fields before updating', 'Validation Error');
+      handleError(
+        "Please fill in all required fields before updating",
+        "Validation Error",
+      );
       return;
     }
 
     // Create summary of all field values for confirmation
     const values = configForm.values;
     const valuesList = [
-      `2nd Floor - Bed: ${values.bedTypes['2nd']?.['Bed'] || 'Not set'}`,
-      `2nd Floor - Room: ${values.bedTypes['2nd']?.['Room'] || 'Not set'}`,
-      `2nd Floor - Special Room: ${values.bedTypes['2nd']?.['Special Room'] || 'Not set'}`,
-      `3rd Floor - Bed: ${values.bedTypes['3rd']?.['Bed'] || 'Not set'}`,
-      `3rd Floor - Room: ${values.bedTypes['3rd']?.['Room'] || 'Not set'}`,
-      `Security Deposit: ${values.defaultSecurityDeposit || 'Not set'}`,
-      `Wi-Fi: ${values.wifiMonthlyCharge || 'Not set'}`,
+      `2nd Floor - Bed: ${values.bedTypes["2nd"]?.["Bed"] || "Not set"}`,
+      `2nd Floor - Room: ${values.bedTypes["2nd"]?.["Room"] || "Not set"}`,
+      `2nd Floor - Special Room: ${values.bedTypes["2nd"]?.["Special Room"] || "Not set"}`,
+      `3rd Floor - Bed: ${values.bedTypes["3rd"]?.["Bed"] || "Not set"}`,
+      `3rd Floor - Room: ${values.bedTypes["3rd"]?.["Room"] || "Not set"}`,
+      `Security Deposit: ${values.defaultSecurityDeposit || "Not set"}`,
+      `Wi-Fi: ${values.wifiMonthlyCharge || "Not set"}`,
     ];
 
     setConfirmationModal({
       isOpen: true,
-      title: 'Confirm Configuration Update',
-      message: `Please review the following values:\n\n${valuesList.join('\n')}`,
+      title: "Confirm Configuration Update",
+      message: `Please review the following values:\n\n${valuesList.join("\n")}`,
       onConfirm: () => performUpdate(configForm.values),
     });
   };
@@ -378,11 +421,15 @@ export const useConfigForm = (): UseConfigFormReturn => {
         if (floorData) {
           for (const bedType of Object.keys(floorData)) {
             const value = floorData[bedType];
-            if (value === undefined || value === '') continue;
+            if (value === undefined || value === "") continue;
 
-            const numValue = typeof value === 'number' ? value : parseFloat(value.toString());
+            const numValue =
+              typeof value === "number" ? value : parseFloat(value.toString());
             if (isNaN(numValue)) {
-              handleError(`${floor} Floor - ${bedType} must be a valid number`, 'Validation Error');
+              handleError(
+                `${floor} Floor - ${bedType} must be a valid number`,
+                "Validation Error",
+              );
               return;
             }
             processedData.bedTypes[floor][bedType] = numValue;
@@ -392,64 +439,77 @@ export const useConfigForm = (): UseConfigFormReturn => {
 
       // Process security deposit - basic conversion only
       const securityDeposit =
-        typeof formData.defaultSecurityDeposit === 'number'
+        typeof formData.defaultSecurityDeposit === "number"
           ? formData.defaultSecurityDeposit
           : parseFloat(formData.defaultSecurityDeposit.toString());
 
       if (isNaN(securityDeposit)) {
-        handleError('Security Deposit must be a valid number', 'Validation Error');
+        handleError(
+          "Security Deposit must be a valid number",
+          "Validation Error",
+        );
         return;
       }
       processedData.defaultSecurityDeposit = securityDeposit;
 
       // Process Wi-Fi charge - basic conversion only
       const wifiCharge =
-        typeof formData.wifiMonthlyCharge === 'number'
+        typeof formData.wifiMonthlyCharge === "number"
           ? formData.wifiMonthlyCharge
           : parseFloat(formData.wifiMonthlyCharge.toString());
 
       if (isNaN(wifiCharge)) {
-        handleError('Wi-Fi charge must be a valid number', 'Validation Error');
+        handleError("Wi-Fi charge must be a valid number", "Validation Error");
         return;
       }
       processedData.wifiMonthlyCharge = wifiCharge;
 
       // Call cloud function to save configuration - let backend handle complex validation
-      const saveConfigFunction = httpsCallable(functions, 'saveConfiguration');
+      const saveConfigFunction = httpsCallable(functions, "saveConfiguration");
       const result = await saveConfigFunction(processedData);
 
       // Check if the operation was successful
-      if (result.data && typeof result.data === 'object' && 'success' in result.data) {
+      if (
+        result.data &&
+        typeof result.data === "object" &&
+        "success" in result.data
+      ) {
         const response = result.data as { success: boolean; message: string };
         if (response.success) {
-          handleSuccess('Configuration updated successfully', 'Configuration Update');
+          handleSuccess(
+            "Configuration updated successfully",
+            "Configuration Update",
+          );
           setFieldErrors({}); // Clear any previous field errors
           setShowValidationErrors(false); // Clear validation error state
         } else {
           // Parse validation errors and set field-specific errors
-          const validationErrors = parseValidationError(response.message || '');
+          const validationErrors = parseValidationError(response.message || "");
           if (Object.keys(validationErrors).length > 0) {
             setFieldErrors(validationErrors);
           } else {
             // If we can't parse specific fields, show generic error
-            handleError(response.message || 'Failed to update configuration', 'Configuration Update');
+            handleError(
+              response.message || "Failed to update configuration",
+              "Configuration Update",
+            );
           }
         }
       } else {
-        handleError('Unexpected response from server', 'Configuration Update');
+        handleError("Unexpected response from server", "Configuration Update");
       }
     } catch (error) {
       // Handle network or other errors
-      if (error && typeof error === 'object' && 'message' in error) {
+      if (error && typeof error === "object" && "message" in error) {
         const errorMessage = (error as { message: string }).message;
         const validationErrors = parseValidationError(errorMessage);
         if (Object.keys(validationErrors).length > 0) {
           setFieldErrors(validationErrors);
         } else {
-          handleError(error, 'Configuration Update');
+          handleError(error, "Configuration Update");
         }
       } else {
-        handleError(error, 'Configuration Update');
+        handleError(error, "Configuration Update");
       }
     } finally {
       setSubmitting(false);

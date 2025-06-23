@@ -2,22 +2,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 
-// Import test user functions for development
-import { createTestUsersInAuth, clearTestUsers } from "./lib/testUsers.ts";
-
-// Extend window interface for test functions
-declare global {
-  interface Window {
-    createTestUsers: () => Promise<void>;
-    clearTestUsers: () => Promise<void>;
-  }
-}
-
 // Make test functions globally available in development
 if (import.meta.env.DEV) {
-  window.createTestUsers = createTestUsersInAuth;
-  window.clearTestUsers = clearTestUsers;
-  
   console.log(`
 🚀 FIREBASE EMULATOR DEVELOPMENT MODE
 
@@ -34,10 +20,10 @@ if (import.meta.env.DEV) {
 💡 Use PowerShell script: ./start-dev.ps1 (follows strict checking rule)
 
 ✅ Emulator URLs (verify they're accessible):
-   - Auth: http://${import.meta.env['VITE_EMULATOR_AUTH_HOST'] || 'localhost'}:${import.meta.env['VITE_EMULATOR_AUTH_PORT'] || '9099'}
-   - Firestore: http://${import.meta.env['VITE_EMULATOR_FIRESTORE_HOST'] || 'localhost'}:${import.meta.env['VITE_EMULATOR_FIRESTORE_PORT'] || '8080'}
-   - Storage: http://${import.meta.env['VITE_EMULATOR_STORAGE_HOST'] || 'localhost'}:${import.meta.env['VITE_EMULATOR_STORAGE_PORT'] || '9199'}
-   - UI Dashboard: http://${import.meta.env['VITE_EMULATOR_AUTH_HOST'] || 'localhost'}:${import.meta.env['VITE_EMULATOR_UI_PORT'] || '4000'}
+   - Auth: http://${import.meta.env["VITE_EMULATOR_AUTH_HOST"] || "localhost"}:${import.meta.env["VITE_EMULATOR_AUTH_PORT"] || "9099"}
+   - Firestore: http://${import.meta.env["VITE_EMULATOR_FIRESTORE_HOST"] || "localhost"}:${import.meta.env["VITE_EMULATOR_FIRESTORE_PORT"] || "8080"}
+   - Storage: http://${import.meta.env["VITE_EMULATOR_STORAGE_HOST"] || "localhost"}:${import.meta.env["VITE_EMULATOR_STORAGE_PORT"] || "9199"}
+   - UI Dashboard: http://${import.meta.env["VITE_EMULATOR_AUTH_HOST"] || "localhost"}:${import.meta.env["VITE_EMULATOR_UI_PORT"] || "4000"}
 
 📱 Test Functions Available:
    > window.createTestUsers()    // Populate test users
@@ -61,5 +47,5 @@ if (import.meta.env.DEV) {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
-  </StrictMode>
+  </StrictMode>,
 );

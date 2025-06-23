@@ -1,10 +1,13 @@
 // Real-time admin configuration hook following Firebase best practices
-import { useState, useEffect, useCallback } from 'react';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { notifications } from '@mantine/notifications';
-import { db } from '../../../../lib/firebase';
-import { initializeAdminConfig, updateAdminConfig } from '../../../../lib/firestore';
-import type { AdminConfig } from '../../../../types/config';
+import { useState, useEffect, useCallback } from "react";
+import { onSnapshot, doc } from "firebase/firestore";
+import { notifications } from "@mantine/notifications";
+import { db } from "../../../../lib/firebase";
+import {
+  initializeAdminConfig,
+  updateAdminConfig,
+} from "../../../../lib/config";
+import type { AdminConfig } from "../types/config";
 
 export interface UseAdminConfigReturn {
   adminConfig: AdminConfig | null;
@@ -36,7 +39,7 @@ export const useAdminConfig = (): UseAdminConfigReturn => {
         await initializeAdminConfig();
 
         // Set up real-time listener
-        const adminDocRef = doc(db, 'config', 'adminSettings');
+        const adminDocRef = doc(db, "config", "adminSettings");
         unsubscribe = onSnapshot(
           adminDocRef,
           (docSnap) => {
@@ -49,32 +52,41 @@ export const useAdminConfig = (): UseAdminConfigReturn => {
               }
               setError(null);
             } catch (err) {
-              const errorMessage = err instanceof Error ? err.message : 'Failed to process admin configuration';
+              const errorMessage =
+                err instanceof Error
+                  ? err.message
+                  : "Failed to process admin configuration";
               setError(errorMessage);
-              console.error('Admin config processing error:', err);
+              console.error("Admin config processing error:", err);
             } finally {
               setLoading(false);
             }
           },
           (err) => {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch admin configuration';
+            const errorMessage =
+              err instanceof Error
+                ? err.message
+                : "Failed to fetch admin configuration";
             setError(errorMessage);
             setLoading(false);
             notifications.show({
-              title: 'Admin Configuration Error',
+              title: "Admin Configuration Error",
               message: errorMessage,
-              color: 'red'
+              color: "red",
             });
-          }
+          },
         );
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to initialize admin configuration';
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to initialize admin configuration";
         setError(errorMessage);
         setLoading(false);
         notifications.show({
-          title: 'Initialization Error',
+          title: "Initialization Error",
           message: errorMessage,
-          color: 'red'
+          color: "red",
         });
       }
     };
@@ -93,39 +105,48 @@ export const useAdminConfig = (): UseAdminConfigReturn => {
     try {
       await updateAdminConfig(newConfig);
       notifications.show({
-        title: 'Success',
-        message: 'Admin configuration updated successfully',
-        color: 'green'
+        title: "Success",
+        message: "Admin configuration updated successfully",
+        color: "green",
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update admin configuration';
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to update admin configuration";
       notifications.show({
-        title: 'Update Failed',
+        title: "Update Failed",
         message: errorMessage,
-        color: 'red'
+        color: "red",
       });
       throw err;
     }
   }, []);
 
   // Add admin UID
-  const addAdmin = useCallback(async (uid: string) => {
-    if (!adminConfig) return;
-    
-    const updatedList = [...(adminConfig.list || [])];
-    if (!updatedList.includes(uid)) {
-      updatedList.push(uid);
-      await updateConfig({ list: updatedList });
-    }
-  }, [adminConfig, updateConfig]);
+  const addAdmin = useCallback(
+    async (uid: string) => {
+      if (!adminConfig) return;
+
+      const updatedList = [...(adminConfig.list || [])];
+      if (!updatedList.includes(uid)) {
+        updatedList.push(uid);
+        await updateConfig({ list: updatedList });
+      }
+    },
+    [adminConfig, updateConfig],
+  );
 
   // Remove admin UID
-  const removeAdmin = useCallback(async (uid: string) => {
-    if (!adminConfig) return;
-    
-    const updatedList = (adminConfig.list || []).filter(id => id !== uid);
-    await updateConfig({ list: updatedList });
-  }, [adminConfig, updateConfig]);
+  const removeAdmin = useCallback(
+    async (uid: string) => {
+      if (!adminConfig) return;
+
+      const updatedList = (adminConfig.list || []).filter((id) => id !== uid);
+      await updateConfig({ list: updatedList });
+    },
+    [adminConfig, updateConfig],
+  );
 
   return {
     adminConfig,

@@ -1,17 +1,18 @@
 // Generic Firestore hooks for common operations
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  collection, 
-  doc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  where, 
+import { useState, useEffect, useCallback } from "react";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  orderBy,
   QueryConstraint,
-  type DocumentData
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import type { Student, RentHistory } from '../types/student';
+  type DocumentData,
+} from "firebase/firestore";
+import { db } from "../lib/firebase";
+import type {
+  RentHistory,
+} from "../components/admin/members/types/member";
 
 /**
  * Generic hook for real-time Firestore document listening
@@ -19,7 +20,7 @@ import type { Student, RentHistory } from '../types/student';
 export const useFirestoreDoc = <T>(
   collectionName: string,
   docId: string | null,
-  transform?: (data: DocumentData) => T
+  transform?: (data: DocumentData) => T,
 ) => {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,33 +35,37 @@ export const useFirestoreDoc = <T>(
     }
 
     const docRef = doc(db, collectionName, docId);
-    
+
     const unsubscribe = onSnapshot(
       docRef,
       (docSnap) => {
         try {
           if (docSnap.exists()) {
             const rawData = { id: docSnap.id, ...docSnap.data() };
-            const transformedData = transform ? transform(rawData) : rawData as T;
+            const transformedData = transform
+              ? transform(rawData)
+              : (rawData as T);
             setData(transformedData);
           } else {
             setData(null);
           }
           setError(null);
         } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          const errorMessage =
+            err instanceof Error ? err.message : "Unknown error";
           setError(errorMessage);
-          console.error('Document listener error:', err);
+          console.error("Document listener error:", err);
         } finally {
           setLoading(false);
         }
       },
       (err) => {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to listen to document';
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to listen to document";
         setError(errorMessage);
         setLoading(false);
-        console.error('Document listener error:', err);
-      }
+        console.error("Document listener error:", err);
+      },
     );
 
     return () => unsubscribe();
@@ -75,7 +80,7 @@ export const useFirestoreDoc = <T>(
 export const useFirestoreCollection = <T>(
   collectionName: string,
   queryConstraints?: QueryConstraint[],
-  transform?: (data: DocumentData) => T
+  transform?: (data: DocumentData) => T,
 ) => {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,32 +88,36 @@ export const useFirestoreCollection = <T>(
 
   useEffect(() => {
     const collectionRef = collection(db, collectionName);
-    const q = queryConstraints ? query(collectionRef, ...queryConstraints) : collectionRef;
-    
+    const q = queryConstraints
+      ? query(collectionRef, ...queryConstraints)
+      : collectionRef;
+
     const unsubscribe = onSnapshot(
       q,
       (querySnap) => {
         try {
-          const docs = querySnap.docs.map(doc => {
+          const docs = querySnap.docs.map((doc) => {
             const rawData = { id: doc.id, ...doc.data() };
-            return transform ? transform(rawData) : rawData as T;
+            return transform ? transform(rawData) : (rawData as T);
           });
           setData(docs);
           setError(null);
         } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          const errorMessage =
+            err instanceof Error ? err.message : "Unknown error";
           setError(errorMessage);
-          console.error('Collection listener error:', err);
+          console.error("Collection listener error:", err);
         } finally {
           setLoading(false);
         }
       },
       (err) => {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to listen to collection';
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to listen to collection";
         setError(errorMessage);
         setLoading(false);
-        console.error('Collection listener error:', err);
-      }
+        console.error("Collection listener error:", err);
+      },
     );
 
     return () => unsubscribe();
@@ -134,10 +143,11 @@ export const usePaginatedFirestore = <T>() => {
 
       // TODO: Implement proper pagination with startAfter when needed
       // For now, keeping it simple as a placeholder
-      
+
       setLoading(false);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load more data';
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load more data";
       setError(errorMessage);
       setLoading(false);
     }
@@ -148,105 +158,67 @@ export const usePaginatedFirestore = <T>() => {
     setError(null);
   }, []);
 
-  return { 
-    data, 
-    loading, 
-    hasMore, 
-    error, 
-    loadMore, 
-    reset 
+  return {
+    data,
+    loading,
+    hasMore,
+    error,
+    loadMore,
+    reset,
   };
 };
 
 /**
- * Hook for real-time student count monitoring
+ * Hook for real-time member count monitoring
  */
-export const useStudentCounts = () => {
+export const useMemberCounts = () => {
   const transformConfig = useCallback((data: DocumentData) => {
     return {
       ...data,
-      createdAt: data['createdAt']?.toDate() || new Date(),
-      updatedAt: data['updatedAt']?.toDate() || new Date()
+      createdAt: data["createdAt"]?.toDate() || new Date(),
+      updatedAt: data["updatedAt"]?.toDate() || new Date(),
     };
   }, []);
 
-  const { data: config, loading, error } = useFirestoreDoc(
-    'config',
-    'globalSettings',
-    transformConfig
-  );
+  const {
+    data: config,
+    loading,
+    error,
+  } = useFirestoreDoc("config", "globalSettings", transformConfig);
 
   return {
-    counts: (config as { activeStudentCounts?: { total: number; byFloor: Record<string, number>; wifiOpted: number } })?.activeStudentCounts || {
+    counts: (
+      config as {
+        activeMemberCounts?: {
+          total: number;
+          byFloor: Record<string, number>;
+          wifiOpted: number;
+        };
+      }
+    )?.activeMemberCounts || {
       total: 0,
       byFloor: {},
-      wifiOpted: 0
+      wifiOpted: 0,
     },
     loading,
-    error
+    error,
   };
 };
 
-/**
- * Hook for real-time students monitoring
- */
-export const useRealtimeStudents = (activeOnly: boolean = true) => {  const transformStudent = useCallback((data: DocumentData): Student => {
-    // Ensure all required properties exist with proper defaults
-    return {
-      id: data['id'],
-      name: data['name'] || '',
-      phone: data['phone'] || '',
-      firebaseUid: data['firebaseUid'],
-      floor: data['floor'] || '',
-      bedType: data['bedType'] || '',
-      moveInDate: data['moveInDate']?.toDate() || new Date(),
-      securityDeposit: data['securityDeposit'] || 0,
-      advanceDeposit: data['advanceDeposit'] || 0,
-      rentAtJoining: data['rentAtJoining'] || 0,
-      currentRent: data['currentRent'] || 0,
-      totalDepositAgreed: data['totalDepositAgreed'] || 0,
-      currentOutstandingBalance: data['currentOutstandingBalance'] || 0,
-      isActive: data['isActive'] ?? true,
-      optedForWifi: data['optedForWifi'] ?? false,
-      leaveDate: data['leaveDate']?.toDate(),
-      electricityAmount: data['electricityAmount'] || 0,
-      wifiAmount: data['wifiAmount'] || 0,
-      status: data['isActive'] ? 'active' : 'inactive',
-    };
-  }, []);
-
-  const queryConstraints = useMemo(() => {
-    return activeOnly 
-      ? [where('isActive', '==', true), orderBy('createdAt', 'desc')]
-      : [orderBy('createdAt', 'desc')];
-  }, [activeOnly]);
-  const { data: students, loading, error } = useFirestoreCollection<Student>(
-    'students',
-    queryConstraints,
-    transformStudent
-  );
-
-  // Debug logging to track real-time updates
-  useEffect(() => {
-    console.log(`🔄 Students updated via real-time listener: ${students.length} students (activeOnly: ${activeOnly})`);
-    if (students.length > 0) {
-      console.log('📋 Latest students:', students.map(s => ({ name: s.name, isActive: s.isActive })));
-    }
-  }, [students, activeOnly]);
-
-  return { students, loading, error };
-};
+// DEPRECATED: Old useRealtimeMembers hook - replaced by useMembers in members/hooks/useRealTimeMembers.ts
+// This hook had anti-patterns like manual state management and debug logging in production
+// New components should use the refactored hook which follows React and Firebase best practices
 
 /**
  * Hook for real-time rent history monitoring
  */
-export const useRealtimeRentHistory = (studentId: string | null) => {
+export const useRealtimeRentHistory = (memberId: string | null) => {
   const [rentHistory, setRentHistory] = useState<RentHistory[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!studentId) {
+    if (!memberId) {
       setRentHistory([]);
       setLoading(false);
       setError(null);
@@ -254,59 +226,50 @@ export const useRealtimeRentHistory = (studentId: string | null) => {
     }
 
     setLoading(true);
-    const historyRef = collection(db, 'students', studentId, 'rentHistory');
-    const q = query(historyRef, orderBy('billingMonth', 'desc'));
+    const historyRef = collection(db, "members", memberId, "rentHistory");
+    const q = query(historyRef, orderBy("billingMonth", "desc"));
 
     const unsubscribe = onSnapshot(
       q,
-      (querySnap) => {        try {
-          const history = querySnap.docs.map(doc => {
+      (querySnap) => {
+        try {
+          const history = querySnap.docs.map((doc) => {
             const data = doc.data();
             return {
               id: doc.id,
               ...data,
-              lastPaymentRecordedDate: data['lastPaymentRecordedDate']?.toDate(),
-              createdAt: data['createdAt']?.toDate() || new Date(),
-              updatedAt: data['updatedAt']?.toDate() || new Date()
+              lastPaymentRecordedDate:
+                data["lastPaymentRecordedDate"]?.toDate(),
+              createdAt: data["createdAt"]?.toDate() || new Date(),
+              updatedAt: data["updatedAt"]?.toDate() || new Date(),
             } as RentHistory;
           });
           setRentHistory(history);
           setError(null);
         } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          const errorMessage =
+            err instanceof Error ? err.message : "Unknown error";
           setError(errorMessage);
-          console.error('Rent history listener error:', err);
+          console.error("Rent history listener error:", err);
         } finally {
           setLoading(false);
         }
       },
       (err) => {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to listen to rent history';
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to listen to rent history";
         setError(errorMessage);
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
-  }, [studentId]);
+  }, [memberId]);
 
   return { rentHistory, loading, error };
 };
 
-/**
- * Hook for monitoring system-wide changes
- */
-export const useSystemMonitoring = () => {
-  const { data: config } = useFirestoreDoc('config', 'globalSettings');
-  const { students } = useRealtimeStudents(true);
-
-  const systemHealth = {
-    configLoaded: !!config,
-    studentsLoaded: students.length >= 0,
-    lastUpdated: (config as { updatedAt?: Date })?.updatedAt || new Date(),
-    activeStudents: students.length,
-    totalOutstanding: students.reduce((sum, s) => sum + (s.currentOutstandingBalance || 0), 0)
-  };
-
-  return { systemHealth };
-};
+// Backward compatibility exports - deprecated, will be removed in future versions
+export const useStudentCounts = useMemberCounts;

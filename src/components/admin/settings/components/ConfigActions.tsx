@@ -1,6 +1,6 @@
-import React, { useCallback, memo } from 'react';
-import { Group, Button, Modal, Stack, Text } from '@mantine/core';
-import type { ConfirmationModalState } from '../hooks/useConfigForm';
+import React, { useCallback, memo } from "react";
+import { Group, Button, Modal, Stack, Text } from "@mantine/core";
+import type { ConfirmationModalState } from "../hooks/useConfigForm";
 
 interface ConfigActionsProps {
   editMode: boolean;
@@ -9,7 +9,9 @@ interface ConfigActionsProps {
   submitting: boolean;
   confirmationModal: ConfirmationModalState;
   setConfirmationModal: (
-    modal: ConfirmationModalState | ((prev: ConfirmationModalState) => ConfirmationModalState)
+    modal:
+      | ConfirmationModalState
+      | ((prev: ConfirmationModalState) => ConfirmationModalState),
   ) => void;
   handleReset: () => void;
   handleUpdate: () => Promise<void>;
@@ -33,47 +35,67 @@ interface ActionButtonsProps {
 
 // Separate component for action buttons - memoized to prevent unnecessary re-renders
 const ActionButtons: React.FC<ActionButtonsProps> = memo(
-  ({ editMode, hasChanges, areAllFieldsFilled, submitting, onReset, onUpdate }) => (
-    <Group justify='flex-end' gap='md' mt='md'>
-      <Button variant='outline' onClick={onReset} radius='xl' disabled={!editMode || !hasChanges}>
+  ({
+    editMode,
+    hasChanges,
+    areAllFieldsFilled,
+    submitting,
+    onReset,
+    onUpdate,
+  }) => (
+    <Group justify="flex-end" gap="md" mt="md">
+      <Button
+        variant="outline"
+        onClick={onReset}
+        radius="xl"
+        disabled={!editMode || !hasChanges}
+      >
         Reset
       </Button>
-      <Button radius='xl' onClick={onUpdate} disabled={!editMode || !areAllFieldsFilled} loading={submitting}>
+      <Button
+        radius="xl"
+        onClick={onUpdate}
+        disabled={!editMode || !areAllFieldsFilled}
+        loading={submitting}
+      >
         Update
       </Button>
     </Group>
-  )
+  ),
 );
-ActionButtons.displayName = 'ActionButtons';
+ActionButtons.displayName = "ActionButtons";
 
 // Separate component for modal content - memoized to prevent unnecessary re-renders
-const ModalContent: React.FC<{ confirmationModal: ConfirmationModalState }> = memo(({ confirmationModal }) => {
-  const isUpdateConfirmation = confirmationModal.title === 'Confirm Configuration Update';
+const ModalContent: React.FC<{ confirmationModal: ConfirmationModalState }> =
+  memo(({ confirmationModal }) => {
+    const isUpdateConfirmation =
+      confirmationModal.title === "Confirm Configuration Update";
 
-  if (isUpdateConfirmation) {
-    return (
-      <Stack gap='xs'>
-        <Text fw={500}>Please review the following values:</Text>
-        <Text
-          component='div'
-          style={{
-            whiteSpace: 'pre-line',
-            fontFamily: 'monospace',
-            fontSize: '0.875rem',
-            backgroundColor: 'var(--mantine-color-gray-0)',
-            padding: 'var(--mantine-spacing-xs)',
-            borderRadius: 'var(--mantine-radius-sm)',
-            border: '1px solid var(--mantine-color-gray-3)',
-          }}>
-          {confirmationModal.message.split('\n\n')[1]}
-        </Text>
-      </Stack>
-    );
-  }
+    if (isUpdateConfirmation) {
+      return (
+        <Stack gap="xs">
+          <Text fw={500}>Please review the following values:</Text>
+          <Text
+            component="div"
+            style={{
+              whiteSpace: "pre-line",
+              fontFamily: "monospace",
+              fontSize: "0.875rem",
+              backgroundColor: "var(--mantine-color-gray-0)",
+              padding: "var(--mantine-spacing-xs)",
+              borderRadius: "var(--mantine-radius-sm)",
+              border: "1px solid var(--mantine-color-gray-3)",
+            }}
+          >
+            {confirmationModal.message.split("\n\n")[1]}
+          </Text>
+        </Stack>
+      );
+    }
 
-  return <Text>{confirmationModal.message}</Text>;
-});
-ModalContent.displayName = 'ModalContent';
+    return <Text>{confirmationModal.message}</Text>;
+  });
+ModalContent.displayName = "ModalContent";
 
 export const ConfigActions: React.FC<ConfigActionsProps> = ({
   editMode,
@@ -112,7 +134,7 @@ export const ConfigActions: React.FC<ConfigActionsProps> = ({
         onClose={handleModalClose}
         title={confirmationModal.title}
         centered
-        size='md'
+        size="md"
         overlayProps={{
           backgroundOpacity: 0.55,
           blur: 3,
@@ -120,23 +142,29 @@ export const ConfigActions: React.FC<ConfigActionsProps> = ({
         styles={{
           title: {
             fontWeight: 600,
-            fontSize: '1.125rem',
+            fontSize: "1.125rem",
           },
           header: {
-            borderBottom: '1px solid var(--mantine-color-gray-3)',
+            borderBottom: "1px solid var(--mantine-color-gray-3)",
           },
           body: {
-            padding: 'var(--mantine-spacing-lg)',
+            padding: "var(--mantine-spacing-lg)",
           },
-        }}>
-        <Stack gap='lg'>
+        }}
+      >
+        <Stack gap="lg">
           <ModalContent confirmationModal={confirmationModal} />
 
-          <Group justify='flex-end' gap='sm'>
-            <Button variant='outline' onClick={handleModalClose} radius='xl' color='gray'>
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="outline"
+              onClick={handleModalClose}
+              radius="xl"
+              color="gray"
+            >
               Cancel
             </Button>
-            <Button onClick={handleModalConfirm} radius='xl' color='blue'>
+            <Button onClick={handleModalConfirm} radius="xl" color="blue">
               Confirm
             </Button>
           </Group>

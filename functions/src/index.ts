@@ -16,9 +16,11 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 // Import configuration operations
 import { saveConfiguration, initializeConfiguration } from './config-operations';
 
+// Import member operations
+import { addMember, updateMember, deactivateMember } from './member-operations';
+
 // Initialize Firebase Admin
 initializeApp();
-const db = getFirestore();
 
 // Firebase Region Configuration
 // Set region directly in function definitions as recommended by Firebase docs
@@ -40,6 +42,9 @@ const callableOptions = {
 
 // Export configuration operations
 export { saveConfiguration, initializeConfiguration };
+
+// Export member operations
+export { addMember, updateMember, deactivateMember };
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -75,6 +80,7 @@ export const deleteStudentWithSettlement = onCall(callableOptions, async (reques
     }
 
     // Run in transaction for atomicity
+    const db = getFirestore();
     const result = await db.runTransaction(async (transaction) => {
       // Get student document
       const studentRef = db.collection('students').doc(studentId);
@@ -211,8 +217,24 @@ export const deleteStudentWithSettlement = onCall(callableOptions, async (reques
 // Cloud function to calculate settlement preview before deletion
 export const calculateSettlementPreview = onCall(callableOptions, async (request) => {
   try {
-    // In emulator environment, allow requests without authentication for testing
-    const isEmulator = !process.env['FUNCTION_TARGET']; // Firebase automatically sets this in production
+    // Detect emulator environment - multiple ways to check (same as member operations)
+    const isEmulator =
+      process.env['FUNCTIONS_EMULATOR'] === 'true' ||
+      process.env['FIREBASE_CONFIG'] === undefined ||
+      !process.env['FUNCTION_TARGET'] ||
+      // Additional emulator detection methods
+      process.env['FIREBASE_EMULATOR_HUB'] !== undefined ||
+      process.env['GOOGLE_CLOUD_PROJECT'] === 'demo-project' ||
+      process.env['FIRESTORE_EMULATOR_HOST'] !== undefined;
+
+    // Log environment info for debugging
+    logger.info('calculateSettlementPreview called', {
+      hasAuth: !!request.auth,
+      isEmulator,
+      functionTarget: process.env['FUNCTION_TARGET'],
+      functionsEmulator: process.env['FUNCTIONS_EMULATOR'],
+      firebaseConfig: !!process.env['FIREBASE_CONFIG'],
+    });
 
     // Validate authentication (skip in emulator for testing)
     if (!isEmulator && !request.auth) {
@@ -222,7 +244,7 @@ export const calculateSettlementPreview = onCall(callableOptions, async (request
     // Validate input
     const { studentId, leaveDate } = request.data;
     if (!studentId) {
-      throw new HttpsError('invalid-argument', 'Student ID is required');
+      throw new HttpsError('invalid-argument', 'Member ID is required');
     }
 
     // Parse leave date if provided
@@ -234,21 +256,22 @@ export const calculateSettlementPreview = onCall(callableOptions, async (request
       }
     }
 
-    // Step 1: Get student document for totalDepositAgreed
-    const studentDoc = await db.collection('students').doc(studentId).get();
-    if (!studentDoc.exists) {
-      throw new HttpsError('not-found', 'Student not found');
+    // Step 1: Get member document for totalAgreedDeposit
+    const db = getFirestore();
+    const memberDoc = await db.collection('members').doc(studentId).get();
+    if (!memberDoc.exists) {
+      throw new HttpsError('not-found', 'Member not found');
     }
 
-    const studentData = studentDoc.data();
-    if (!studentData) {
-      throw new HttpsError('internal', 'Failed to read student data');
+    const memberData = memberDoc.data();
+    if (!memberData) {
+      throw new HttpsError('internal', 'Failed to read member data');
     }
 
-    const totalDepositAgreed = Number(studentData['totalDepositAgreed']) || 0;
+    const totalDepositAgreed = Number(memberData['totalAgreedDeposit']) || 0;
 
     // Step 2: Get the last month's rent history record
-    const rentHistoryRef = db.collection('students').doc(studentId).collection('rentHistory');
+    const rentHistoryRef = db.collection('members').doc(studentId).collection('rentHistory');
     const rentHistoryQuery = rentHistoryRef.orderBy('billingMonth', 'desc').limit(1);
     const rentHistorySnap = await rentHistoryQuery.get();
 
@@ -280,7 +303,7 @@ export const calculateSettlementPreview = onCall(callableOptions, async (request
 
     logger.info('Settlement calculation', {
       studentId,
-      studentName: studentData['name'],
+      memberName: memberData['name'],
       totalDepositAgreed,
       currentOutstanding,
       refundAmount,
@@ -289,9 +312,9 @@ export const calculateSettlementPreview = onCall(callableOptions, async (request
 
     // Return result
     return {
-      studentName: studentData['name'],
-      totalDepositAgreed,
-      currentOutstandingBalance: currentOutstanding,
+      memberName: memberData['name'],
+      totalAgreedDeposit: totalDepositAgreed,
+      outstandingBalance: currentOutstanding,
       refundAmount,
       status: refundAmount > 0 ? 'Refund Due' : refundAmount < 0 ? 'Payment Due' : 'Settled',
       leaveDate: leaveDateObj ? leaveDateObj.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],

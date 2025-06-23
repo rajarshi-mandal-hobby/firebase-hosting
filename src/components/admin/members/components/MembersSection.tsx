@@ -28,149 +28,169 @@ import {
   IconCheck,
 } from "@tabler/icons-react";
 
-import type { Student } from "../../../../types/student";
-import { StudentModal, DeleteStudentModal } from ".";
+import type { Member } from "../types/member";
+import { MemberModal, DeleteMemberModal } from ".";
+import type { MembersSectionProps } from "../types";
 
-interface MembersSectionProps {
-  students: Student[];
-  loading: boolean;
-}
-
-const MembersSection: React.FC<MembersSectionProps> = ({ students, loading }) => {
+const MembersSection: React.FC<MembersSectionProps> = ({
+  members,
+  loading,
+}) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"Name" | "Floor">("Name");
   const [showFilter, setShowFilter] = useState<"Active" | "Deleted">("Active");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+
   // Delete confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
 
   if (loading) {
     return (
-      <Stack align='center' py='xl'>
-        <Loader size='lg' />
-        <Text c='dimmed'>Loading members...</Text>
+      <Stack align="center" py="xl">
+        <Loader size="lg" />
+        <Text c="dimmed">Loading members...</Text>
       </Stack>
     );
-  } // Filter and sort students based on search, sort, and filter selections
-  const getProcessedStudents = () => {
-    let processedStudents = [...students];
+  } // Filter and sort members based on search, sort, and filter selections
+  const getProcessedMembers = () => {
+    let processedMembers = [...members];
 
     // Apply search filter
     if (searchQuery.trim()) {
-      processedStudents = processedStudents.filter((student) =>
-        student.name.toLowerCase().includes(searchQuery.toLowerCase())
+      processedMembers = processedMembers.filter((member) =>
+        member.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
     // Apply active/deleted filter
     if (showFilter === "Active") {
-      processedStudents = processedStudents.filter((student) => student.isActive);
+      processedMembers = processedMembers.filter((member) => member.isActive);
     } else if (showFilter === "Deleted") {
-      processedStudents = processedStudents.filter((student) => !student.isActive);
+      processedMembers = processedMembers.filter((member) => !member.isActive);
     }
 
     // Apply sorting
     if (sortBy === "Name") {
-      processedStudents.sort((a, b) => a.name.localeCompare(b.name));
+      processedMembers.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === "Floor") {
-      processedStudents.sort((a, b) => {
+      processedMembers.sort((a, b) => {
         const floorA = a.floor || "2nd";
         const floorB = b.floor || "2nd";
         return floorA.localeCompare(floorB);
       });
     }
 
-    return processedStudents;
+    return processedMembers;
   };
 
-  const processedStudents = getProcessedStudents();
+  const processedMembers = getProcessedMembers();
   // Calculate statistics
-  const activeStudents = students.filter((s) => s.isActive);
-  const wifiOptedCount = activeStudents.filter((s) => s.optedForWifi).length;
+  const activeMembers = members.filter((m) => m.isActive);
+  const wifiOptedCount = activeMembers.filter((m) => m.optedForWifi).length;
 
-  const handleAddStudent = () => {
-    setEditingStudent(null);
+  const handleAddMember = () => {
+    setEditingMember(null);
     setModalOpen(true);
   };
-  const handleEditStudent = (student: Student) => {
-    setEditingStudent(student);
+  const handleEditMember = (member: Member) => {
+    setEditingMember(member);
     setModalOpen(true);
   };
 
-  const handleDeleteStudent = (studentId: string, studentName: string) => {
-    const student = students.find((s) => s.id === studentId || s.name === studentName);
-    if (student) {
-      setStudentToDelete(student);
+  const handleDeleteMember = (memberId: string, memberName: string) => {
+    const member = members.find(
+      (m) => m.id === memberId || m.name === memberName,
+    );
+    if (member) {
+      setMemberToDelete(member);
       setDeleteModalOpen(true);
     }
   };
 
   const handleModalClose = () => {
     setModalOpen(false);
-    setEditingStudent(null);
+    setEditingMember(null);
   };
 
   const handleDeleteModalClose = () => {
     setDeleteModalOpen(false);
-    setStudentToDelete(null);
+    setMemberToDelete(null);
   };
 
   return (
-    <Stack gap='md'>
+    <Stack gap="md">
       {/* Statistics Panel */}
-      <Card withBorder p='md' radius='md'>
-        <Group justify='space-between' align='center'>
-          <Group gap='xs'>
-            <Group gap='xs'>
-              <Text size='sm' fw={500}>
+      <Card withBorder p="md" radius="md">
+        <Group justify="space-between" align="center">
+          <Group gap="xs">
+            <Group gap="xs">
+              <Text size="sm" fw={500}>
                 Total Active Members:
-              </Text>
-              <Badge variant='filled' size='lg' color='blue'>
-                {activeStudents.length}
+              </Text>{" "}
+              <Badge variant="filled" size="lg" color="blue">
+                {activeMembers.length}
               </Badge>
             </Group>
-            <Group gap='xs'>
-              <Text size='sm' fw={500}>
-                WiFi Opted Students:
+            <Group gap="xs">
+              <Text size="sm" fw={500}>
+                WiFi Opted Members:
               </Text>
-              <Badge variant='filled'>{wifiOptedCount}</Badge>
+              <Badge variant="filled">{wifiOptedCount}</Badge>
             </Group>
           </Group>
         </Group>
       </Card>{" "}
       {/* Action Controls */}
-      <Group justify='space-between' align='end'>
+      <Group justify="space-between" align="end">
         <TextInput
-          placeholder='Search students by name...'
+          placeholder="Search members by name..."
           leftSection={<IconSearch size={16} />}
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.currentTarget.value)}
           style={{ flexGrow: 1, maxWidth: "300px" }}
-          size='sm'
+          size="sm"
         />
-        <Group gap='sm'>
-          <ActionIcon variant='filled' size='lg' onClick={handleAddStudent} aria-label='Add Member'>
+        <Group gap="sm">
+          <ActionIcon
+            variant="filled"
+            size="lg"
+            onClick={handleAddMember}
+            aria-label="Add Member"
+          >
             <IconUserPlus size={18} />
           </ActionIcon>{" "}
-          <Menu shadow='md' width={180}>
+          <Menu shadow="md" width={180}>
             <Menu.Target>
-              <ActionIcon variant='subtle' size='lg' aria-label='Sort & Filter'>
+              <ActionIcon variant="subtle" size="lg" aria-label="Sort & Filter">
                 <IconAdjustments size={18} />
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Label>Sort by</Menu.Label>
               <Menu.Item
-                leftSection={sortBy === "Name" ? <IconCheck size={16} /> : <div style={{ width: 16 }} />}
-                onClick={() => setSortBy("Name")}>
+                leftSection={
+                  sortBy === "Name" ? (
+                    <IconCheck size={16} />
+                  ) : (
+                    <div style={{ width: 16 }} />
+                  )
+                }
+                onClick={() => setSortBy("Name")}
+              >
                 Name
               </Menu.Item>
               <Menu.Item
-                leftSection={sortBy === "Floor" ? <IconCheck size={16} /> : <div style={{ width: 16 }} />}
-                onClick={() => setSortBy("Floor")}>
+                leftSection={
+                  sortBy === "Floor" ? (
+                    <IconCheck size={16} />
+                  ) : (
+                    <div style={{ width: 16 }} />
+                  )
+                }
+                onClick={() => setSortBy("Floor")}
+              >
                 Floor
               </Menu.Item>
 
@@ -178,84 +198,114 @@ const MembersSection: React.FC<MembersSectionProps> = ({ students, loading }) =>
 
               <Menu.Label>Show</Menu.Label>
               <Menu.Item
-                leftSection={showFilter === "Active" ? <IconCheck size={16} /> : <div style={{ width: 16 }} />}
-                onClick={() => setShowFilter("Active")}>
+                leftSection={
+                  showFilter === "Active" ? (
+                    <IconCheck size={16} />
+                  ) : (
+                    <div style={{ width: 16 }} />
+                  )
+                }
+                onClick={() => setShowFilter("Active")}
+              >
                 Active
               </Menu.Item>
               <Menu.Item
-                leftSection={showFilter === "Deleted" ? <IconCheck size={16} /> : <div style={{ width: 16 }} />}
-                onClick={() => setShowFilter("Deleted")}>
+                leftSection={
+                  showFilter === "Deleted" ? (
+                    <IconCheck size={16} />
+                  ) : (
+                    <div style={{ width: 16 }} />
+                  )
+                }
+                onClick={() => setShowFilter("Deleted")}
+              >
                 Deleted
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
         </Group>
       </Group>{" "}
-      {/* Students List */}
-      <Stack gap='sm'>
-        {processedStudents.length === 0 ? (
+      {/* Members List */}
+      <Stack gap="sm">
+        {processedMembers.length === 0 ? (
           <Alert>
             {searchQuery.trim()
-              ? `No students found matching "${searchQuery}"`
-              : "No students found with the current filters."}
+              ? `No members found matching "${searchQuery}"`
+              : "No members found with the current filters."}
           </Alert>
         ) : (
           <>
-            <Text size='sm' c='dimmed'>
-              Showing {processedStudents.length} student{processedStudents.length !== 1 ? "s" : ""}
+            <Text size="sm" c="dimmed">
+              Showing {processedMembers.length} member
+              {processedMembers.length !== 1 ? "s" : ""}
             </Text>
-            <Accordion variant='separated' multiple>
-              {processedStudents.map((student) => {
-                const studentId = student.id || `student-${student.name}`;                return (
-                  <Accordion.Item key={studentId} value={studentId}>
-                    <Group justify='space-between' align='flex-start' wrap='nowrap' style={{ position: 'relative' }}>
-                      <Accordion.Control style={{ flex: 1, marginRight: '40px' }}>
-                        <Group gap='sm'>
-                          <Avatar size='sm' radius='xl' color='blue'>
-                            {(student.name?.[0] || "S").toUpperCase()}
+            <Accordion variant="separated" multiple>
+              {processedMembers.map((member) => {
+                const memberId = member.id || `member-${member.name}`;
+                return (
+                  <Accordion.Item key={memberId} value={memberId}>
+                    <Group
+                      justify="space-between"
+                      align="flex-start"
+                      wrap="nowrap"
+                      style={{ position: "relative" }}
+                    >
+                      {" "}
+                      <Accordion.Control
+                        style={{ flex: 1, marginRight: "40px" }}
+                      >
+                        <Group gap="sm">
+                          <Avatar size="sm" radius="xl" color="blue">
+                            {(member.name?.[0] || "M").toUpperCase()}
                           </Avatar>
                           <Stack gap={2}>
-                            <Text fw={500} size='sm'>
-                              {student.name}
+                            <Text fw={500} size="sm">
+                              {member.name}
                             </Text>
-                            <Group gap='xs'>
-                              <Badge size='xs' variant='light' color='gray'>
-                                {student.floor} Floor
+                            <Group gap="xs">
+                              <Badge size="xs" variant="light" color="gray">
+                                {member.floor} Floor
                               </Badge>
-                              <Badge size='xs' variant='light' color={student.isActive ? "green" : "red"}>
-                                {student.isActive ? "Active" : "Deleted"}
+                              <Badge
+                                size="xs"
+                                variant="light"
+                                color={member.isActive ? "green" : "red"}
+                              >
+                                {member.isActive ? "Active" : "Deleted"}
                               </Badge>
                             </Group>
                           </Stack>
                         </Group>
                       </Accordion.Control>
-                      <Menu shadow='md'>
+                      <Menu shadow="md">
                         <Menu.Target>
-                          <ActionIcon 
-                            variant='subtle' 
-                            size='sm' 
-                            style={{ 
-                              position: 'absolute', 
-                              right: '8px', 
-                              top: '50%', 
-                              transform: 'translateY(-50%)',
-                              zIndex: 1
+                          <ActionIcon
+                            variant="subtle"
+                            size="sm"
+                            style={{
+                              position: "absolute",
+                              right: "8px",
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              zIndex: 1,
                             }}
                           >
                             <IconDots size={16} />
                           </ActionIcon>
                         </Menu.Target>
                         <Menu.Dropdown>
-                          <Menu.Item 
-                            leftSection={<IconEdit size={16} />} 
-                            onClick={() => handleEditStudent(student)}
+                          <Menu.Item
+                            leftSection={<IconEdit size={16} />}
+                            onClick={() => handleEditMember(member)}
                           >
                             Edit
                           </Menu.Item>
                           <Menu.Item
                             leftSection={<IconTrash size={16} />}
-                            color='red'
-                            onClick={() => handleDeleteStudent(studentId, student.name)}
+                            color="red"
+                            onClick={() =>
+                              handleDeleteMember(memberId, member.name)
+                            }
                           >
                             Delete
                           </Menu.Item>
@@ -263,56 +313,81 @@ const MembersSection: React.FC<MembersSectionProps> = ({ students, loading }) =>
                       </Menu>
                     </Group>
                     <Accordion.Panel>
-                      <List listStyleType='none' spacing='xs'>
+                      <List listStyleType="none" spacing="xs">
                         <List.Item>
-                          <Group gap='xs'>
+                          <Group gap="xs">
                             <IconPhone size={14} />
-                            <Anchor href={`tel:${student.phone}`} size='sm'>
-                              {student.phone}
+                            <Anchor href={`tel:${member.phone}`} size="sm">
+                              {member.phone}
                             </Anchor>
                           </Group>
                         </List.Item>
                         <List.Item>
-                          <Text size='sm' c='dimmed'>
-                            Bed Type: {student.bedType}
+                          <Text size="sm" c="dimmed">
+                            Bed Type: {member.bedType}
                           </Text>
                         </List.Item>
                         <List.Item>
-                          <Text size='sm' c='dimmed'>
-                            Move-in Date: {new Date(student.moveInDate).toLocaleDateString()}
+                          <Text size="sm" c="dimmed">
+                            Move-in Date:{" "}
+                            {new Date(member.moveInDate).toLocaleDateString()}
                           </Text>
                         </List.Item>
                         <List.Item>
-                          <Text size='sm' c='dimmed'>
-                            Current Rent: <NumberFormatter value={student.currentRent} prefix='₹' thousandSeparator />
+                          <Text size="sm" c="dimmed">
+                            Current Rent:{" "}
+                            <NumberFormatter
+                              value={member.currentRent}
+                              prefix="₹"
+                              thousandSeparator
+                            />
                           </Text>
                         </List.Item>
                         <List.Item>
-                          <Text size='sm' c='dimmed'>
+                          <Text size="sm" c="dimmed">
                             Security Deposit:{" "}
-                            <NumberFormatter value={student.securityDeposit} prefix='₹' thousandSeparator />
+                            <NumberFormatter
+                              value={member.securityDeposit}
+                              prefix="₹"
+                              thousandSeparator
+                            />
                           </Text>
                         </List.Item>
                         <List.Item>
-                          <Text size='sm' c='dimmed'>
+                          <Text size="sm" c="dimmed">
                             Advance Deposit:{" "}
-                            <NumberFormatter value={student.advanceDeposit} prefix='₹' thousandSeparator />
+                            <NumberFormatter
+                              value={member.advanceDeposit}
+                              prefix="₹"
+                              thousandSeparator
+                            />
                           </Text>
                         </List.Item>
                         <List.Item>
-                          <Group gap='xs'>
-                            <Text size='sm' c='dimmed'>
+                          <Group gap="xs">
+                            <Text size="sm" c="dimmed">
                               WiFi Opted:
                             </Text>
-                            <Badge variant='light' color={student.optedForWifi ? "green" : "gray"} size='sm'>
-                              {student.optedForWifi ? "Yes" : "No"}
+                            <Badge
+                              variant="light"
+                              color={member.optedForWifi ? "green" : "gray"}
+                              size="sm"
+                            >
+                              {member.optedForWifi ? "Yes" : "No"}
                             </Badge>
                           </Group>
                         </List.Item>
                         <List.Item>
-                          <Text size='sm' c={student.currentOutstandingBalance > 0 ? "red" : "green"}>
+                          <Text
+                            size="sm"
+                            c={member.outstandingBalance > 0 ? "red" : "green"}
+                          >
                             Outstanding:{" "}
-                            <NumberFormatter value={student.currentOutstandingBalance} prefix='₹' thousandSeparator />
+                            <NumberFormatter
+                              value={member.outstandingBalance}
+                              prefix="₹"
+                              thousandSeparator
+                            />
                           </Text>
                         </List.Item>
                       </List>
@@ -322,20 +397,20 @@ const MembersSection: React.FC<MembersSectionProps> = ({ students, loading }) =>
               })}
             </Accordion>
           </>
-        )}
-      </Stack>{" "}      {/* Student Modal */}
-      <StudentModal
+        )}{" "}
+      </Stack>{" "}
+      {/* Member Modal */}
+      <MemberModal
         opened={modalOpen}
         onClose={handleModalClose}
-        editingStudent={editingStudent}
-        hasOnlyOneRentHistory={editingStudent ? true : false} // For now, assume editing students have only one rent history
+        editingMember={editingMember}
+        hasOnlyOneRentHistory={editingMember ? true : false} // For now, assume editing members have only one rent history
       />
-
       {/* Delete Confirmation Modal */}
-      <DeleteStudentModal
+      <DeleteMemberModal
         opened={deleteModalOpen}
         onClose={handleDeleteModalClose}
-        student={studentToDelete}
+        member={memberToDelete}
       />
     </Stack>
   );

@@ -19,10 +19,12 @@ const callableOptions = {
  * This function handles updating global configuration settings
  */
 export const saveConfiguration = onCall(callableOptions, async (request) => {
-  try {    // Detect emulator environment - multiple ways to check
-    const isEmulator = process.env['FUNCTIONS_EMULATOR'] === 'true' || 
-                      process.env['FIREBASE_CONFIG'] === undefined ||
-                      !process.env['FUNCTION_TARGET'];
+  try {
+    // Detect emulator environment - multiple ways to check
+    const isEmulator =
+      process.env['FUNCTIONS_EMULATOR'] === 'true' ||
+      process.env['FIREBASE_CONFIG'] === undefined ||
+      !process.env['FUNCTION_TARGET'];
 
     // Log environment info for debugging
     logger.info('saveConfiguration called', {
@@ -70,7 +72,7 @@ export const saveConfiguration = onCall(callableOptions, async (request) => {
         // Create new configuration document
         updateData.createdAt = FieldValue.serverTimestamp();
         transaction.set(configRef, updateData);
-        
+
         logger.info('Configuration created successfully', {
           createdFields: Object.keys(sanitizedData),
         });
@@ -119,20 +121,23 @@ export const saveConfiguration = onCall(callableOptions, async (request) => {
 /**
  * This is a separate function for setting up initial configuration
  */
-export const initializeConfiguration = onCall(callableOptions, async (request) => {  try {    // Detect emulator environment - multiple ways to check
-    const isEmulator = process.env['FUNCTIONS_EMULATOR'] === 'true' || 
-                      process.env['FIREBASE_CONFIG'] === undefined ||
-                      !process.env['FUNCTION_TARGET'];
+export const initializeConfiguration = onCall(callableOptions, async (request) => {
+  try {
+    // Detect emulator environment - multiple ways to check
+    const isEmulator =
+      process.env['FUNCTIONS_EMULATOR'] === 'true' ||
+      process.env['FIREBASE_CONFIG'] === undefined ||
+      !process.env['FUNCTION_TARGET'];
 
     // Validate authentication (skip in emulator for testing)
     if (!isEmulator && !request.auth) {
       throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
-    logger.info('initializeConfiguration called', { 
+    logger.info('initializeConfiguration called', {
       isEmulator,
-      hasAuth: !!request.auth 
-    });// Run in transaction for atomicity
+      hasAuth: !!request.auth,
+    }); // Run in transaction for atomicity
     const result = await getFirestore().runTransaction(async (transaction: any) => {
       // Check if config already exists
       const configRef = getFirestore().collection('config').doc('globalSettings');
@@ -161,7 +166,8 @@ export const initializeConfiguration = onCall(callableOptions, async (request) =
       const floorCounts: Record<string, number> = {};
       baseConfig.floors.forEach((floor: string) => {
         floorCounts[floor] = 0;
-      });      let wifiOptedInCount = 0;
+      });
+      let wifiOptedInCount = 0;
       studentsSnapshot.docs.forEach((doc) => {
         const studentData = doc.data();
         const floor = studentData['floor'];

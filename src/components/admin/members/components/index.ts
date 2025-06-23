@@ -1,4 +1,7 @@
 // Members components exports
-export { default as MembersSection } from './MembersSection';
-export { default as StudentModal } from './StudentModal';
-export { default as DeleteStudentModal } from './DeleteStudentModal';
+export { default as MembersSection } from "./MembersSection";
+export { default as MemberModal } from "./MemberModal";
+export { default as DeleteMemberModal } from "./DeleteMemberModal";
+
+// Export component types
+export * from "../types";

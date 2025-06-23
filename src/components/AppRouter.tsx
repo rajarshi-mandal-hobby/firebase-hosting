@@ -1,33 +1,51 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { Container, Loader, Stack, Text } from "@mantine/core";
-import { useAuth } from "@/hooks/useAuth";
-import SignIn from "@/pages/SignIn";
-import Dashboard from "@/components/Dashboard";
-import AdminDashboard from "@/components/admin/core/AdminDashboard";
-import PhoneVerification from "@/components/PhoneVerification";
+import { useAuth } from "../hooks/useAuth";
+import SignIn from "../pages/SignIn";
+import Dashboard from "./Dashboard";
+import AdminDashboard from "./admin/core/AdminDashboard";
+import PhoneVerification from "./PhoneVerification";
 
-const LoadingScreen: React.FC<{ message?: string }> = ({ message = "Loading..." }) => (
-  <Container size='sm' style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+const LoadingScreen: React.FC<{ message?: string }> = ({
+  message = "Loading...",
+}) => (
+  <Container
+    size="sm"
+    style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
     <Stack align="center" gap="md">
-      <Loader size='xl' type='dots' />
-      <Text c="dimmed" size="sm">{message}</Text>
+      <Loader size="xl" type="dots" />
+      <Text c="dimmed" size="sm">
+        {message}
+      </Text>
     </Stack>
   </Container>
 );
 
 const AppRouter: React.FC = () => {
-  const { user, userProfile, loading, profileLoading, authInitialized } = useAuth();
+  const { user, userProfile, loading, profileLoading, authInitialized } =
+    useAuth();
   // Development mode bypass for testing (set VITE_DEV_BYPASS_AUTH=true in .env)
-  const devBypassAuth = import.meta.env['VITE_DEV_BYPASS_AUTH'] === 'true';
-  
+  const devBypassAuth = import.meta.env["VITE_DEV_BYPASS_AUTH"] === "true";
+
   if (devBypassAuth) {
     return (
       <Router>
         <Routes>
-          <Route path='/' element={<Navigate to='/dashboard' replace />} />
-          <Route path='/dashboard' element={<AdminDashboard />} />
-          <Route path='*' element={<Navigate to='/dashboard' replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<AdminDashboard />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
     );
@@ -48,7 +66,7 @@ const AppRouter: React.FC = () => {
     return (
       <Router>
         <Routes>
-          <Route path='*' element={<SignIn />} />
+          <Route path="*" element={<SignIn />} />
         </Routes>
       </Router>
     );
@@ -63,12 +81,12 @@ const AppRouter: React.FC = () => {
     return (
       <Router>
         <Routes>
-          <Route path='/' element={<Navigate to='/dashboard' replace />} />
-          <Route 
-            path='/dashboard' 
-            element={userProfile.isAdmin ? <AdminDashboard /> : <Dashboard />} 
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/dashboard"
+            element={userProfile.isAdmin ? <AdminDashboard /> : <Dashboard />}
           />
-          <Route path='*' element={<Navigate to='/dashboard' replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
     );
@@ -78,7 +96,7 @@ const AppRouter: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path='*' element={<PhoneVerification />} />
+        <Route path="*" element={<PhoneVerification />} />
       </Routes>
     </Router>
   );

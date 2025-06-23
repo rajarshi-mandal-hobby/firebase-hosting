@@ -41,7 +41,7 @@ This project is a React (TypeScript, Vite) application utilizing Mantine UI and 
 - When fixing bugs, check the codebase for existing implementation options before introducing new patterns/technologies; remove old implementations if new ones are adopted.
 - Maintain a clean, organized codebase.
 - Avoid standalone scripts in files, especially for one-time runs.
-- Keep files under 200-300 lines; refactor as needed.
+- Keep files under 400-500 lines; refactor as needed.
 - Mock data solely for tests; never for development or production environments.
 - Do not add stubbing or fake data patterns affecting dev/prod.
 - Focus on task-relevant code; avoid unrelated changes.

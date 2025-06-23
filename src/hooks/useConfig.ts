@@ -1,10 +1,13 @@
 // Custom hooks for managing configuration data
-import { useState, useEffect, useCallback } from 'react';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { notifications } from '@mantine/notifications';
-import { db } from '../lib/firebase';
-import { getSystemStats } from '../lib/firestore';
-import type { ConfigData, SystemStats } from '../types';
+import { useState, useEffect, useCallback } from "react";
+import { onSnapshot, doc } from "firebase/firestore";
+import { notifications } from "@mantine/notifications";
+import { db } from "../lib/firebase";
+import { getSystemStats } from "../lib/firestore";
+import type {
+  ConfigData,
+  SystemStats,
+} from "../components/admin/settings/types/config";
 
 /**
  * Hook for managing system configuration with real-time updates
@@ -18,7 +21,8 @@ export const useConfig = () => {
     setLoading(true);
     setError(null);
 
-    const configDocRef = doc(db, 'config', 'globalSettings');    const unsubscribe = onSnapshot(
+    const configDocRef = doc(db, "config", "globalSettings");
+    const unsubscribe = onSnapshot(
       configDocRef,
       (docSnap) => {
         try {
@@ -31,32 +35,36 @@ export const useConfig = () => {
           }
           setError(null);
         } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Failed to process configuration data';
+          const errorMessage =
+            err instanceof Error
+              ? err.message
+              : "Failed to process configuration data";
           setError(errorMessage);
-          console.error('Config processing error:', err);
+          console.error("Config processing error:", err);
         } finally {
           setLoading(false);
         }
       },
       (err) => {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch configuration';
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to fetch configuration";
         setError(errorMessage);
         setLoading(false);
         notifications.show({
-          title: 'Configuration Error',
+          title: "Configuration Error",
           message: errorMessage,
-          color: 'red'
+          color: "red",
         });
-      }
+      },
     );
 
     return () => unsubscribe();
   }, []);
 
-  return { 
-    config, 
-    loading, 
-    error 
+  return {
+    config,
+    loading,
+    error,
   };
 };
 
@@ -75,9 +83,12 @@ export const useSystemStats = () => {
       const statsData = await getSystemStats();
       setStats(statsData);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch system statistics';
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to fetch system statistics";
       setError(errorMessage);
-      console.error('Stats error:', err);
+      console.error("Stats error:", err);
     } finally {
       setLoading(false);
     }
@@ -91,11 +102,11 @@ export const useSystemStats = () => {
     fetchStats();
   }, [fetchStats]);
 
-  return { 
-    stats, 
-    loading, 
-    error, 
-    refetch 
+  return {
+    stats,
+    loading,
+    error,
+    refetch,
   };
 };
 
@@ -105,19 +116,29 @@ export const useSystemStats = () => {
 export const useRentRates = () => {
   const { config } = useConfig();
 
-  const getRentForBedType = useCallback((floor: string, bedType: string): number | null => {
-    if (!config || !config.bedTypes[floor] || !config.bedTypes[floor][bedType]) {
-      return null;
-    }
-    return config.bedTypes[floor][bedType];
-  }, [config]);
+  const getRentForBedType = useCallback(
+    (floor: string, bedType: string): number | null => {
+      if (
+        !config ||
+        !config.bedTypes[floor] ||
+        !config.bedTypes[floor][bedType]
+      ) {
+        return null;
+      }
+      return config.bedTypes[floor][bedType];
+    },
+    [config],
+  );
 
-  const getAvailableBedTypes = useCallback((floor: string): string[] => {
-    if (!config || !config.bedTypes[floor]) {
-      return [];
-    }
-    return Object.keys(config.bedTypes[floor]);
-  }, [config]);
+  const getAvailableBedTypes = useCallback(
+    (floor: string): string[] => {
+      if (!config || !config.bedTypes[floor]) {
+        return [];
+      }
+      return Object.keys(config.bedTypes[floor]);
+    },
+    [config],
+  );
 
   const getAllFloors = useCallback((): string[] => {
     return config?.floors || [];
@@ -132,6 +153,6 @@ export const useRentRates = () => {
     getAvailableBedTypes,
     getAllFloors,
     getDefaultSecurityDeposit,
-    config
+    config,
   };
 };

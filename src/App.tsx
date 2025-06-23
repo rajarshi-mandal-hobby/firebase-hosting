@@ -4,7 +4,7 @@ import { ModalsProvider } from "@mantine/modals";
 import { DatesProvider } from "@mantine/dates";
 import { AuthProvider } from "./contexts/AuthContext";
 import AppRouter from "./components/AppRouter";
-import 'dayjs/locale/en';
+import "dayjs/locale/en";
 
 // Import Mantine styles
 import "@mantine/core/styles.css";
@@ -20,10 +20,12 @@ const theme = createTheme({
 
 function App() {
   return (
-    <MantineProvider theme={theme} defaultColorScheme='light'>
-      <Notifications position='top-right' />
+    <MantineProvider theme={theme} defaultColorScheme="light">
+      <Notifications position="top-right" />
       <ModalsProvider>
-        <DatesProvider settings={{ locale: 'en', firstDayOfWeek: 0, weekendDays: [0, 6] }}>
+        <DatesProvider
+          settings={{ locale: "en", firstDayOfWeek: 0, weekendDays: [0, 6] }}
+        >
           <AuthProvider>
             <AppRouter />
           </AuthProvider>

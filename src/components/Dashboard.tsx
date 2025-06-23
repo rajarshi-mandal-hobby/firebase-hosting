@@ -1,5 +1,16 @@
 import React from "react";
-import { Container, Paper, Title, Text, Button, Stack, Group, Avatar, Box, Badge } from "@mantine/core";
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  Button,
+  Stack,
+  Group,
+  Avatar,
+  Box,
+  Badge,
+} from "@mantine/core";
 import { IconLogout, IconSettings, IconDashboard } from "@tabler/icons-react";
 import { useAuth } from "../hooks/useAuth";
 import { notifications } from "@mantine/notifications";
@@ -26,36 +37,51 @@ const Dashboard: React.FC = () => {
   const isAdmin = userProfile?.isAdmin || false;
 
   return (
-    <Container size='lg' py='xl'>
-      <Paper shadow='sm' radius='lg' p='xl'>
-        <Stack gap='lg'>
-          <Group justify='space-between'>
+    <Container size="lg" py="xl">
+      <Paper shadow="sm" radius="lg" p="xl">
+        <Stack gap="lg">
+          <Group justify="space-between">
             <Group>
-              <Avatar src={user?.photoURL ?? null} alt={user?.displayName || "User"} size='lg' radius='xl' />
+              <Avatar
+                src={user?.photoURL ?? null}
+                alt={user?.displayName || "User"}
+                size="lg"
+                radius="xl"
+              />
               <Box>
                 <Title order={3}>Welcome back!</Title>
-                <Text c='dimmed'>{user?.displayName || "User"}</Text>
-                <Text size='sm' c='dimmed'>
+                <Text c="dimmed">{user?.displayName || "User"}</Text>
+                <Text size="sm" c="dimmed">
                   {user?.email}
                 </Text>
               </Box>
             </Group>
             <Group>
               {isAdmin && (
-                <Badge color='blue' variant='light' size='lg'>
+                <Badge color="blue" variant="light" size="lg">
                   <IconSettings size={14} style={{ marginRight: 4 }} />
                   Admin
                 </Badge>
               )}
-              <Button variant='outline' color='red' leftSection={<IconLogout size={16} />} onClick={handleLogout}>
+              <Button
+                variant="outline"
+                color="red"
+                leftSection={<IconLogout size={16} />}
+                onClick={handleLogout}
+              >
                 Sign Out
               </Button>
             </Group>
           </Group>
-          <Paper shadow='xs' p='md' radius='md' style={{ backgroundColor: "var(--mantine-color-gray-0)" }}>
-            <Stack gap='md'>
+          <Paper
+            shadow="xs"
+            p="md"
+            radius="md"
+            style={{ backgroundColor: "var(--mantine-color-gray-0)" }}
+          >
+            <Stack gap="md">
               <Group>
-                <IconDashboard size={24} color='var(--mantine-color-blue-6)' />
+                <IconDashboard size={24} color="var(--mantine-color-blue-6)" />
                 <Title order={4}>Dashboard</Title>
               </Group>
               <Text>
@@ -66,34 +92,46 @@ const Dashboard: React.FC = () => {
             </Stack>
           </Paper>
           {isAdmin && (
-            <Paper shadow='xs' p='md' radius='md' style={{ backgroundColor: "var(--mantine-color-blue-0)" }}>
-              <Title order={5} mb='sm'>
+            <Paper
+              shadow="xs"
+              p="md"
+              radius="md"
+              style={{ backgroundColor: "var(--mantine-color-blue-0)" }}
+            >
+              <Title order={5} mb="sm">
                 Admin Functions
               </Title>
-              <Text size='sm' c='dimmed'>
+              <Text size="sm" c="dimmed">
                 Admin-specific features and controls will be available here.
               </Text>
             </Paper>
           )}{" "}
-          <Paper shadow='xs' p='md' radius='md' style={{ backgroundColor: "var(--mantine-color-green-0)" }}>
-            <Title order={5} mb='sm'>
+          <Paper
+            shadow="xs"
+            p="md"
+            radius="md"
+            style={{ backgroundColor: "var(--mantine-color-green-0)" }}
+          >
+            <Title order={5} mb="sm">
               Account Status
             </Title>
-            <Stack gap='xs'>
-              <Text size='sm'>
+            <Stack gap="xs">
+              <Text size="sm">
                 <strong>Email:</strong> {user?.email}
               </Text>
               {userProfile?.phoneNumber && (
-                <Text size='sm'>
+                <Text size="sm">
                   <strong>Phone:</strong> {userProfile.phoneNumber} ✅
                 </Text>
               )}
-              <Text size='sm'>
-                <strong>Account Type:</strong> {isAdmin ? "Administrator" : "Regular User"}
+              <Text size="sm">
+                <strong>Account Type:</strong>{" "}
+                {isAdmin ? "Administrator" : "Regular User"}
               </Text>
-              <Text size='sm' c='dimmed'>
-                You are currently connected to Firebase emulators for local development. Authentication, Firestore, and
-                Storage are running locally.
+              <Text size="sm" c="dimmed">
+                You are currently connected to Firebase emulators for local
+                development. Authentication, Firestore, and Storage are running
+                locally.
               </Text>
             </Stack>
           </Paper>
