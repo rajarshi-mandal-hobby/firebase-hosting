@@ -7,9 +7,4 @@ typings/
 
 # Node.js dependency directory
 node_modules/
-
-# Environment files (not used - region set directly in code)
-.env
-.env.local
-.env.dev
 *.local
