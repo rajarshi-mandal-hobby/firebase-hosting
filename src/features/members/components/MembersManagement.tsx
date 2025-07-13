@@ -1,9 +1,9 @@
 import { Accordion, ActionIcon, Button, Center, Group, rem, Stack, Text, TextInput, Title } from '@mantine/core';
 import { useState } from 'react';
-import { SharedAvatar, StatusIndicator } from '../../../components/shared';
-import { MemberDetailsList } from '../../../components/shared/MemberDetailsList';
+import { SharedAvatar, StatusIndicator } from '../../../shared/components';
+import { MemberDetailsList } from '../../../shared/components/MemberDetailsList';
 import type { UseMemberManagementData } from '../hooks/useMemberManagementData';
-import { IconFilter, IconPersonAdd, IconPhone, IconSearch } from '../../../components/shared/icons';
+import { IconFilter, IconPersonAdd, IconPhone, IconSearch } from '../../../shared/components/icons';
 import { MemberModal, DeleteMemberModal, DeactivationModal } from './modals';
 
 interface MembersManagementProps {

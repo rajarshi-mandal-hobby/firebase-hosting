@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type FC } from 'react';
 import { Stack, Group, Text, Badge, Avatar, Button, Divider, NumberFormatter, Loader } from '@mantine/core';
 import { MonthPickerInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
-import { SharedModal } from '../../../../components/shared/SharedModal';
+import { SharedModal } from '../../../../shared/components/SharedModal';
 
 // Mock data and types for Phase 1
 interface Member {

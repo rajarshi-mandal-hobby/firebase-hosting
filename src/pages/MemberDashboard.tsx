@@ -14,16 +14,24 @@ import {
   Space,
   Loader,
 } from '@mantine/core';
-// Import Material Symbols rounded logout icon
-import { AppContainer, RentDetailsList, SharedAvatar, StatusBadge, getStatusAlertConfig } from '../components/shared';
+import { lazy, useState, useCallback, useMemo, Suspense } from 'react';
 import { mockCurrentUser } from '../data/mockData';
-import { useState, useMemo, useCallback, lazy, Suspense } from 'react';
-import classes from './MemberDashboard.module.css';
-import { IconBed, IconPhone, IconLogout, IconQrCode, IconUpi } from '../components/shared/icons';
-import { CurrencyFormatter } from '../components/shared';
-import type { Member, RentHistory } from '../firestore-types';
-import { useMemberDashboardData } from '../hooks/useMemberDashboardData';
-import { MemberDetailsList } from '../components/shared/MemberDetailsList';
+import { useMemberDashboardData } from '../hooks';
+import {
+  SharedAvatar,
+  IconPhone,
+  IconBed,
+  AppContainer,
+  IconLogout,
+  MemberDetailsList,
+  RentDetailsList,
+  IconUpi,
+  IconQrCode,
+  CurrencyFormatter,
+  StatusBadge,
+} from '../shared/components';
+import type { Member, UPIPaymentParams, RentHistory } from '../shared/types/firestore-types';
+import { getStatusAlertConfig } from '../shared/utils';
 
 // Lazy load the Friends section for better performance
 const FriendsSection = lazy(() =>
@@ -71,6 +79,19 @@ export function MemberDashboard() {
   // Use the cached hook for data management
   const { currentMember, currentMonthHistory, otherMembers, historyData, loading, error, actions } =
     useMemberDashboardData();
+
+  const upiUri = (amount: number, name: string): string => {
+    const upiParams: UPIPaymentParams = {
+      pa: '+918777529394@paytm', // UPI ID (e.g., "+918777529394@paytm")
+      pn: 'Rajarshi', // Payee name (e.g., "Rent Payment")
+      am: amount, // Amount
+      cu: 'INR', // Currency (e.g., "INR")
+      tn: `${name}'s paying the rent of ${amount}`,
+    };
+    return encodeURIComponent(
+      `upi://pay?pa=${upiParams.pa}&pn=${upiParams.pn}&am=${upiParams.am}&cu=${upiParams.cu}&tn=${upiParams.tn}`
+    );
+  };
 
   // Handle tab changes and trigger lazy loading
   const handleTabChange = useCallback(
@@ -219,12 +240,7 @@ export function MemberDashboard() {
                       href={
                         isPaymentDisabled || !currentMonthHistory
                           ? undefined
-                          : `upi://pay?pa=${encodeURIComponent('+918777529394@paytm')}&pn=Rajarshi&am=${
-                              currentMonthHistory.currentOutstanding
-                            }&cu=INR&tn=${encodeURIComponent(
-                              currentMember.name + "'s Rent " + currentMonthHistory.currentOutstanding
-                            )}
-                            `
+                          : upiUri(currentMonthHistory.currentOutstanding, currentMember.name)
                       }>
                       <CurrencyFormatter value={currentMonthHistory?.currentOutstanding || 0} prefix='Pay ₹' />
                     </Button>
@@ -258,9 +274,7 @@ export function MemberDashboard() {
               <Accordion variant='contained'>
                 {historyData.map((history) => (
                   <Accordion.Item key={history.id} value={history.id}>
-                    <Accordion.Control
-                      className={classes.accordionControl}
-                      icon={<StatusBadge status={history.status} size={16} />}>
+                    <Accordion.Control icon={<StatusBadge status={history.status} size={16} />}>
                       <Group justify='space-between' pr='md'>
                         <Title order={5}>{formatMonthYear(history.id)}</Title>
                         <Text>

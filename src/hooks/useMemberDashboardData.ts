@@ -5,7 +5,7 @@ import {
   getMemberRentHistory 
 } from '../utils/memberUtils';
 import { mockCurrentUser, mockMembers } from '../data/mockData';
-import type { Member, RentHistory, MockMemberData } from '../firestore-types';
+import type { Member, RentHistory, MockMemberData } from '../shared/types/firestore-types';
 
 export interface UseMemberDashboardData {
   currentMember: Member | null;

@@ -49,10 +49,6 @@ export function SharedModal({
   return (
     <Modal
       {...modalProps}
-      overlayProps={{
-        blur: 3,
-        ...modalProps.overlayProps,
-      }}
       closeButtonProps={{
         // children: <IconX size={16} />,
         'aria-label': 'Close modal',

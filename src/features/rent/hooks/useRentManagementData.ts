@@ -3,7 +3,7 @@ import {
   getActiveMembersWithLatestBills,
   calculateTotalOutstanding
 } from '../../../utils/memberUtils';
-import type { Member, RentHistory } from '../../../firestore-types';
+import type { Member, RentHistory } from '../../../shared/types/firestore-types';
 
 export interface MemberWithBill {
   member: Member;

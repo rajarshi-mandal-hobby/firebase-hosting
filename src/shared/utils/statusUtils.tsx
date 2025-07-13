@@ -1,9 +1,5 @@
-import React from 'react';
-import { type ThemeIconProps } from '@mantine/core';
-import { IconCheck, IconClose, IconDoneAll, IconSendMoney, MyThemeIcon } from './icons';
-
-export type PaymentStatus = 'Paid' | 'Due' | 'Partial' | 'Overpaid' | 'Partially Paid';
-export type GeneralStatus = PaymentStatus | 'active' | 'inactive';
+import type { PaymentStatus } from '../types/firestore-types';
+import { IconCheck, IconDoneAll, IconSendMoney, IconClose, MyThemeIcon } from '../components';
 
 interface IconProps {
   size?: number | string;
@@ -18,7 +14,7 @@ interface StatusConfig {
   alertMessage: string;
 }
 
-const statusConfigs: Record<PaymentStatus, StatusConfig> = {
+export const statusConfigs: Record<PaymentStatus, StatusConfig> = {
   Paid: {
     icon: IconCheck,
     color: 'green.6',
@@ -56,29 +52,13 @@ const statusConfigs: Record<PaymentStatus, StatusConfig> = {
   },
 };
 
-// Simple mapping for GeneralStatus-only statuses
-const generalStatusMap = {
-  active: 'Paid',
-  inactive: 'Due',
-} as const;
-
-interface StatusBadgeProps extends Omit<ThemeIconProps, 'children'> {
-  status: PaymentStatus;
-}
-
-export function StatusBadge({ status, ...props }: StatusBadgeProps) {
-  const config = statusConfigs[status];
-
-  return <MyThemeIcon icon={config.icon} color={config.color} {...props} />;
-}
-
 export const getStatusIcon = (status: PaymentStatus) => {
   return statusConfigs[status]?.icon;
-}
+};
 
 export const getStatusColor = (status: PaymentStatus) => {
   return statusConfigs[status]?.color;
-}
+};
 
 export function getStatusAlertConfig(status: PaymentStatus) {
   const config = statusConfigs[status];
@@ -88,40 +68,6 @@ export function getStatusAlertConfig(status: PaymentStatus) {
     title: config.alertTitle,
     message: config.alertMessage,
     icon: <MyThemeIcon icon={IconComponent} color={config.alertColor} size={16} />,
+    iconComponent: IconComponent,
   };
-}
-
-// StatusIndicator component (merged from StatusIndicator.tsx)
-interface StatusIndicatorProps {
-  status: GeneralStatus;
-  size?: number;
-  children: React.ReactNode;
-}
-
-export function StatusIndicator({ status, size = 16, children }: StatusIndicatorProps) {
-  // Map GeneralStatus to PaymentStatus for reuse
-  const paymentStatus: PaymentStatus =
-    generalStatusMap[status as keyof typeof generalStatusMap] || (status as PaymentStatus);
-
-  return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      {children}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          right: 0,
-          borderRadius: '50%',
-          width: size,
-          height: size,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: '2px solid white',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
-        }}>
-        <StatusBadge status={paymentStatus} size={size - 2} />
-      </div>
-    </div>
-  );
 }

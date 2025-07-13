@@ -1,5 +1,5 @@
 import { List, Text } from '@mantine/core';
-import { formatDate } from '../../utils';
+import { formatDate } from '../utils';
 import { CurrencyFormatter } from './CurrencyFormatter';
 import {
   IconPhone,
@@ -11,7 +11,7 @@ import {
   IconWifi,
   IconFirebase,
 } from './icons';
-import type { Member } from '../../firestore-types';
+import type { Member } from '../types/firestore-types';
 import type { Timestamp } from 'firebase/firestore';
 
 interface MemberDetailsListProps {

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { NumberInput, Stack, Text, TextInput, Select, Switch, Alert, Group, Divider } from '@mantine/core';
 import { MonthPickerInput } from '@mantine/dates';
-import { SharedModal } from '../../../../components/shared/SharedModal';
+import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
-import type { Member, Floor, BedType } from '../../../../firestore-types';
+import type { Member, Floor, BedType } from '../../../../shared/types/firestore-types';
 import { mockGlobalSettings } from '../../../../data/mockData';
 
 interface MemberModalProps {

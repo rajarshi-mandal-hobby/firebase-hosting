@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { NumberInput, Stack, Text, TextInput, Button, Group, ActionIcon, Alert } from '@mantine/core';
-import { SharedModal } from '../../../../components/shared/SharedModal';
+import { NumberInput, Stack, Text, Button, Group, ActionIcon, Alert, Textarea, rem } from '@mantine/core';
+import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
+import { IconClose } from '../../../../shared/components/icons';
 
 interface ExpenseItem {
   description: string;
@@ -88,15 +89,17 @@ export function AddExpenseModal({ opened, onClose, memberName = '' }: AddExpense
           Adding expenses for <strong>{memberName || 'Selected Member'}</strong>
         </Text>
 
-        <Stack gap='xs'>
+        <Stack gap='lg'>
           {expenses.map((expense, index) => (
-            <Group key={index} align='flex-end'>
-              <TextInput
+            <Group key={index} align='flex-start' justify='space-between'>
+              <Textarea
                 label={index === 0 ? 'Description' : undefined}
                 placeholder='Enter expense description'
                 value={expense.description}
                 onChange={(event) => updateExpenseItem(index, 'description', event.currentTarget?.value ?? '')}
-                style={{ flex: 1 }}
+                flex={2}
+                autosize
+                minRows={1}
               />
               <NumberInput
                 label={index === 0 ? 'Amount' : undefined}
@@ -105,24 +108,37 @@ export function AddExpenseModal({ opened, onClose, memberName = '' }: AddExpense
                 onChange={(value) => updateExpenseItem(index, 'amount', Number(value) || 0)}
                 prefix='₹'
                 min={0}
-                style={{ width: 120 }}
+                flex={1}
+                hideControls
               />
-              {expenses.length > 1 && (
-                <ActionIcon
-                  color='red'
-                  variant='subtle'
-                  onClick={() => removeExpenseItem(index)}
-                  style={{ marginBottom: index === 0 ? 0 : 0 }}>
-                  ×
+              {/* {expenses.length > 1 && (
+                <ActionIcon color='red' variant='filled' onClick={() => removeExpenseItem(index)} flex={0} size={16}>
+                  <IconClose size={16} />
                 </ActionIcon>
-              )}
+              )} */}
             </Group>
           ))}
         </Stack>
 
-        <Button variant='light' size='xs' onClick={addExpenseItem}>
-          + Add Another Expense
-        </Button>
+        <Group gap='xs'>
+          <Button
+            variant='light'
+            size='xs'
+            style={{ height: `${rem(28)}` }}
+            onClick={addExpenseItem}
+            flex={1}
+            leftSection='+'>
+            Add Another Expense
+          </Button>
+          <ActionIcon
+            color='red'
+            variant='light'
+            size={rem(28)}
+            onClick={() => removeExpenseItem(expenses.length - 1)}
+            disabled={expenses.length <= 1}>
+            <IconClose size={'70%'} />
+          </ActionIcon>
+        </Group>
 
         {totalAmount > 0 && (
           <Alert color='blue' title='Expense Summary'>

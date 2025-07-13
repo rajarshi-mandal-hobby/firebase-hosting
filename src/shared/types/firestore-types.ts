@@ -8,18 +8,18 @@ import type { Timestamp } from 'firebase/firestore';
  * Available floors as defined in the schema
  */
 export const FLOORS = ['2nd', '3rd'] as const;
-export type Floor = typeof FLOORS[number];
+export type Floor = (typeof FLOORS)[number];
 
 /**
  * Available bed types per floor
  */
 export const BED_TYPES = {
   '2nd': ['Bed', 'Room', 'Special Room'],
-  '3rd': ['Bed', 'Room']
+  '3rd': ['Bed', 'Room'],
 } as const;
 
-export type BedTypeFor2nd = typeof BED_TYPES['2nd'][number];
-export type BedTypeFor3rd = typeof BED_TYPES['3rd'][number];
+export type BedTypeFor2nd = (typeof BED_TYPES)['2nd'][number];
+export type BedTypeFor3rd = (typeof BED_TYPES)['3rd'][number];
 export type BedType = BedTypeFor2nd | BedTypeFor3rd;
 
 /**
@@ -33,7 +33,7 @@ export type AdminRole = 'primary' | 'secondary';
 export const COLLECTIONS = {
   CONFIG: 'config',
   MEMBERS: 'members',
-  ELECTRIC_BILLS: 'electricBills'
+  ELECTRIC_BILLS: 'electricBills',
 } as const;
 
 /**
@@ -41,7 +41,7 @@ export const COLLECTIONS = {
  */
 export const CONFIG_DOCS = {
   GLOBAL_SETTINGS: 'globalSettings',
-  ADMINS: 'admins'
+  ADMINS: 'admins',
 } as const;
 
 // ======================================
@@ -148,7 +148,7 @@ export interface Expense {
 /**
  * Payment status for rent history
  */
-export type PaymentStatus = 'Due' | 'Paid' | 'Partially Paid' | 'Overpaid';
+export type PaymentStatus = 'Due' | 'Paid' | 'Partially Paid' | 'Partial' | 'Overpaid';
 
 /**
  * General status type that extends payment status for broader use
@@ -184,7 +184,8 @@ export interface RentHistory {
  * This type is used in mock data where some fields may be null/undefined and rent history
  * is embedded directly in the member object instead of being a separate subcollection.
  */
-export interface MockMemberData extends MakeNullable<Member, 'firebaseUid' | 'fcmToken' | 'outstandingNote' | 'leaveDate' | 'ttlExpiry'> {
+export interface MockMemberData
+  extends MakeNullable<Member, 'firebaseUid' | 'fcmToken' | 'outstandingNote' | 'leaveDate' | 'ttlExpiry'> {
   rentHistory?: RentHistory[] | null;
 }
 
@@ -357,114 +358,6 @@ export interface AccountLinkResponse {
 }
 
 // ======================================
-// RUNTIME VALIDATION HELPERS
-// ======================================
-
-/**
- * Runtime validation for floor values
- */
-export const validateFloor = (floor: string): floor is Floor => 
-  FLOORS.includes(floor as Floor);
-
-/**
- * Runtime validation for bed type values based on floor
- */
-export const validateBedType = (floor: Floor, bedType: string): bedType is BedType => {
-  const validTypes = BED_TYPES[floor] as readonly string[];
-  return validTypes.includes(bedType);
-};
-
-/**
- * Get available bed types for a specific floor
- */
-export const getBedTypesForFloor = (floor: Floor): readonly string[] =>
-  BED_TYPES[floor];
-
-/**
- * Validate phone number format (+91 followed by 10 digits)
- */
-export const validatePhoneNumber = (phone: string): boolean => {
-  const phoneRegex = /^\+91[0-9]{10}$/;
-  return phoneRegex.test(phone);
-};
-
-/**
- * Format phone number to standard format
- */
-export const formatPhoneNumber = (phone: string): string => {
-  // Remove all non-digits
-  const digits = phone.replace(/\D/g, '');
-  
-  // If it starts with 91, add +
-  if (digits.startsWith('91') && digits.length === 12) {
-    return `+${digits}`;
-  }
-  
-  // If it's 10 digits, add +91
-  if (digits.length === 10) {
-    return `+91${digits}`;
-  }
-  
-  return phone; // Return as-is if format is unclear
-};
-
-// ======================================
-// FIRESTORE QUERY HELPERS
-// ======================================
-
-/**
- * Get collection path with type safety
- */
-export const getCollectionPath = (collection: keyof typeof COLLECTIONS): string => 
-  COLLECTIONS[collection];
-
-/**
- * Get config document path with type safety
- */
-export const getConfigDocPath = (docId: keyof typeof CONFIG_DOCS): string =>
-  `${COLLECTIONS.CONFIG}/${CONFIG_DOCS[docId]}`;
-
-/**
- * Generate member rent history collection path
- */
-export const getMemberRentHistoryPath = (memberId: string): string =>
-  `${COLLECTIONS.MEMBERS}/${memberId}/rentHistory`;
-
-/**
- * Generate electric bill document path
- */
-export const getElectricBillPath = (billingMonth: string): string =>
-  `${COLLECTIONS.ELECTRIC_BILLS}/${billingMonth}`;
-
-/**
- * Validate and format billing month (YYYY-MM)
- */
-export const validateBillingMonth = (month: string): boolean => {
-  const regex = /^\d{4}-\d{2}$/;
-  if (!regex.test(month)) return false;
-  
-  const [year, monthNum] = month.split('-').map(Number);
-  return year >= 2020 && year <= 2030 && monthNum >= 1 && monthNum <= 12;
-};
-
-/**
- * Generate billing month string from Date
- */
-export const formatBillingMonth = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  return `${year}-${month}`;
-};
-
-/**
- * Parse billing month string to Date (first day of month)
- */
-export const parseBillingMonth = (month: string): Date => {
-  const [year, monthNum] = month.split('-').map(Number);
-  return new Date(year, monthNum - 1, 1);
-};
-
-// ======================================
 // ERROR HANDLING TYPES
 // ======================================
 
@@ -482,7 +375,7 @@ export interface AppError {
  * Firestore-specific error types
  */
 export interface FirestoreError extends AppError {
-  code: 
+  code:
     | 'firestore/permission-denied'
     | 'firestore/not-found'
     | 'firestore/already-exists'
@@ -557,20 +450,15 @@ export type ApplicationError = FirestoreError | AuthError | ValidationError | Bu
 /**
  * Error result wrapper for operations that can fail
  */
-export type Result<T, E = ApplicationError> = 
-  | { success: true; data: T }
-  | { success: false; error: E };
+export type Result<T, E = ApplicationError> = { success: true; data: T } | { success: false; error: E };
 
 /**
  * Helper to create error objects
  */
-export const createError = <T extends ApplicationError>(
-  type: T['code'],
-  message: string,
-  details?: unknown
-): T => ({
-  code: type,
-  message,
-  details,
-  timestamp: new Date(),
-} as T);
+export const createError = <T extends ApplicationError>(type: T['code'], message: string, details?: unknown): T =>
+  ({
+    code: type,
+    message,
+    details,
+    timestamp: new Date(),
+  } as T);

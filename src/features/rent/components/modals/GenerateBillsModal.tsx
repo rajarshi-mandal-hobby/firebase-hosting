@@ -1,8 +1,23 @@
-import { useState } from 'react';
-import { Button, Group, NumberInput, Stack, Text, Alert } from '@mantine/core';
+import { useState, useEffect } from 'react';
+import {
+  Button,
+  Group,
+  NumberInput,
+  Stack,
+  Text,
+  TextInput,
+  Divider,
+  Combobox,
+  useCombobox,
+  Pill,
+  CheckIcon,
+  PillsInput,
+  Input,
+} from '@mantine/core';
 import { MonthPickerInput } from '@mantine/dates';
-import { SharedModal } from '../../../../components/shared/SharedModal';
+import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
+import { mockGlobalSettings, mockMembers } from '../../../../data/mockData';
 
 interface GenerateBillsModalProps {
   opened: boolean;
@@ -16,9 +31,82 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
     secondFloorElectricity: 0,
     thirdFloorElectricity: 0,
     memberCountEditable: false,
-    secondFloorCount: 0,
-    thirdFloorCount: 0,
+    secondFloorCount: mockGlobalSettings.activememberCounts.byFloor['2nd'],
+    thirdFloorCount: mockGlobalSettings.activememberCounts.byFloor['3rd'],
+    // Multi-select expense entry
+    expenseMemberIds: [] as string[],
+    expenseAmount: 0,
+    expenseDescription: '',
+    // Multi-select wifi charge entry
+    wifiMemberIds: [] as string[],
+    wifiAmount: mockGlobalSettings.wifiMonthlyCharge,
   });
+
+  // Get active members for Combobox options
+  const activeMembers = mockMembers
+    .filter((member) => member.isActive)
+    .map((member) => ({
+      value: member.id,
+      label: `${member.name} (${member.floor})`,
+    }));
+
+  const expenseCombobox = useCombobox({
+    onDropdownClose: () => expenseCombobox.resetSelectedOption(),
+    onDropdownOpen: () => expenseCombobox.updateSelectedOptionIndex('active'),
+  });
+
+  const wifiCombobox = useCombobox({
+    onDropdownClose: () => wifiCombobox.resetSelectedOption(),
+    onDropdownOpen: () => wifiCombobox.updateSelectedOptionIndex('active'),
+  });
+
+  // Filter and limit options for MaxDisplayedItems pattern
+  const MAX_DISPLAYED_OPTIONS = 5;
+
+  const expenseOptions = activeMembers.slice(0, MAX_DISPLAYED_OPTIONS);
+  const wifiOptions = activeMembers.slice(0, MAX_DISPLAYED_OPTIONS);
+
+  useEffect(() => {
+    // Initialize member counts from mock data
+    setFormData((prev) => ({
+      ...prev,
+      secondFloorCount: mockGlobalSettings.activememberCounts.byFloor['2nd'],
+      thirdFloorCount: mockGlobalSettings.activememberCounts.byFloor['3rd'],
+    }));
+  }, []);
+
+  // Helper functions for multi-select (following Mantine MaxDisplayedItems pattern)
+  const handleExpenseMemberSelect = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      expenseMemberIds: prev.expenseMemberIds.includes(value)
+        ? prev.expenseMemberIds.filter((id) => id !== value)
+        : [...prev.expenseMemberIds, value],
+    }));
+  };
+
+  const handleWifiMemberSelect = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      wifiMemberIds: prev.wifiMemberIds.includes(value)
+        ? prev.wifiMemberIds.filter((id) => id !== value)
+        : [...prev.wifiMemberIds, value],
+    }));
+  };
+
+  const removeExpenseMember = (memberId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      expenseMemberIds: prev.expenseMemberIds.filter((id) => id !== memberId),
+    }));
+  };
+
+  const removeWifiMember = (memberId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      wifiMemberIds: prev.wifiMemberIds.filter((id) => id !== memberId),
+    }));
+  };
 
   const handleGenerateBills = async () => {
     setLoading(true);
@@ -38,8 +126,13 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
         secondFloorElectricity: 0,
         thirdFloorElectricity: 0,
         memberCountEditable: false,
-        secondFloorCount: 0,
-        thirdFloorCount: 0,
+        secondFloorCount: mockGlobalSettings.activememberCounts.byFloor['2nd'],
+        thirdFloorCount: mockGlobalSettings.activememberCounts.byFloor['3rd'],
+        expenseMemberIds: [],
+        expenseAmount: 0,
+        expenseDescription: '',
+        wifiMemberIds: [],
+        wifiAmount: mockGlobalSettings.wifiMonthlyCharge,
       });
     } catch {
       notifications.show({
@@ -108,31 +201,26 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
           />
         </Group>
 
-        <Alert title='Member Count' color='blue'>
-          <Text size='sm'>
-            Member counts will be automatically calculated based on active members. If you need to override counts,
-            enable the option below.
-          </Text>
-        </Alert>
+        <Divider label='Member Counts' labelPosition='center' />
 
-        {formData.memberCountEditable && (
-          <Group grow>
-            <NumberInput
-              label='2nd Floor Member Count'
-              placeholder='Number of members'
-              value={formData.secondFloorCount}
-              onChange={(value) => setFormData((prev) => ({ ...prev, secondFloorCount: Number(value) || 0 }))}
-              min={0}
-            />
-            <NumberInput
-              label='3rd Floor Member Count'
-              placeholder='Number of members'
-              value={formData.thirdFloorCount}
-              onChange={(value) => setFormData((prev) => ({ ...prev, thirdFloorCount: Number(value) || 0 }))}
-              min={0}
-            />
-          </Group>
-        )}
+        <Group grow>
+          <NumberInput
+            label='2nd Floor Member Count'
+            placeholder='Number of members'
+            value={formData.secondFloorCount}
+            onChange={(value) => setFormData((prev) => ({ ...prev, secondFloorCount: Number(value) || 0 }))}
+            min={0}
+            readOnly={!formData.memberCountEditable}
+          />
+          <NumberInput
+            label='3rd Floor Member Count'
+            placeholder='Number of members'
+            value={formData.thirdFloorCount}
+            onChange={(value) => setFormData((prev) => ({ ...prev, thirdFloorCount: Number(value) || 0 }))}
+            min={0}
+            readOnly={!formData.memberCountEditable}
+          />
+        </Group>
 
         <Button
           variant='light'
@@ -140,6 +228,184 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
           onClick={() => setFormData((prev) => ({ ...prev, memberCountEditable: !prev.memberCountEditable }))}>
           {formData.memberCountEditable ? 'Use Auto Count' : 'Edit Member Count'}
         </Button>
+
+        <Divider label='Additional Charges' labelPosition='center' />
+
+        {/* Single Expense Section - Always Visible */}
+        <Stack gap='sm'>
+          <Text fw={500} size='sm'>
+            Member Expense
+          </Text>
+
+          <Combobox store={expenseCombobox} onOptionSubmit={handleExpenseMemberSelect} withinPortal={false}>
+            <Combobox.DropdownTarget>
+              <PillsInput pointer onClick={() => expenseCombobox.toggleDropdown()}>
+                <Pill.Group>
+                  {formData.expenseMemberIds.length > 0 ? (
+                    <>
+                      {formData.expenseMemberIds
+                        .slice(
+                          0,
+                          MAX_DISPLAYED_OPTIONS === formData.expenseMemberIds.length
+                            ? MAX_DISPLAYED_OPTIONS
+                            : MAX_DISPLAYED_OPTIONS - 1
+                        )
+                        .map((memberId) => {
+                          const member = activeMembers.find((m) => m.value === memberId);
+                          return member ? (
+                            <Pill key={memberId} withRemoveButton onRemove={() => removeExpenseMember(memberId)}>
+                              {member.label}
+                            </Pill>
+                          ) : null;
+                        })}
+                      {formData.expenseMemberIds.length > MAX_DISPLAYED_OPTIONS && (
+                        <Pill>+{formData.expenseMemberIds.length - (MAX_DISPLAYED_OPTIONS - 1)} more</Pill>
+                      )}
+                    </>
+                  ) : (
+                    <Input.Placeholder>Search members for expense</Input.Placeholder>
+                  )}
+
+                  <Combobox.EventsTarget>
+                    <PillsInput.Field
+                      type='hidden'
+                      onBlur={() => expenseCombobox.closeDropdown()}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Backspace') {
+                          event.preventDefault();
+                          removeExpenseMember(formData.expenseMemberIds[formData.expenseMemberIds.length - 1]);
+                        }
+                      }}
+                    />
+                  </Combobox.EventsTarget>
+                </Pill.Group>
+              </PillsInput>
+            </Combobox.DropdownTarget>
+
+            <Combobox.Dropdown>
+              <Combobox.Options>
+                {expenseOptions.map((item) => (
+                  <Combobox.Option
+                    value={item.value}
+                    key={item.value}
+                    active={formData.expenseMemberIds.includes(item.value)}>
+                    <Group gap='sm'>
+                      {formData.expenseMemberIds.includes(item.value) ? <CheckIcon size={12} /> : null}
+                      <span>{item.label}</span>
+                    </Group>
+                  </Combobox.Option>
+                ))}
+                {activeMembers.length > MAX_DISPLAYED_OPTIONS && (
+                  <Text size='xs' c='dimmed' p='xs'>
+                    {activeMembers.length - MAX_DISPLAYED_OPTIONS} more options available...
+                  </Text>
+                )}
+              </Combobox.Options>
+            </Combobox.Dropdown>
+          </Combobox>
+
+          <Group grow>
+            <TextInput
+              label='Description'
+              placeholder='Enter expense description'
+              value={formData.expenseDescription}
+              onChange={(event) =>
+                setFormData((prev) => ({ ...prev, expenseDescription: event.currentTarget?.value ?? '' }))
+              }
+            />
+            <NumberInput
+              label='Amount'
+              placeholder='0'
+              value={formData.expenseAmount}
+              onChange={(value) => setFormData((prev) => ({ ...prev, expenseAmount: Number(value) || 0 }))}
+              prefix='₹'
+              min={0}
+            />
+          </Group>
+        </Stack>
+
+        {/* Single WiFi Charge Section - Always Visible */}
+        <Stack gap='sm'>
+          <Text fw={500} size='sm'>
+            WiFi Charge
+          </Text>
+
+          <Combobox store={wifiCombobox} onOptionSubmit={handleWifiMemberSelect} withinPortal={false}>
+            <Combobox.DropdownTarget>
+              <PillsInput pointer onClick={() => wifiCombobox.toggleDropdown()}>
+                <Pill.Group>
+                  {formData.wifiMemberIds.length > 0 ? (
+                    <>
+                      {formData.wifiMemberIds
+                        .slice(
+                          0,
+                          MAX_DISPLAYED_OPTIONS === formData.wifiMemberIds.length
+                            ? MAX_DISPLAYED_OPTIONS
+                            : MAX_DISPLAYED_OPTIONS - 1
+                        )
+                        .map((memberId) => {
+                          const member = activeMembers.find((m) => m.value === memberId);
+                          return member ? (
+                            <Pill key={memberId} withRemoveButton onRemove={() => removeWifiMember(memberId)}>
+                              {member.label}
+                            </Pill>
+                          ) : null;
+                        })}
+                      {formData.wifiMemberIds.length > MAX_DISPLAYED_OPTIONS && (
+                        <Pill>+{formData.wifiMemberIds.length - (MAX_DISPLAYED_OPTIONS - 1)} more</Pill>
+                      )}
+                    </>
+                  ) : (
+                    <Input.Placeholder>Search members for wifi charge</Input.Placeholder>
+                  )}
+
+                  <Combobox.EventsTarget>
+                    <PillsInput.Field
+                      type='hidden'
+                      onBlur={() => wifiCombobox.closeDropdown()}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Backspace') {
+                          event.preventDefault();
+                          removeWifiMember(formData.wifiMemberIds[formData.wifiMemberIds.length - 1]);
+                        }
+                      }}
+                    />
+                  </Combobox.EventsTarget>
+                </Pill.Group>
+              </PillsInput>
+            </Combobox.DropdownTarget>
+
+            <Combobox.Dropdown>
+              <Combobox.Options>
+                {wifiOptions.map((item) => (
+                  <Combobox.Option
+                    value={item.value}
+                    key={item.value}
+                    active={formData.wifiMemberIds.includes(item.value)}>
+                    <Group gap='sm'>
+                      {formData.wifiMemberIds.includes(item.value) ? <CheckIcon size={12} /> : null}
+                      <span>{item.label}</span>
+                    </Group>
+                  </Combobox.Option>
+                ))}
+                {activeMembers.length > MAX_DISPLAYED_OPTIONS && (
+                  <Text size='xs' c='dimmed' p='xs'>
+                    {activeMembers.length - MAX_DISPLAYED_OPTIONS} more options available...
+                  </Text>
+                )}
+              </Combobox.Options>
+            </Combobox.Dropdown>
+          </Combobox>
+
+          <NumberInput
+            label='Amount'
+            placeholder='30'
+            value={formData.wifiAmount}
+            onChange={(value) => setFormData((prev) => ({ ...prev, wifiAmount: Number(value) || 0 }))}
+            prefix='₹'
+            min={0}
+          />
+        </Stack>
       </Stack>
     </SharedModal>
   );

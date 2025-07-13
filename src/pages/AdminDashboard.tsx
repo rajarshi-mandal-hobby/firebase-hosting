@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { RentManagement } from '../features/rent/components/RentManagement';
 import { MembersManagement } from '../features/members/components/MembersManagement';
 import { ConfigManagement } from '../features/config/components/ConfigManagement';
-import { AppContainer, SharedAvatar } from '../components/shared';
+import { AppContainer, SharedAvatar } from '../shared/components';
 import { mockAdminUser } from '../data/mockData';
-import { IconLogout } from '../components/shared/icons';
+import { IconLogout } from '../shared/components/icons';
 import { useRentManagementData } from '../features/rent/hooks/useRentManagementData';
 import { useMemberManagementData } from '../features/members/hooks/useMemberManagementData';
 
@@ -50,7 +50,6 @@ export function AdminDashboard() {
         </Group>
 
         <SegmentedControl
-          style={{ fontSize: '14px', fontWeight: 500 }}
           mb='md'
           value={activeTab}
           onChange={setActiveTab}

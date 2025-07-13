@@ -1,5 +1,5 @@
-import type { Member, RentHistory, MockMemberData, PaymentStatus } from '../shared/types/firestore-types';
-import { mockMembers } from '../data/mockData';
+import type { Member, RentHistory, MockMemberData, PaymentStatus } from '../types/firestore-types';
+import { mockMembers } from '../../data/mockData';
 
 /**
  * Utility functions for member data processing

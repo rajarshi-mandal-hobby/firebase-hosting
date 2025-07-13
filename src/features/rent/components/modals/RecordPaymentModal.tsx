@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NumberInput, Stack, Text, TextInput, Switch, Alert } from '@mantine/core';
-import { SharedModal } from '../../../../components/shared/SharedModal';
+import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
 
 interface RecordPaymentModalProps {

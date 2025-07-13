@@ -1,7 +1,6 @@
 import { Accordion, Button, Group, Stack, Text, Title } from '@mantine/core';
 import { useState } from 'react';
-import { CurrencyFormatter, SharedAvatar, StatusBadge, RentDetailsList } from '../../../components/shared';
-import type { PaymentStatus } from '../../../components/shared';
+import { CurrencyFormatter, SharedAvatar, StatusBadge, RentDetailsList } from '../../../shared/components';
 import type { UseRentManagementData } from '../hooks/useRentManagementData';
 import { GenerateBillsModal, RecordPaymentModal, AddExpenseModal } from './modals';
 
@@ -56,12 +55,12 @@ export function RentManagement({ rentData }: RentManagementProps) {
                 <Group justify='space-between' wrap='nowrap'>
                   <Group justify='flex-start' wrap='nowrap'>
                     <SharedAvatar name={member.name} size='md' />
-                    <Title order={5} fw={600} lineClamp={1}>
+                    <Title order={5} lineClamp={1}>
                       {member.name}
                     </Title>
                   </Group>
                   <Group justify='flex-start' wrap='nowrap' pr='md' gap='xs'>
-                    {latestHistory && <StatusBadge status={latestHistory.status as PaymentStatus} size={16} />}
+                    {latestHistory && <StatusBadge status={latestHistory.status} size={16} />}
                     <CurrencyFormatter value={member.outstandingBalance} />
                   </Group>
                 </Group>
@@ -73,24 +72,22 @@ export function RentManagement({ rentData }: RentManagementProps) {
                   <Text c='dimmed'>No billing history available</Text>
                 )}
                 <Group mt='md'>
-                  <Button 
-                    variant='default' 
+                  <Button
+                    variant='default'
                     size='xs'
                     onClick={() => {
                       setSelectedMember({ name: member.name, outstandingBalance: member.outstandingBalance });
                       setRecordPaymentModal(true);
-                    }}
-                  >
+                    }}>
                     Record Payment
                   </Button>
-                  <Button 
-                    variant='default' 
+                  <Button
+                    variant='default'
                     size='xs'
                     onClick={() => {
                       setSelectedMember({ name: member.name, outstandingBalance: member.outstandingBalance });
                       setAddExpenseModal(true);
-                    }}
-                  >
+                    }}>
                     Add Expense
                   </Button>
                 </Group>
@@ -101,11 +98,8 @@ export function RentManagement({ rentData }: RentManagementProps) {
       </Accordion>
 
       {/* Modals */}
-      <GenerateBillsModal 
-        opened={generateBillsModal} 
-        onClose={() => setGenerateBillsModal(false)} 
-      />
-      
+      <GenerateBillsModal opened={generateBillsModal} onClose={() => setGenerateBillsModal(false)} />
+
       <RecordPaymentModal
         opened={recordPaymentModal}
         onClose={() => {
@@ -115,7 +109,7 @@ export function RentManagement({ rentData }: RentManagementProps) {
         memberName={selectedMember?.name}
         outstandingAmount={selectedMember?.outstandingBalance}
       />
-      
+
       <AddExpenseModal
         opened={addExpenseModal}
         onClose={() => {

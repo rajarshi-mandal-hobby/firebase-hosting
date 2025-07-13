@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAllMembers, getMemberCounts } from '../../../utils/memberUtils';
-import type { Member } from '../../../firestore-types';
+import type { Member } from '../../../shared/types/firestore-types';
 
 export interface MemberCounts {
   total: number;

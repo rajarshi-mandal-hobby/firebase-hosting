@@ -1,8 +1,7 @@
 import { Avatar } from '@mantine/core';
 import type { AvatarProps } from '@mantine/core';
-import { memo } from 'react';
 
-export const SharedAvatar = memo(({ ...props }: AvatarProps) => {
+export const SharedAvatar = ({ ...props }: AvatarProps) => {
   return (
     <Avatar
       key={props.name}
@@ -11,10 +10,8 @@ export const SharedAvatar = memo(({ ...props }: AvatarProps) => {
       src={props.src || null}
       size={props.size || 'md'} // Default to 'md' if size not provided
       radius={props.radius || 'xl'} // Default to 'xl' radius
-      color={'initials'} // Use gray if no image
+      color={'initials'}
       {...props}
     />
   );
-});
-
-SharedAvatar.displayName = 'SharedAvatar';
+};

@@ -1,5 +1,5 @@
 import { List } from '@mantine/core';
-import type { PaymentStatus, RentHistory } from '../../firestore-types';
+import type { RentHistory, PaymentStatus } from '../types/firestore-types';
 import { CurrencyFormatter } from './CurrencyFormatter';
 import {
   IconRupee,
@@ -12,7 +12,7 @@ import {
   IconNotes,
   MyThemeIcon,
 } from './icons';
-import { getStatusColor, getStatusIcon } from './StatusHelper';
+import { getStatusColor, getStatusIcon } from '../utils';
 
 interface RentDetailsListProps {
   data: RentHistory;
