@@ -8,6 +8,7 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { MemberDashboard } from './pages/MemberDashboard';
 import { SignIn } from './pages/SignIn';
+import { DataProvider } from './contexts/DataProvider';
 
 const router = createBrowserRouter([
     {
@@ -31,8 +32,10 @@ const router = createBrowserRouter([
 export default function App() {
     return (
         <MantineProvider theme={theme}>
-            <Notifications position="bottom-center" />
-            <RouterProvider router={router} />
+            <DataProvider>
+                <Notifications position="bottom-center" />
+                <RouterProvider router={router} />
+            </DataProvider>
         </MantineProvider>
     );
 }

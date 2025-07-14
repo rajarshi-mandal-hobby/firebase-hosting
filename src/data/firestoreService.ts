@@ -4,9 +4,20 @@
  * This file serves as the main entry point for all data operations.
  * It aggregates all individual service modules and provides a unified API.
  * 
- * In production, most operations will call Firebase Functions or direct Firestore operations.
- * This mock implementation simulates those operations with setTimeout for realistic async behavior.
+ * Updated to use real Firestore onSnapshot listeners for real-time data.
  */
+
+// Import Firebase Firestore functions
+import { 
+  doc, 
+  collection, 
+  onSnapshot, 
+  query, 
+  where, 
+  orderBy, 
+  limit
+} from 'firebase/firestore';
+import { db } from '../../firebase';
 
 // Import all service modules
 import { ConfigService } from './services/configService';
@@ -16,8 +27,10 @@ import { BillingService } from './services/billingService';
 // Import types
 import type { 
   GlobalSettings, 
+  AdminConfig,
   Admin, 
   Member,
+  RentHistory
 } from '../shared/types/firestore-types';
 
 // Export the service error class
@@ -81,62 +94,148 @@ export class AuthService {
 
 /**
  * Simple Realtime Service (placeholder)
- * Future: Will use Firestore onSnapshot listeners
+/**
+ * Real-time Service using Firestore onSnapshot
  */
 export class RealtimeService {
   /**
-   * Subscribe to global settings changes
+   * Subscribe to global settings changes using onSnapshot
    */
   static subscribeToGlobalSettings(callback: (settings: GlobalSettings) => void): () => void {
-    // Mock implementation - call immediately and then periodically
-    let isActive = true;
+    const globalSettingsRef = doc(db, 'config', 'globalSettings');
     
-    const updateCallback = async () => {
-      if (!isActive) return;
-      try {
-        const settings = await ConfigService.getGlobalSettings();
-        callback(settings);
-      } catch (error) {
-        console.error('Error fetching global settings:', error);
+    const unsubscribe = onSnapshot(
+      globalSettingsRef,
+      (doc) => {
+        if (doc.exists()) {
+          const data = doc.data() as GlobalSettings;
+          callback(data);
+        } else {
+          console.warn('Global settings document does not exist');
+        }
+      },
+      (error) => {
+        console.error('Error listening to global settings:', error);
       }
-    };
+    );
 
-    // Initial call
-    updateCallback();
-
-    // Periodic updates every 30 seconds
-    const interval = setInterval(updateCallback, 30000);
-
-    // Return unsubscribe function
-    return () => {
-      isActive = false;
-      clearInterval(interval);
-    };
+    return unsubscribe;
   }
 
   /**
-   * Subscribe to active members changes
+   * Subscribe to admin config changes using onSnapshot
+   */
+  static subscribeToAdminConfig(callback: (adminConfig: AdminConfig) => void): () => void {
+    const adminConfigRef = doc(db, 'config', 'adminConfig');
+    
+    const unsubscribe = onSnapshot(
+      adminConfigRef,
+      (doc) => {
+        if (doc.exists()) {
+          const data = doc.data() as AdminConfig;
+          callback(data);
+        } else {
+          console.warn('Admin config document does not exist');
+        }
+      },
+      (error) => {
+        console.error('Error listening to admin config:', error);
+      }
+    );
+
+    return unsubscribe;
+  }
+
+  /**
+   * Subscribe to active members changes using onSnapshot
    */
   static subscribeToActiveMembers(callback: (members: Member[]) => void): () => void {
-    let isActive = true;
+    const membersQuery = query(
+      collection(db, 'members'),
+      where('isActive', '==', true),
+      orderBy('name')
+    );
     
-    const updateCallback = async () => {
-      if (!isActive) return;
-      try {
-        const members = await MembersService.getMembers({ isActive: true });
+    const unsubscribe = onSnapshot(
+      membersQuery,
+      (snapshot) => {
+        const members: Member[] = [];
+        snapshot.forEach((doc) => {
+          members.push({ 
+            id: doc.id, 
+            ...doc.data() 
+          } as Member);
+        });
         callback(members);
-      } catch (error) {
-        console.error('Error fetching active members:', error);
+      },
+      (error) => {
+        console.error('Error listening to active members:', error);
       }
-    };
+    );
 
-    updateCallback();
-    const interval = setInterval(updateCallback, 15000);
+    return unsubscribe;
+  }
 
-    return () => {
-      isActive = false;
-      clearInterval(interval);
-    };
+  /**
+   * Subscribe to all members changes using onSnapshot
+   */
+  static subscribeToAllMembers(callback: (members: Member[]) => void): () => void {
+    const membersQuery = query(
+      collection(db, 'members'),
+      orderBy('name')
+    );
+    
+    const unsubscribe = onSnapshot(
+      membersQuery,
+      (snapshot) => {
+        const members: Member[] = [];
+        snapshot.forEach((doc) => {
+          members.push({ 
+            id: doc.id, 
+            ...doc.data() 
+          } as Member);
+        });
+        callback(members);
+      },
+      (error) => {
+        console.error('Error listening to all members:', error);
+      }
+    );
+
+    return unsubscribe;
+  }
+
+  /**
+   * Subscribe to a single member's rent history using onSnapshot
+   */
+  static subscribeToMemberRentHistory(
+    memberId: string, 
+    callback: (rentHistory: RentHistory[]) => void
+  ): () => void {
+    const rentHistoryQuery = query(
+      collection(db, 'members', memberId, 'rentHistory'),
+      orderBy('generatedAt', 'desc'),
+      limit(12) // Last 12 months
+    );
+    
+    const unsubscribe = onSnapshot(
+      rentHistoryQuery,
+      (snapshot) => {
+        const rentHistory: RentHistory[] = [];
+        snapshot.forEach((doc) => {
+          rentHistory.push({ 
+            id: doc.id, 
+            ...doc.data() 
+          } as RentHistory);
+        });
+        callback(rentHistory);
+      },
+      (error) => {
+        console.error('Error listening to member rent history:', error);
+      }
+    );
+
+    return unsubscribe;
   }
 }
 
@@ -193,6 +292,7 @@ export const FirestoreService = {
   Members: {
     getMembers: MembersService.getMembers.bind(MembersService),
     getMember: MembersService.getMember.bind(MembersService),
+    getMemberRentHistory: MembersService.getMemberRentHistory.bind(MembersService),
     searchMembers: MembersService.searchMembers.bind(MembersService),
     addMember: MembersService.addMember.bind(MembersService),
     updateMember: MembersService.updateMember.bind(MembersService),
@@ -203,11 +303,13 @@ export const FirestoreService = {
 
   // Billing operations
   Billing: {
+    generateBulkBills: BillingService.generateBulkBills.bind(BillingService),
+    recordPayment: BillingService.recordPayment.bind(BillingService),
+    getCurrentElectricBill: BillingService.getCurrentElectricBill.bind(BillingService),
+    getBillingSummary: BillingService.getBillingSummary.bind(BillingService),
     generateMonthlyBills: BillingService.generateMonthlyBills.bind(BillingService),
     getElectricBillHistory: BillingService.getElectricBillHistory.bind(BillingService),
     getElectricBill: BillingService.getElectricBill.bind(BillingService),
-    updateElectricBill: BillingService.updateElectricBill.bind(BillingService),
-    deleteBillingMonth: BillingService.deleteBillingMonth.bind(BillingService),
   },
 
   // Authentication operations
@@ -219,7 +321,10 @@ export const FirestoreService = {
   // Real-time subscriptions
   Realtime: {
     subscribeToGlobalSettings: RealtimeService.subscribeToGlobalSettings.bind(RealtimeService),
+    subscribeToAdminConfig: RealtimeService.subscribeToAdminConfig.bind(RealtimeService),
     subscribeToActiveMembers: RealtimeService.subscribeToActiveMembers.bind(RealtimeService),
+    subscribeToAllMembers: RealtimeService.subscribeToAllMembers.bind(RealtimeService),
+    subscribeToMemberRentHistory: RealtimeService.subscribeToMemberRentHistory.bind(RealtimeService),
   },
 
   // Utility functions

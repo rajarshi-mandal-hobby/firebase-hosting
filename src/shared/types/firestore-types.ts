@@ -77,7 +77,7 @@ export interface GlobalSettings {
   };
   securityDeposit: number;
   wifiMonthlyCharge: number;
-  upiPhoneNumber: string;
+  upiVpa: string;
   activememberCounts: {
     total: number;
     byFloor: {
@@ -245,7 +245,7 @@ export interface UPIPaymentData {
   memberName: string;
   amount: number;
   billingMonth: string; // YYYY-MM format
-  upiPhoneNumber: string;
+  upiVpa: string;
 }
 
 // ======================================
@@ -295,7 +295,7 @@ export interface CloudFunctionResponse<T = unknown> {
 export interface MemberDashboardData {
   member: Omit<Member, 'securityDeposit' | 'totalAgreedDeposit' | 'rentAtJoining' | 'advanceDeposit'>;
   currentMonthRent?: RentHistory;
-  upiPhoneNumber: string;
+  upiVpa: string;
 }
 
 /**

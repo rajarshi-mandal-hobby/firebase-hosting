@@ -1,16 +1,25 @@
 import { SegmentedControl, Group, Text, Stack, ActionIcon, Title } from '@mantine/core';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RentManagement } from '../features/rent/components/RentManagement';
 import { MembersManagement } from '../features/members/components/MembersManagement';
 import { ConfigManagement } from '../features/config/components/ConfigManagement';
 import { AppContainer, SharedAvatar } from '../shared/components';
-import { mockAdminUser } from '../data/mockData';
+import { useData } from '../contexts/DataProvider';
 import { IconLogout } from '../shared/components/icons';
 import { useRentManagementData } from '../features/rent/hooks/useRentManagementData';
 import { useMemberManagementData } from '../features/members/hooks/useMemberManagementData';
+import type { AdminConfig } from '../shared/types/firestore-types';
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('rent');
+  const { getAdminConfig } = useData();
+  
+  // Get admin config for displaying admin info
+  const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
+  
+  useEffect(() => {
+    getAdminConfig().then(setAdminConfig).catch(console.error);
+  }, [getAdminConfig]);
 
   // Lift data to dashboard level so it persists across tab switches
   const rentData = useRentManagementData();
@@ -35,11 +44,15 @@ export function AdminDashboard() {
         {/* Header with Admin Info and Sign Out */}
         <Group justify='space-between'>
           <Group>
-            <SharedAvatar name={mockAdminUser.displayName} src={mockAdminUser.photoURL} size='md' />
+            <SharedAvatar 
+              name={adminConfig?.list[0]?.email.split('@')[0] || 'Admin'} 
+              src={undefined} 
+              size='md' 
+            />
             <Stack gap={0}>
-              <Title size='md'>{mockAdminUser.displayName || 'Admin'}</Title>
+              <Title size='md'>{adminConfig?.list[0]?.email.split('@')[0] || 'Admin'}</Title>
               <Text size='xs' c='dimmed'>
-                {mockAdminUser.email}
+                {adminConfig?.list[0]?.email || 'Loading...'}
               </Text>
             </Stack>
           </Group>

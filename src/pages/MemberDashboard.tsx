@@ -14,24 +14,14 @@ import {
   Space,
   Loader,
 } from '@mantine/core';
-import { lazy, useState, useCallback, useMemo, Suspense } from 'react';
-import { mockCurrentUser } from '../data/mockData';
+import { lazy, useState, useCallback, useMemo, Suspense, useEffect } from 'react';
+import { mockCurrentUser } from '../data/mock/mockData';
 import { useMemberDashboardData } from '../hooks';
-import {
-  SharedAvatar,
-  IconPhone,
-  IconBed,
-  AppContainer,
-  IconLogout,
-  MemberDetailsList,
-  RentDetailsList,
-  IconUpi,
-  IconQrCode,
-  CurrencyFormatter,
-  StatusBadge,
-} from '../shared/components';
+import { SharedAvatar, IconPhone, IconBed, AppContainer, IconLogout, MemberDetailsList, RentDetailsList, IconUpi, IconQrCode, CurrencyFormatter, StatusBadge } from '../shared/components';
 import type { Member, UPIPaymentParams, RentHistory } from '../shared/types/firestore-types';
 import { getStatusAlertConfig } from '../shared/utils';
+import { useData } from '../contexts/DataProvider';
+
 
 // Lazy load the Friends section for better performance
 const FriendsSection = lazy(() =>
@@ -75,6 +65,15 @@ const FriendsSection = lazy(() =>
 export function MemberDashboard() {
   const [activeTab, setActiveTab] = useState('me');
   const [showHistory, setShowHistory] = useState(false);
+  const { getGlobalSettings } = useData();
+  const [globalSettings, setGlobalSettings] = useState<{ upiVpa: string } | null>(null);
+
+  // Load global settings for UPI
+  useEffect(() => {
+    getGlobalSettings().then(settings => {
+      setGlobalSettings(settings);
+    }).catch(console.error);
+  }, [getGlobalSettings]);
 
   // Use the cached hook for data management
   const { currentMember, currentMonthHistory, otherMembers, historyData, loading, error, actions } =
@@ -82,7 +81,7 @@ export function MemberDashboard() {
 
   const upiUri = (amount: number, name: string): string => {
     const upiParams: UPIPaymentParams = {
-      pa: '+918777529394@paytm', // UPI ID (e.g., "+918777529394@paytm")
+      pa: `${globalSettings?.upiVpa || '+918777529394'}@paytm`, // UPI ID from global settings
       pn: 'Rajarshi', // Payee name (e.g., "Rent Payment")
       am: amount, // Amount
       cu: 'INR', // Currency (e.g., "INR")
@@ -97,11 +96,9 @@ export function MemberDashboard() {
   const handleTabChange = useCallback(
     (value: string) => {
       setActiveTab(value);
-      if (value === 'friends') {
-        actions.loadFriends();
-      }
+      // Friends are auto-loaded in the new implementation
     },
-    [actions]
+    [setActiveTab]
   );
 
   // Handle history loading

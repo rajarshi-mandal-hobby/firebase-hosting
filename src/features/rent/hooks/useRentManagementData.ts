@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  getActiveMembersWithLatestBills,
-  calculateTotalOutstanding
-} from '../../../utils/memberUtils';
+import { useData } from '../../../contexts/DataProvider';
+import { calculateTotalOutstanding } from '../../../shared/utils/memberUtils';
 import type { Member, RentHistory } from '../../../shared/types/firestore-types';
 
 export interface MemberWithBill {
@@ -26,19 +24,19 @@ export interface UseRentManagementData {
 }
 
 /**
- * Custom hook for rent management data with proper caching
- * Now used at AdminDashboard level to persist across tab switches
+ * Custom hook for rent management data using DataProvider with real-time updates
  */
 export const useRentManagementData = (): UseRentManagementData => {
+  const { 
+    getMembers, 
+    getMemberRentHistory, 
+    isLoading 
+  } = useData();
+
   // State
   const [membersWithBills, setMembersWithBills] = useState<MemberWithBill[]>([]);
   const [totalOutstanding, setTotalOutstanding] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-
-  // Loading states
-  const [rentLoading, setRentLoading] = useState(false);
-
-  // Cache flags
   const [rentLoaded, setRentLoaded] = useState(false);
 
   // Load rent data
@@ -46,29 +44,47 @@ export const useRentManagementData = (): UseRentManagementData => {
     if (rentLoaded) return;
 
     try {
-      setRentLoading(true);
       setError(null);
       
-      // Simulate async operation
-      await new Promise(resolve => setTimeout(resolve, 400));
+      // Get active members from DataProvider (with caching)
+      const members = await getMembers({ isActive: true });
       
-      const rentData = getActiveMembersWithLatestBills();
-      const totalOutstanding = calculateTotalOutstanding();
+      // Get rent history for each member
+      const membersWithBillsData: MemberWithBill[] = [];
       
-      setMembersWithBills(rentData);
+      for (const member of members) {
+        try {
+          const rentHistory = await getMemberRentHistory(member.id);
+          const latestHistory = rentHistory[0] || null; // Most recent history
+          
+          membersWithBillsData.push({
+            member,
+            latestHistory
+          });
+        } catch (err) {
+          console.warn(`Failed to load rent history for member ${member.id}:`, err);
+          membersWithBillsData.push({
+            member,
+            latestHistory: null
+          });
+        }
+      }
+      
+      // Calculate total outstanding
+      const totalOutstanding = calculateTotalOutstanding(members);
+      
+      setMembersWithBills(membersWithBillsData);
       setTotalOutstanding(totalOutstanding);
       setRentLoaded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load rent data');
-    } finally {
-      setRentLoading(false);
     }
-  }, [rentLoaded]);
+  }, [rentLoaded, getMembers, getMemberRentHistory]);
 
   // Auto-load rent data on mount
   useEffect(() => {
     loadRentData();
-  }, [loadRentData, rentLoaded]);
+  }, [loadRentData]);
 
   // Actions
   const actions = {
@@ -84,7 +100,7 @@ export const useRentManagementData = (): UseRentManagementData => {
     membersWithBills,
     totalOutstanding,
     loading: {
-      rent: rentLoading,
+      rent: isLoading('members_{"isActive":true}'),
     },
     error,
     actions,

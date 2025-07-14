@@ -11,10 +11,30 @@ import {
   ActionIcon,
   Accordion,
 } from '@mantine/core';
+import { useState, useEffect } from 'react';
+import { useData } from '../../../contexts/DataProvider';
+import type { GlobalSettings, AdminConfig } from '../../../shared/types/firestore-types';
 // import { IconTrash } from '@tabler/icons-react';
-import { mockGlobalSettings, mockAdminUser } from '../../../data/mockData';
 
 export function ConfigManagement() {
+  const { getGlobalSettings, getAdminConfig } = useData();
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
+  
+  useEffect(() => {
+    // Load data
+    Promise.all([
+      getGlobalSettings(),
+      getAdminConfig()
+    ]).then(([settings, admin]) => {
+      setGlobalSettings(settings);
+      setAdminConfig(admin);
+    }).catch(console.error);
+  }, [getGlobalSettings, getAdminConfig]);
+
+  if (!globalSettings || !adminConfig) {
+    return <Text>Loading configuration...</Text>;
+  }
   return (
     <Stack gap='lg'>
       {/* Admin Management - Collapsible and at the top */}
@@ -36,10 +56,10 @@ export function ConfigManagement() {
                   <Group justify='space-between' p='sm' bg='gray.0' style={{ borderRadius: '8px' }}>
                     <div>
                       <Text size='sm' fw={500}>
-                        {mockAdminUser.displayName}
+                        {adminConfig.list[0]?.email.split('@')[0] || 'Admin'}
                       </Text>
                       <Text size='xs' c='dimmed'>
-                        {mockAdminUser.email}
+                        {adminConfig.list[0]?.email || 'No email'}
                       </Text>
                       <Text size='xs' c='blue'>
                         Primary Admin (You)
@@ -95,19 +115,19 @@ export function ConfigManagement() {
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing='md'>
           <NumberInput
             label='Bed Rent'
-            defaultValue={mockGlobalSettings.bedTypes['2nd'].Bed}
+            defaultValue={globalSettings.bedTypes['2nd'].Bed}
             leftSection='₹'
             size='sm'
           />
           <NumberInput
             label='Room Rent'
-            defaultValue={mockGlobalSettings.bedTypes['2nd'].Room}
+            defaultValue={globalSettings.bedTypes['2nd'].Room}
             leftSection='₹'
             size='sm'
           />
           <NumberInput
             label='Special Rent'
-            defaultValue={mockGlobalSettings.bedTypes['2nd'].Special}
+            defaultValue={globalSettings.bedTypes['2nd'].Special}
             leftSection='₹'
             size='sm'
           />
@@ -121,13 +141,13 @@ export function ConfigManagement() {
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing='md'>
           <NumberInput
             label='Bed Rent'
-            defaultValue={mockGlobalSettings.bedTypes['3rd'].Bed}
+            defaultValue={globalSettings.bedTypes['3rd'].Bed}
             leftSection='₹'
             size='sm'
           />
           <NumberInput
             label='Room Rent'
-            defaultValue={mockGlobalSettings.bedTypes['3rd'].Room}
+            defaultValue={globalSettings.bedTypes['3rd'].Room}
             leftSection='₹'
             size='sm'
           />
@@ -143,17 +163,17 @@ export function ConfigManagement() {
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing='md'>
           <NumberInput
             label='Security Deposit'
-            defaultValue={mockGlobalSettings.securityDeposit}
+            defaultValue={globalSettings.securityDeposit}
             leftSection='₹'
             size='sm'
           />
           <NumberInput
             label='WiFi Monthly Charge'
-            defaultValue={mockGlobalSettings.wifiMonthlyCharge}
+            defaultValue={globalSettings.wifiMonthlyCharge}
             leftSection='₹'
             size='sm'
           />
-          <TextInput label='UPI Phone Number' defaultValue={mockGlobalSettings.upiPhoneNumber} size='sm' />
+          <TextInput label='UPI Phone Number' defaultValue={globalSettings.upiVpa} size='sm' />
         </SimpleGrid>
         <Group justify='flex-end' mt='md'>
           <Button variant='default' size='sm'>

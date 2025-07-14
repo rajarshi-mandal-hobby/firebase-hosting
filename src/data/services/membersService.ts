@@ -1,15 +1,26 @@
 /**
  * Members Service
  * 
- * Handles member data and operations.
- * In production, this will call Firebase Functions.
+ * Handles member data and operations using real Firestore.
  */
 
-import type { Member, Floor } from '../../shared/types/firestore-types';
-import { dataStore, createMockTimestamp } from '../mock/mockData';
 import { 
-  simulateNetworkDelay, 
-  simulateRandomError, 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy, 
+  limit, 
+  Timestamp 
+} from 'firebase/firestore';
+import { db } from '../../../firebase';
+import type { Member, Floor, RentHistory } from '../../shared/types/firestore-types';
+import { 
   ServiceError,
   validatePhoneNumber,
   validateAmount,
@@ -18,285 +29,329 @@ import {
 
 export class MembersService {
   /**
-   * Fetch all members with optional filtering
-   * Future: Will call Firebase Function or direct Firestore query
+   * Fetch all members with optional filtering using Firestore
    */
   static async getMembers(filters?: {
     isActive?: boolean;
     floor?: Floor;
     optedForWifi?: boolean;
   }): Promise<Member[]> {
-    await simulateNetworkDelay();
-    simulateRandomError();
-
-    let filteredMembers = [...dataStore.members];
-
-    if (filters?.isActive !== undefined) {
-      filteredMembers = filteredMembers.filter(m => m.isActive === filters.isActive);
+    try {
+      const membersQuery = collection(db, 'members');
+      
+      // Apply filters
+      const constraints = [];
+      if (filters?.isActive !== undefined) {
+        constraints.push(where('isActive', '==', filters.isActive));
+      }
+      if (filters?.floor) {
+        constraints.push(where('floor', '==', filters.floor));
+      }
+      if (filters?.optedForWifi !== undefined) {
+        constraints.push(where('optedForWifi', '==', filters.optedForWifi));
+      }
+      
+      // Create filtered query
+      const q = constraints.length > 0 
+        ? query(membersQuery, ...constraints, orderBy('name'))
+        : query(membersQuery, orderBy('name'));
+      
+      const snapshot = await getDocs(q);
+      const members: Member[] = [];
+      
+      snapshot.forEach((doc) => {
+        members.push({ 
+          id: doc.id, 
+          ...doc.data() 
+        } as Member);
+      });
+      
+      return members;
+    } catch (error) {
+      console.error('Error fetching members:', error);
+      throw new ServiceError('firestore/read-error', 'Failed to fetch members');
     }
-
-    if (filters?.floor) {
-      filteredMembers = filteredMembers.filter(m => m.floor === filters.floor);
-    }
-
-    if (filters?.optedForWifi !== undefined) {
-      filteredMembers = filteredMembers.filter(m => m.optedForWifi === filters.optedForWifi);
-    }
-
-    return filteredMembers;
   }
 
   /**
-   * Fetch a single member by ID
-   * Future: Will call Firebase Function or direct Firestore read
+   * Get a single member by ID from Firestore
    */
   static async getMember(memberId: string): Promise<Member | null> {
-    await simulateNetworkDelay();
-    simulateRandomError();
+    try {
+      const memberRef = doc(db, 'members', memberId);
+      const memberDoc = await getDoc(memberRef);
+      
+      if (!memberDoc.exists()) {
+        return null;
+      }
+      
+      return { 
+        id: memberDoc.id, 
+        ...memberDoc.data() 
+      } as Member;
+    } catch (error) {
+      console.error('Error fetching member:', error);
+      throw new ServiceError('firestore/read-error', 'Failed to fetch member');
+    }
+  }
 
-    const member = dataStore.members.find(m => m.id === memberId);
-    return member ? { ...member } : null;
+  /**
+   * Get member rent history from subcollection
+   */
+  static async getMemberRentHistory(memberId: string, limitCount = 12): Promise<RentHistory[]> {
+    try {
+      const rentHistoryQuery = query(
+        collection(db, 'members', memberId, 'rentHistory'),
+        orderBy('generatedAt', 'desc'),
+        limit(limitCount)
+      );
+      
+      const snapshot = await getDocs(rentHistoryQuery);
+      const rentHistory: RentHistory[] = [];
+      
+      snapshot.forEach((doc) => {
+        rentHistory.push({ 
+          id: doc.id, 
+          ...doc.data() 
+        } as RentHistory);
+      });
+      
+      return rentHistory;
+    } catch (error) {
+      console.error('Error fetching member rent history:', error);
+      throw new ServiceError('firestore/read-error', 'Failed to fetch member rent history');
+    }
   }
 
   /**
    * Search members by name or phone
-   * Future: Will use Firestore text search or Algolia
    */
-  static async searchMembers(query: string, activeOnly = true): Promise<Member[]> {
-    await simulateNetworkDelay(100, 300); // Faster for search
-    simulateRandomError(0.02); // Lower error rate for search
-
-    const searchTerm = query.toLowerCase().trim();
-    if (!searchTerm) return [];
-
-    let searchPool = dataStore.members;
-    if (activeOnly) {
-      searchPool = searchPool.filter(m => m.isActive);
+  static async searchMembers(searchTerm: string, activeOnly = true): Promise<Member[]> {
+    try {
+      // Get all members first (Firestore doesn't support full-text search)
+      const members = await this.getMembers({ isActive: activeOnly ? true : undefined });
+      
+      // Filter by search term
+      const searchLower = searchTerm.toLowerCase();
+      return members.filter(member =>
+        member.name.toLowerCase().includes(searchLower) ||
+        member.phone.includes(searchTerm)
+      );
+    } catch (error) {
+      console.error('Error searching members:', error);
+      throw new ServiceError('firestore/read-error', 'Failed to search members');
     }
-
-    return searchPool.filter(member =>
-      member.name.toLowerCase().includes(searchTerm) ||
-      member.phone.includes(searchTerm)
-    );
   }
 
   /**
-   * Add a new member
-   * Future: Will call Firebase Function for complex validation and creation
+   * Add a new member to Firestore
    */
-  static async addMember(memberData: Omit<Member, 'id' | 'totalAgreedDeposit'>): Promise<Member> {
-    await simulateNetworkDelay(800, 1200); // Longer delay for complex operation
-    simulateRandomError();
-
-    // Validation
-    if (!memberData.name?.trim()) {
-      throw new ServiceError('validation/required-field', 'Member name is required', { field: 'name' });
-    }
-
-    if (!memberData.phone?.trim()) {
-      throw new ServiceError('validation/required-field', 'Phone number is required', { field: 'phone' });
-    }
-
-    // Phone format validation
-    if (!validatePhoneNumber(memberData.phone)) {
-      throw new ServiceError('validation/invalid-phone', 'Invalid phone number format. Use +91XXXXXXXXXX');
-    }
-
-    // Check for duplicate phone numbers
-    const existingMember = dataStore.members.find(m => m.phone === memberData.phone);
-    if (existingMember) {
-      throw new ServiceError('business/duplicate-member', 'A member with this phone number already exists');
-    }
-
-    // Validate floor and bed type
-    if (!dataStore.globalSettings.floors.includes(memberData.floor)) {
-      throw new ServiceError('validation/invalid-floor', `Invalid floor: ${memberData.floor}`);
-    }
-
-    const floorBedTypes = dataStore.globalSettings.bedTypes[memberData.floor];
-    if (!floorBedTypes || !(memberData.bedType in floorBedTypes)) {
-      throw new ServiceError('validation/invalid-bed-type', `Invalid bed type for floor ${memberData.floor}: ${memberData.bedType}`);
-    }
-
-    // Validate monetary values
-    if (!validateAmount(memberData.securityDeposit) || 
-        !validateAmount(memberData.rentAtJoining) || 
-        !validateAmount(memberData.advanceDeposit) ||
-        !validateAmount(memberData.currentRent) ||
-        !validateAmount(memberData.outstandingBalance)) {
-      throw new ServiceError('validation/invalid-amount', 'All monetary amounts must be non-negative');
-    }
-
-    // Create new member
-    const newMember: Member = {
-      ...memberData,
-      id: generateMemberId(),
-      totalAgreedDeposit: memberData.securityDeposit + memberData.rentAtJoining + memberData.advanceDeposit,
-    };
-
-    // Update global counters (simulating atomic transaction)
-    if (newMember.isActive) {
-      dataStore.globalSettings.activememberCounts.total += 1;
-      dataStore.globalSettings.activememberCounts.byFloor[memberData.floor] += 1;
-      if (memberData.optedForWifi) {
-        dataStore.globalSettings.activememberCounts.wifiOptedIn += 1;
+  static async addMember(memberData: {
+    name: string;
+    phone: string;
+    floor: Floor;
+    bedType: string;
+    rentAmount: number;
+    securityDeposit: number;
+    advanceDeposit: number;
+    optedForWifi: boolean;
+    moveInDate: Date;
+  }): Promise<Member> {
+    try {
+      // Validation
+      if (!validatePhoneNumber(memberData.phone)) {
+        throw new ServiceError('validation/invalid-phone', 'Invalid phone number format');
       }
-    }
 
-    dataStore.members.push(newMember);
-    return newMember;
+      if (!validateAmount(memberData.rentAmount)) {
+        throw new ServiceError('validation/invalid-amount', 'Invalid rent amount');
+      }
+
+      if (!validateAmount(memberData.securityDeposit)) {
+        throw new ServiceError('validation/invalid-amount', 'Invalid security deposit');
+      }
+
+      if (!validateAmount(memberData.advanceDeposit)) {
+        throw new ServiceError('validation/invalid-amount', 'Invalid advance deposit');
+      }
+
+      // Check for duplicate phone number
+      const existingMembers = await this.getMembers();
+      const existingMember = existingMembers.find(m => m.phone === memberData.phone);
+      if (existingMember) {
+        throw new ServiceError('business/duplicate-phone', 'Member with this phone number already exists');
+      }
+
+      // Generate member ID
+      const memberId = generateMemberId();
+
+      // Calculate total agreed deposit
+      const totalAgreedDeposit = memberData.securityDeposit + memberData.advanceDeposit;
+
+      // Create member object
+      const newMember: Omit<Member, 'id'> = {
+        name: memberData.name,
+        phone: memberData.phone,
+        floor: memberData.floor,
+        bedType: memberData.bedType as Member['bedType'],
+        moveInDate: Timestamp.fromDate(memberData.moveInDate),
+        securityDeposit: memberData.securityDeposit,
+        rentAtJoining: memberData.rentAmount,
+        advanceDeposit: memberData.advanceDeposit,
+        currentRent: memberData.rentAmount,
+        totalAgreedDeposit,
+        outstandingBalance: 0,
+        isActive: true,
+        optedForWifi: memberData.optedForWifi,
+        // Optional fields set to undefined
+        firebaseUid: undefined,
+        fcmToken: undefined,
+        outstandingNote: undefined,
+        leaveDate: undefined,
+        ttlExpiry: undefined,
+      };
+
+      // Save to Firestore
+      const memberRef = doc(db, 'members', memberId);
+      await setDoc(memberRef, newMember);
+
+      return { id: memberId, ...newMember } as Member;
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      console.error('Error adding member:', error);
+      throw new ServiceError('firestore/write-error', 'Failed to add member');
+    }
   }
 
   /**
-   * Update an existing member
-   * Future: Will call Firebase Function for validation and update
+   * Update an existing member in Firestore
    */
   static async updateMember(memberId: string, updates: Partial<Member>): Promise<Member> {
-    await simulateNetworkDelay();
-    simulateRandomError();
-
-    const memberIndex = dataStore.members.findIndex(m => m.id === memberId);
-    if (memberIndex === -1) {
-      throw new ServiceError('business/member-not-found', 'Member not found');
-    }
-
-    const currentMember = dataStore.members[memberIndex];
-
-    // Handle WiFi opt-in changes for counter updates
-    if (updates.optedForWifi !== undefined && updates.optedForWifi !== currentMember.optedForWifi) {
-      if (updates.optedForWifi) {
-        dataStore.globalSettings.activememberCounts.wifiOptedIn += 1;
-      } else {
-        dataStore.globalSettings.activememberCounts.wifiOptedIn -= 1;
+    try {
+      // Validation for specific fields
+      if (updates.phone && !validatePhoneNumber(updates.phone)) {
+        throw new ServiceError('validation/invalid-phone', 'Invalid phone number format');
       }
-    }
 
-    // Handle floor changes
-    if (updates.floor && updates.floor !== currentMember.floor) {
-      dataStore.globalSettings.activememberCounts.byFloor[currentMember.floor] -= 1;
-      dataStore.globalSettings.activememberCounts.byFloor[updates.floor] += 1;
-    }
+      if (updates.currentRent && !validateAmount(updates.currentRent)) {
+        throw new ServiceError('validation/invalid-amount', 'Invalid rent amount');
+      }
 
-    // Handle active status changes
-    if (updates.isActive !== undefined && updates.isActive !== currentMember.isActive) {
-      if (updates.isActive) {
-        dataStore.globalSettings.activememberCounts.total += 1;
-        dataStore.globalSettings.activememberCounts.byFloor[currentMember.floor] += 1;
-        if (currentMember.optedForWifi) {
-          dataStore.globalSettings.activememberCounts.wifiOptedIn += 1;
-        }
-      } else {
-        dataStore.globalSettings.activememberCounts.total -= 1;
-        dataStore.globalSettings.activememberCounts.byFloor[currentMember.floor] -= 1;
-        if (currentMember.optedForWifi) {
-          dataStore.globalSettings.activememberCounts.wifiOptedIn -= 1;
+      if (updates.securityDeposit && !validateAmount(updates.securityDeposit)) {
+        throw new ServiceError('validation/invalid-amount', 'Invalid security deposit');
+      }
+
+      // Check if member exists
+      const member = await this.getMember(memberId);
+      if (!member) {
+        throw new ServiceError('business/member-not-found', 'Member not found');
+      }
+
+      // Check for duplicate phone if phone is being updated
+      if (updates.phone && updates.phone !== member.phone) {
+        const existingMembers = await this.getMembers();
+        const existingMember = existingMembers.find(m => m.phone === updates.phone && m.id !== memberId);
+        if (existingMember) {
+          throw new ServiceError('business/duplicate-phone', 'Member with this phone number already exists');
         }
       }
-    }
 
-    // Recalculate totalAgreedDeposit if deposit fields change
-    const updatedMember = { ...currentMember, ...updates };
-    if (updates.securityDeposit !== undefined || 
-        updates.rentAtJoining !== undefined || 
-        updates.advanceDeposit !== undefined) {
-      updatedMember.totalAgreedDeposit = 
-        updatedMember.securityDeposit + 
-        updatedMember.rentAtJoining + 
-        updatedMember.advanceDeposit;
-    }
+      // Remove undefined fields and prepare updates
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([, value]) => value !== undefined)
+      );
 
-    dataStore.members[memberIndex] = updatedMember;
-    return updatedMember;
+      // Update in Firestore
+      const memberRef = doc(db, 'members', memberId);
+      await updateDoc(memberRef, cleanUpdates);
+
+      // Return updated member
+      const updatedMember = await this.getMember(memberId);
+      return updatedMember!;
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      console.error('Error updating member:', error);
+      throw new ServiceError('firestore/write-error', 'Failed to update member');
+    }
   }
 
   /**
-   * Deactivate a member
-   * Future: Will call Firebase Function for complex settlement calculation
+   * Deactivate a member (set isActive to false)
    */
   static async deactivateMember(memberId: string, leaveDate: Date): Promise<{
     finalOutstanding: number;
     refundAmount: number;
     settlementDetails: string;
   }> {
-    await simulateNetworkDelay(1000, 1500); // Longer delay for complex calculation
-    simulateRandomError();
+    try {
+      const member = await this.getMember(memberId);
+      if (!member) {
+        throw new ServiceError('business/member-not-found', 'Member not found');
+      }
 
-    const memberIndex = dataStore.members.findIndex(m => m.id === memberId);
-    if (memberIndex === -1) {
-      throw new ServiceError('business/member-not-found', 'Member not found');
+      if (!member.isActive) {
+        throw new ServiceError('business/member-not-active', 'Member is already inactive');
+      }
+
+      // Simple settlement calculation (real logic would be more complex)
+      const finalOutstanding = member.outstandingBalance;
+      const refundAmount = Math.max(0, member.securityDeposit + member.advanceDeposit - finalOutstanding);
+      const settlementDetails = `Outstanding: ₹${finalOutstanding}, Refund: ₹${refundAmount}`;
+
+      // Update member
+      const memberRef = doc(db, 'members', memberId);
+      await updateDoc(memberRef, {
+        isActive: false,
+        leaveDate: Timestamp.fromDate(leaveDate),
+        ttlExpiry: Timestamp.fromDate(new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)) // 6 months from now
+      });
+
+      return {
+        finalOutstanding,
+        refundAmount,
+        settlementDetails,
+      };
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      console.error('Error deactivating member:', error);
+      throw new ServiceError('firestore/write-error', 'Failed to deactivate member');
     }
-
-    const member = dataStore.members[memberIndex];
-    if (!member.isActive) {
-      throw new ServiceError('business/member-not-active', 'Member is already inactive');
-    }
-
-    // Simple settlement calculation (full logic will be in Firebase Function)
-    const finalOutstanding = member.outstandingBalance;
-    const refundAmount = finalOutstanding < 0 ? Math.abs(finalOutstanding) : 0;
-    const paymentDue = finalOutstanding > 0 ? finalOutstanding : 0;
-
-    let settlementDetails: string;
-    if (paymentDue > 0) {
-      settlementDetails = `Payment due: ₹${paymentDue}`;
-    } else if (refundAmount > 0) {
-      settlementDetails = `Refund due: ₹${refundAmount}`;
-    } else {
-      settlementDetails = 'Account settled';
-    }
-
-    // Update member status
-    const updatedMember = {
-      ...member,
-      isActive: false,
-      leaveDate: createMockTimestamp(leaveDate),
-      ttlExpiry: createMockTimestamp(new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)), // 6 months from now
-    };
-
-    // Update counters
-    dataStore.globalSettings.activememberCounts.total -= 1;
-    dataStore.globalSettings.activememberCounts.byFloor[member.floor] -= 1;
-    if (member.optedForWifi) {
-      dataStore.globalSettings.activememberCounts.wifiOptedIn -= 1;
-    }
-
-    dataStore.members[memberIndex] = updatedMember;
-
-    return {
-      finalOutstanding,
-      refundAmount,
-      settlementDetails,
-    };
   }
 
   /**
    * Permanently delete an inactive member
-   * Future: Will call Firebase Function for safe deletion
    */
   static async deleteMember(memberId: string): Promise<void> {
-    await simulateNetworkDelay();
-    simulateRandomError();
+    try {
+      const member = await this.getMember(memberId);
+      if (!member) {
+        throw new ServiceError('business/member-not-found', 'Member not found');
+      }
 
-    const memberIndex = dataStore.members.findIndex(m => m.id === memberId);
-    if (memberIndex === -1) {
-      throw new ServiceError('business/member-not-found', 'Member not found');
+      if (member.isActive) {
+        throw new ServiceError('business/member-still-active', 'Cannot delete active member. Deactivate first.');
+      }
+
+      // Delete member document (this will also delete subcollections when using Firebase Functions)
+      const memberRef = doc(db, 'members', memberId);
+      await deleteDoc(memberRef);
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      console.error('Error deleting member:', error);
+      throw new ServiceError('firestore/write-error', 'Failed to delete member');
     }
-
-    const member = dataStore.members[memberIndex];
-    if (member.isActive) {
-      throw new ServiceError('business/member-still-active', 'Cannot delete active member. Deactivate first.');
-    }
-
-    // Remove from data store
-    dataStore.members.splice(memberIndex, 1);
-
-    // Also remove related rent history data
-    dataStore.rentHistory = dataStore.rentHistory.filter(rh => rh.id !== memberId);
   }
 
   /**
-   * Get member statistics
-   * Future: Will call Firebase Function for real-time stats
+   * Get member statistics from Firestore
    */
   static async getMemberStats(): Promise<{
     totalActive: number;
@@ -305,26 +360,30 @@ export class MembersService {
     byFloor: Record<string, number>;
     totalOutstanding: number;
   }> {
-    await simulateNetworkDelay(100, 200);
-    
-    const activeMembers = dataStore.members.filter(m => m.isActive);
-    const inactiveMembers = dataStore.members.filter(m => !m.isActive);
-    
-    const byFloor = activeMembers.reduce((acc, member) => {
-      acc[member.floor] = (acc[member.floor] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    try {
+      const allMembers = await this.getMembers();
+      const activeMembers = allMembers.filter(m => m.isActive);
+      const inactiveMembers = allMembers.filter(m => !m.isActive);
+      
+      const byFloor = activeMembers.reduce((acc, member) => {
+        acc[member.floor] = (acc[member.floor] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
 
-    const totalOutstanding = activeMembers
-      .filter(m => m.outstandingBalance > 0)
-      .reduce((sum, m) => sum + m.outstandingBalance, 0);
+      const totalOutstanding = activeMembers
+        .filter(m => m.outstandingBalance > 0)
+        .reduce((sum, m) => sum + m.outstandingBalance, 0);
 
-    return {
-      totalActive: activeMembers.length,
-      totalInactive: inactiveMembers.length,
-      wifiOptedIn: activeMembers.filter(m => m.optedForWifi).length,
-      byFloor,
-      totalOutstanding,
-    };
+      return {
+        totalActive: activeMembers.length,
+        totalInactive: inactiveMembers.length,
+        wifiOptedIn: activeMembers.filter(m => m.optedForWifi).length,
+        byFloor,
+        totalOutstanding,
+      };
+    } catch (error) {
+      console.error('Error getting member stats:', error);
+      throw new ServiceError('firestore/read-error', 'Failed to get member statistics');
+    }
   }
 }

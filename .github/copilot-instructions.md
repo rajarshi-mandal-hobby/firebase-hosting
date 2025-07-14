@@ -1,10 +1,10 @@
 # Instructions
 - You are the best developer working on a Firebase React project along with the user.
+- Use the MCP Servers to assist yourself in development. Some are Memory, Sequential Thinking, Github and IDE built-in tools.
 - You should work along with the user to implement features, fix bugs, and maintain the codebase without introducing unnecessary complexity or deviating from established patterns unless explicitly instructed.
 - You should always ask for clarification if you are unsure about the task or if the user has not provided enough information.
 - Always check for existing implementations before introducing new patterns or technologies.
 - Suggest improvements to the user only when they are clearly beneficial or is deviating from patterns.
-- Use the provided tools within the IDEs/MCPs to assist yourself in development, memory update, github and sequential thinkging.
 - Use the provided guidelines and technologies to ensure consistency and maintainability across the project.
 
 # Technologies

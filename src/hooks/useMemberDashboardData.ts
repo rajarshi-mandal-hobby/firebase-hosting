@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  getMemberWithLatestBill, 
-  mapToMember, 
-  getMemberRentHistory 
-} from '../utils/memberUtils';
-import { mockCurrentUser, mockMembers } from '../data/mockData';
-import type { Member, RentHistory, MockMemberData } from '../shared/types/firestore-types';
+import { mockCurrentUser } from '../data/mock/mockData';
+import { useData } from '../contexts/DataProvider';
+import type { Member, RentHistory } from '../shared/types/firestore-types';
 
 export interface UseMemberDashboardData {
   currentMember: Member | null;
@@ -20,8 +16,7 @@ export interface UseMemberDashboardData {
   error: string | null;
   actions: {
     loadHistory: () => void;
-    loadFriends: () => void;
-    refetchMember: () => void;
+    refreshData: () => void;
   };
   cache: {
     memberLoaded: boolean;
@@ -31,8 +26,7 @@ export interface UseMemberDashboardData {
 }
 
 /**
- * Custom hook for member dashboard data with proper caching
- * Prevents unnecessary re-renders and API calls
+ * Custom hook for member dashboard data using DataProvider with real-time updates
  */
 export const useMemberDashboardData = (): UseMemberDashboardData => {
   // State
@@ -52,49 +46,49 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
   const [friendsLoaded, setFriendsLoaded] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
+  const { getMember, getMembers, getMemberRentHistory } = useData();
+
   // Load current member data
   const loadMemberData = useCallback(async () => {
-    if (memberLoaded) return;
+    if (memberLoaded || memberLoading) return;
 
     try {
       setMemberLoading(true);
       setError(null);
       
-      // Simulate async operation
-      await new Promise(resolve => setTimeout(resolve, 400));
-      
-      const memberData = getMemberWithLatestBill(mockCurrentUser.linkedMemberId);
-      if (!memberData) {
+      // Get current member
+      const member = await getMember(mockCurrentUser.linkedMemberId);
+      if (!member) {
         setError('Member data not found');
         setCurrentMember(null);
         setCurrentMonthHistory(null);
-      } else {
-        setCurrentMember(memberData.member);
-        setCurrentMonthHistory(memberData.latestHistory);
+        return;
       }
-      
+
+      // Get current month rent history
+      const rentHistory = await getMemberRentHistory(mockCurrentUser.linkedMemberId);
+      const currentMonthBill = rentHistory.length > 0 ? rentHistory[0] : null;
+
+      setCurrentMember(member);
+      setCurrentMonthHistory(currentMonthBill);
       setMemberLoaded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load member data');
     } finally {
       setMemberLoading(false);
     }
-  }, [memberLoaded]);
+  }, [memberLoaded, memberLoading, getMember, getMemberRentHistory]);
 
-  // Load friends data
-  const loadFriends = useCallback(async () => {
-    if (friendsLoaded) return;
+  // Load other active members (friends)
+  const loadFriendsData = useCallback(async () => {
+    if (friendsLoaded || friendsLoading) return;
 
     try {
       setFriendsLoading(true);
       setError(null);
       
-      // Simulate async operation
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const filteredMembers = (mockMembers as MockMemberData[])
-        .filter((m) => m.isActive && m.id !== mockCurrentUser.linkedMemberId)
-        .map(mapToMember);
+      const allMembers = await getMembers({ isActive: true });
+      const filteredMembers = allMembers.filter(m => m.id !== mockCurrentUser.linkedMemberId);
 
       setOtherMembers(filteredMembers);
       setFriendsLoaded(true);
@@ -103,20 +97,17 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
     } finally {
       setFriendsLoading(false);
     }
-  }, [friendsLoaded]);
+  }, [friendsLoaded, friendsLoading, getMembers]);
 
   // Load history data
   const loadHistory = useCallback(async () => {
-    if (historyLoaded) return;
+    if (historyLoaded || historyLoading) return;
 
     try {
       setHistoryLoading(true);
       setError(null);
       
-      // Simulate async operation
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const history = getMemberRentHistory(mockCurrentUser.linkedMemberId);
+      const history = await getMemberRentHistory(mockCurrentUser.linkedMemberId);
       // Get up to 12 previous months, skipping the first (current month)
       const prevHistory = history.slice(1, 13);
       
@@ -127,33 +118,27 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
     } finally {
       setHistoryLoading(false);
     }
-  }, [historyLoaded]);
+  }, [historyLoaded, historyLoading, getMemberRentHistory]);
 
-  // Auto-load member data on mount
+  // Auto-load member data when hook is used
   useEffect(() => {
     loadMemberData();
   }, [loadMemberData]);
 
-  // Actions
-  const actions = {
-    loadHistory: useCallback(() => {
-      if (!historyLoaded) {
-        loadHistory();
-      }
-    }, [loadHistory, historyLoaded]),
-    
-    loadFriends: useCallback(() => {
-      if (!friendsLoaded) {
-        loadFriends();
-      }
-    }, [loadFriends, friendsLoaded]),
-    
-    refetchMember: useCallback(() => {
-      setMemberLoaded(false);
-      setCurrentMember(null);
-      setCurrentMonthHistory(null);
-    }, [])
-  };
+  // Auto-load friends when they're accessed
+  useEffect(() => {
+    if (otherMembers.length === 0 && !friendsLoaded && !friendsLoading) {
+      loadFriendsData();
+    }
+  }, [otherMembers.length, friendsLoaded, friendsLoading, loadFriendsData]);
+
+  // Refresh all data
+  const refreshData = useCallback(() => {
+    setMemberLoaded(false);
+    setFriendsLoaded(false);
+    setHistoryLoaded(false);
+    setError(null);
+  }, []);
 
   return {
     currentMember,
@@ -166,11 +151,14 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
       history: historyLoading,
     },
     error,
-    actions,
+    actions: {
+      loadHistory,
+      refreshData,
+    },
     cache: {
       memberLoaded,
       friendsLoaded,
       historyLoaded,
-    }
+    },
   };
 };

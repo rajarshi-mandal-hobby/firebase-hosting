@@ -17,7 +17,9 @@ import {
 import { MonthPickerInput } from '@mantine/dates';
 import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
-import { mockGlobalSettings, mockMembers } from '../../../../data/mockData';
+import { FirestoreService } from '../../../../data/firestoreService';
+import { useData } from '../../../../contexts/DataProvider';
+import type { GlobalSettings, Member } from '../../../../shared/types/firestore-types';
 
 interface GenerateBillsModalProps {
   opened: boolean;
@@ -26,29 +28,51 @@ interface GenerateBillsModalProps {
 
 export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps) {
   const [loading, setLoading] = useState(false);
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [activeMembers, setActiveMembers] = useState<{ value: string; label: string }[]>([]);
+  const { getGlobalSettings, getMembers } = useData();
+
   const [formData, setFormData] = useState({
     billingMonth: new Date(),
     secondFloorElectricity: 0,
     thirdFloorElectricity: 0,
     memberCountEditable: false,
-    secondFloorCount: mockGlobalSettings.activememberCounts.byFloor['2nd'],
-    thirdFloorCount: mockGlobalSettings.activememberCounts.byFloor['3rd'],
+    secondFloorCount: 0, // Will be set from globalSettings
+    thirdFloorCount: 0, // Will be set from globalSettings
     // Multi-select expense entry
     expenseMemberIds: [] as string[],
     expenseAmount: 0,
     expenseDescription: '',
     // Multi-select wifi charge entry
     wifiMemberIds: [] as string[],
-    wifiAmount: mockGlobalSettings.wifiMonthlyCharge,
+    wifiAmount: 0, // Will be set from globalSettings
   });
 
-  // Get active members for Combobox options
-  const activeMembers = mockMembers
-    .filter((member) => member.isActive)
-    .map((member) => ({
-      value: member.id,
-      label: `${member.name} (${member.floor})`,
-    }));
+  // Load data when modal opens
+  useEffect(() => {
+    if (opened) {
+      Promise.all([
+        getGlobalSettings(),
+        getMembers({ isActive: true })
+      ]).then(([settings, members]) => {
+        setGlobalSettings(settings);
+        
+        const memberOptions = members.map((member: Member) => ({
+          value: member.id,
+          label: `${member.name} (${member.floor})`,
+        }));
+        setActiveMembers(memberOptions);
+
+        // Update form data with settings
+        setFormData(prev => ({
+          ...prev,
+          secondFloorCount: settings.activememberCounts?.byFloor?.['2nd'] || 0,
+          thirdFloorCount: settings.activememberCounts?.byFloor?.['3rd'] || 0,
+          wifiAmount: settings.wifiMonthlyCharge,
+        }));
+      }).catch(console.error);
+    }
+  }, [opened, getGlobalSettings, getMembers]);
 
   const expenseCombobox = useCombobox({
     onDropdownClose: () => expenseCombobox.resetSelectedOption(),
@@ -67,12 +91,8 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
   const wifiOptions = activeMembers.slice(0, MAX_DISPLAYED_OPTIONS);
 
   useEffect(() => {
-    // Initialize member counts from mock data
-    setFormData((prev) => ({
-      ...prev,
-      secondFloorCount: mockGlobalSettings.activememberCounts.byFloor['2nd'],
-      thirdFloorCount: mockGlobalSettings.activememberCounts.byFloor['3rd'],
-    }));
+    // Member counts are now initialized from DataProvider above
+    // This effect is no longer needed but kept for any future initialization
   }, []);
 
   // Helper functions for multi-select (following Mantine MaxDisplayedItems pattern)
@@ -111,8 +131,27 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
   const handleGenerateBills = async () => {
     setLoading(true);
     try {
-      // Mock API call - replace with actual Firebase function call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Call actual Firebase function
+      await FirestoreService.Billing.generateBulkBills({
+        billingMonth: formData.billingMonth.toISOString().slice(0, 7), // YYYY-MM format
+        floorElectricity: {
+          '2nd': formData.secondFloorElectricity,
+          '3rd': formData.thirdFloorElectricity,
+        },
+        floorMemberCounts: {
+          '2nd': formData.secondFloorCount,
+          '3rd': formData.thirdFloorCount,
+        },
+        bulkExpenses: formData.expenseAmount > 0 ? [{
+          memberIds: formData.expenseMemberIds,
+          amount: formData.expenseAmount,
+          description: formData.expenseDescription,
+        }] : [],
+        wifiCharges: formData.wifiMemberIds.length > 0 ? {
+          memberIds: formData.wifiMemberIds,
+          amount: formData.wifiAmount,
+        } : undefined,
+      });
 
       notifications.show({
         title: 'Success',
@@ -126,15 +165,16 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
         secondFloorElectricity: 0,
         thirdFloorElectricity: 0,
         memberCountEditable: false,
-        secondFloorCount: mockGlobalSettings.activememberCounts.byFloor['2nd'],
-        thirdFloorCount: mockGlobalSettings.activememberCounts.byFloor['3rd'],
+        secondFloorCount: globalSettings?.activememberCounts?.byFloor?.['2nd'] || 0,
+        thirdFloorCount: globalSettings?.activememberCounts?.byFloor?.['3rd'] || 0,
         expenseMemberIds: [],
         expenseAmount: 0,
         expenseDescription: '',
         wifiMemberIds: [],
-        wifiAmount: mockGlobalSettings.wifiMonthlyCharge,
+        wifiAmount: globalSettings?.wifiMonthlyCharge || 0,
       });
-    } catch {
+    } catch (error) {
+      console.error('Error generating bills:', error);
       notifications.show({
         title: 'Error',
         message: 'Failed to generate bills. Please try again.',

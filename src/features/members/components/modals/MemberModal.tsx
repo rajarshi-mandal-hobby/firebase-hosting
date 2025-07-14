@@ -3,8 +3,8 @@ import { NumberInput, Stack, Text, TextInput, Select, Switch, Alert, Group, Divi
 import { MonthPickerInput } from '@mantine/dates';
 import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
-import type { Member, Floor, BedType } from '../../../../shared/types/firestore-types';
-import { mockGlobalSettings } from '../../../../data/mockData';
+import type { Member, Floor, BedType, GlobalSettings } from '../../../../shared/types/firestore-types';
+import { useData } from '../../../../contexts/DataProvider';
 
 interface MemberModalProps {
   opened: boolean;
@@ -15,6 +15,9 @@ interface MemberModalProps {
 
 export function MemberModal({ opened, onClose, member, mode }: MemberModalProps) {
   const [loading, setLoading] = useState(false);
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const { getGlobalSettings } = useData();
+
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -22,12 +25,26 @@ export function MemberModal({ opened, onClose, member, mode }: MemberModalProps)
     bedType: null as BedType | null,
     moveInDate: new Date(), // Keep as Date for internal logic
     currentRent: 0,
-    securityDeposit: mockGlobalSettings.securityDeposit,
+    securityDeposit: 1600, // Default value, will be updated from global settings
     advanceDeposit: 0,
     rentAtJoining: 0,
     fullPayment: true,
     actualAmountPaid: 0,
   });
+
+  // Load global settings
+  useEffect(() => {
+    if (opened) {
+      getGlobalSettings().then(settings => {
+        setGlobalSettings(settings);
+        // Update form data with current security deposit
+        setFormData(prev => ({
+          ...prev,
+          securityDeposit: settings.securityDeposit
+        }));
+      }).catch(console.error);
+    }
+  }, [opened, getGlobalSettings]);
 
   // Initialize form data when modal opens or member changes
   useEffect(() => {
@@ -68,7 +85,7 @@ export function MemberModal({ opened, onClose, member, mode }: MemberModalProps)
           bedType: null,
           moveInDate: new Date(),
           currentRent: 0,
-          securityDeposit: mockGlobalSettings.securityDeposit,
+          securityDeposit: globalSettings?.securityDeposit || 1600,
           advanceDeposit: 0,
           rentAtJoining: 0,
           fullPayment: true,
@@ -76,7 +93,7 @@ export function MemberModal({ opened, onClose, member, mode }: MemberModalProps)
         });
       }
     }
-  }, [opened, mode, member]);
+  }, [opened, mode, member, globalSettings?.securityDeposit]);
 
   // Auto-calculate advance deposit from rent at joining
   useEffect(() => {
@@ -99,8 +116,8 @@ export function MemberModal({ opened, onClose, member, mode }: MemberModalProps)
 
   // Get available bed types for selected floor
   const getAvailableBedTypes = (floor: Floor) => {
-    if (!floor || !mockGlobalSettings.bedTypes[floor]) return [];
-    return Object.keys(mockGlobalSettings.bedTypes[floor]).map((bedType) => ({
+    if (!floor || !globalSettings?.bedTypes[floor]) return [];
+    return Object.keys(globalSettings.bedTypes[floor]).map((bedType) => ({
       value: bedType,
       label: bedType === 'Special' ? 'Special Room' : bedType, // Display "Special Room" instead of "Special"
     }));
@@ -145,7 +162,7 @@ export function MemberModal({ opened, onClose, member, mode }: MemberModalProps)
 
     if (!formData.floor) return; // Should not happen as bed type is disabled when floor is empty
 
-    const floorData = mockGlobalSettings.bedTypes[formData.floor];
+    const floorData = globalSettings?.bedTypes[formData.floor];
     if (!floorData) return;
 
     // Map "Special Room" back to "Special" for mockData lookup
@@ -250,10 +267,10 @@ export function MemberModal({ opened, onClose, member, mode }: MemberModalProps)
             placeholder='Select floor'
             value={formData.floor}
             onChange={handleFloorChange}
-            data={mockGlobalSettings.floors.map((floor) => ({
+            data={globalSettings?.floors.map((floor: string) => ({
               value: floor,
               label: `${floor} Floor`,
-            }))}
+            })) || []}
             required
             clearable
             searchable={false}
