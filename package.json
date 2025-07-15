@@ -9,35 +9,38 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "emulators": "firebase emulators:start",
-    "emulators:kill": "firebase emulators:exec --only firestore 'echo Emulators stopped'",
-    "seed:emulator": "vite-node seed-emulator.ts"
+    "wait:emulators": "wait-on tcp:8080",
+    "wait:dev": "wait-on http://localhost:5173",
+    "emulators:kill": "powershell -ExecutionPolicy Bypass -File ./emulators-kill.ps1",
+    "emulators:seed": "vite-node emulators-seed.ts"
   },
   "dependencies": {
-    "@mantine/core": "^8.1.2",
+    "@mantine/core": "^8.1.3",
     "@mantine/dates": "^8.1.3",
-    "@mantine/form": "^8.1.2",
-    "@mantine/hooks": "^8.1.2",
-    "@mantine/notifications": "^8.1.2",
+    "@mantine/form": "^8.1.3",
+    "@mantine/hooks": "^8.1.3",
+    "@mantine/notifications": "^8.1.3",
     "dayjs": "^1.11.13",
     "firebase": "^11.10.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.3",
-    "zod": "^3.25.71"
+    "zod": "^4.0.5"
   },
   "devDependencies": {
-    "@eslint/js": "^9.29.0",
+    "@eslint/js": "^9.31.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^4.5.2",
-    "eslint": "^9.29.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "eslint": "^9.31.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
-    "globals": "^16.2.0",
+    "globals": "^16.3.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.8.3",
-    "typescript-eslint": "^8.34.1",
-    "vite": "^7.0.0",
-    "vite-node": "^3.2.4"
+    "typescript-eslint": "^8.37.0",
+    "vite": "^7.0.4",
+    "vite-node": "^3.2.4",
+    "wait-on": "^8.0.3"
   }
 }
