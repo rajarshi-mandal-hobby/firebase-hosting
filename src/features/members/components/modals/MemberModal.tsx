@@ -4,7 +4,7 @@ import { MonthPickerInput } from '@mantine/dates';
 import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
 import type { Member, Floor, BedType, GlobalSettings } from '../../../../shared/types/firestore-types';
-import { useData } from '../../../../contexts/DataProvider';
+import { useData } from '../../../../hooks';
 
 interface MemberModalProps {
   opened: boolean;
@@ -35,14 +35,16 @@ export function MemberModal({ opened, onClose, member, mode }: MemberModalProps)
   // Load global settings
   useEffect(() => {
     if (opened) {
-      getGlobalSettings().then(settings => {
+      void getGlobalSettings().then((settings: GlobalSettings) => {
         setGlobalSettings(settings);
         // Update form data with current security deposit
         setFormData(prev => ({
           ...prev,
           securityDeposit: settings.securityDeposit
         }));
-      }).catch(console.error);
+      }).catch((error: unknown) => {
+        console.error('Failed to load global settings:', error);
+      });
     }
   }, [opened, getGlobalSettings]);
 
@@ -85,7 +87,7 @@ export function MemberModal({ opened, onClose, member, mode }: MemberModalProps)
           bedType: null,
           moveInDate: new Date(),
           currentRent: 0,
-          securityDeposit: globalSettings?.securityDeposit || 1600,
+          securityDeposit: globalSettings?.securityDeposit ?? 1600,
           advanceDeposit: 0,
           rentAtJoining: 0,
           fullPayment: true,
@@ -270,7 +272,7 @@ export function MemberModal({ opened, onClose, member, mode }: MemberModalProps)
             data={globalSettings?.floors.map((floor: string) => ({
               value: floor,
               label: `${floor} Floor`,
-            })) || []}
+            })) ?? []}
             required
             clearable
             searchable={false}

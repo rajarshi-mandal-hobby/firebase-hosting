@@ -1,12 +1,12 @@
 /**
  * Validation Utilities for Cloud Functions
- * 
+ *
  * This file contains validation functions and error handling utilities
  * used across all Cloud Functions.
  */
 
-import { https } from "firebase-functions/v2";
-import { CloudFunctionResponse } from "../types/shared";
+import { https } from 'firebase-functions/v2';
+import { CloudFunctionResponse } from '../types/shared';
 
 /**
  * Custom error class for function-specific errors
@@ -14,7 +14,7 @@ import { CloudFunctionResponse } from "../types/shared";
 export class ValidationError extends Error {
   constructor(public code: string, message: string, public details?: unknown) {
     super(message);
-    this.name = "ValidationError";
+    this.name = 'ValidationError';
   }
 }
 
@@ -23,7 +23,7 @@ export class ValidationError extends Error {
  */
 export function validateAuth(context: https.CallableRequest): string {
   if (!context.auth?.uid) {
-    throw new ValidationError("unauthenticated", "User must be authenticated");
+    throw new ValidationError('unauthenticated', 'User must be authenticated');
   }
   return context.auth.uid;
 }
@@ -31,22 +31,16 @@ export function validateAuth(context: https.CallableRequest): string {
 /**
  * Validates that required fields are present in the request data
  */
-export function validateRequiredFields(
-  data: unknown,
-  requiredFields: string[]
-): Record<string, unknown> {
-  if (!data || typeof data !== "object") {
-    throw new ValidationError("invalid-argument", "Request data must be an object");
+export function validateRequiredFields(data: unknown, requiredFields: string[]): Record<string, unknown> {
+  if (!data || typeof data !== 'object') {
+    throw new ValidationError('invalid-argument', 'Request data must be an object');
   }
 
   const dataObj = data as Record<string, unknown>;
-  
+
   for (const field of requiredFields) {
     if (!(field in dataObj) || dataObj[field] === undefined || dataObj[field] === null) {
-      throw new ValidationError(
-        "missing-required-field",
-        `Missing required field: ${field}`
-      );
+      throw new ValidationError('missing-required-field', `Missing required field: ${field}`);
     }
   }
 
@@ -72,10 +66,7 @@ export function validateEmail(email: string): boolean {
 /**
  * Creates a standardized success response
  */
-export function createSuccessResponse<T>(
-  message: string,
-  data?: T
-): CloudFunctionResponse<T> {
+export function createSuccessResponse<T>(message: string, data?: T): CloudFunctionResponse<T> {
   return {
     success: true,
     message,
@@ -86,10 +77,7 @@ export function createSuccessResponse<T>(
 /**
  * Creates a standardized error response
  */
-export function createErrorResponse(
-  message: string,
-  error?: string
-): CloudFunctionResponse {
+export function createErrorResponse(message: string, error?: string): CloudFunctionResponse {
   return {
     success: false,
     message,
@@ -101,17 +89,17 @@ export function createErrorResponse(
  * Error handler wrapper for Cloud Functions
  */
 export function handleFunctionError(error: unknown): CloudFunctionResponse {
-  console.error("Function error:", error);
+  console.error('Function error:', error);
 
   if (error instanceof ValidationError) {
     return createErrorResponse(error.message, error.code);
   }
 
   if (error instanceof Error) {
-    return createErrorResponse("Internal server error", error.message);
+    return createErrorResponse('Internal server error', error.message);
   }
 
-  return createErrorResponse("Unknown error occurred", "unknown-error");
+  return createErrorResponse('Unknown error occurred', 'unknown-error');
 }
 
 /**
@@ -119,18 +107,21 @@ export function handleFunctionError(error: unknown): CloudFunctionResponse {
  */
 export function validateMemberId(memberId: string): boolean {
   // Member IDs should be non-empty strings
-  return typeof memberId === "string" && memberId.trim().length > 0;
+  return typeof memberId === 'string' && memberId.trim().length > 0;
 }
 
 /**
  * Validates pagination parameters
  */
-export function validatePagination(limit?: number, startAfter?: string): {
+export function validatePagination(
+  limit?: number,
+  startAfter?: string
+): {
   validLimit: number;
   validStartAfter?: string;
 } {
-  const validLimit = Math.min(Math.max(limit || 20, 1), 100); // Between 1-100, default 20
-  const validStartAfter = startAfter && startAfter.trim() ? startAfter.trim() : undefined;
-  
+  const validLimit = Math.min(Math.max(limit ?? 20, 1), 100); // Between 1-100, default 20
+  const validStartAfter = startAfter?.trim() ? startAfter.trim() : undefined;
+
   return { validLimit, validStartAfter };
 }

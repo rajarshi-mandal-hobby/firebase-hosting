@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useData } from '../../../contexts/DataProvider';
+import { useData } from '../../../hooks/useData';
 import { calculateTotalOutstanding } from '../../../shared/utils/memberUtils';
 import type { Member, RentHistory } from '../../../shared/types/firestore-types';
 
@@ -83,7 +83,7 @@ export const useRentManagementData = (): UseRentManagementData => {
 
   // Auto-load rent data on mount
   useEffect(() => {
-    loadRentData();
+    void loadRentData();
   }, [loadRentData]);
 
   // Actions

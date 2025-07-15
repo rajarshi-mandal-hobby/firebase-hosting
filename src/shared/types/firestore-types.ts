@@ -245,7 +245,7 @@ export interface UPIPaymentData {
   memberName: string;
   amount: number;
   billingMonth: string; // YYYY-MM format
-  upiVpa: string;
+  upiPhoneNumber: string;
 }
 
 // ======================================
@@ -295,7 +295,7 @@ export interface CloudFunctionResponse<T = unknown> {
 export interface MemberDashboardData {
   member: Omit<Member, 'securityDeposit' | 'totalAgreedDeposit' | 'rentAtJoining' | 'advanceDeposit'>;
   currentMonthRent?: RentHistory;
-  upiVpa: string;
+  upiPhoneNumber: string;
 }
 
 /**

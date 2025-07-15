@@ -121,7 +121,7 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
 
     // Debounce the settlement preview fetch to avoid excessive API calls
     const timeoutId = setTimeout(() => {
-      fetchSettlementPreview(member, leaveDate);
+      void fetchSettlementPreview(member, leaveDate);
     }, 300);
 
     return () => clearTimeout(timeoutId);
@@ -174,6 +174,10 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
     setLeaveDate(new Date());
     setSettlementPreview(null);
     onClose();
+  };
+
+  const handleDeactivationClick = () => {
+    void handleConfirmDeactivation();
   };
 
   if (!member) return null;
@@ -284,7 +288,7 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
           <Button variant="subtle" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button color="orange" onClick={handleConfirmDeactivation} loading={deactivating}>
+          <Button color="orange" onClick={handleDeactivationClick} loading={deactivating}>
             Deactivate Member
           </Button>
         </Group>

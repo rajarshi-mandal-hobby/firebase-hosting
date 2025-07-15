@@ -437,13 +437,13 @@ export const getMemberWithRentHistory = (memberId: string): MemberWithRentHistor
 
 export const getMemberRentHistory = (memberId: string) => {
   const member = getMemberWithRentHistory(memberId);
-  return member?.rentHistory || [];
+  return member?.rentHistory ?? [];
 };
 
 export const getCurrentMonthRentHistory = (memberId: string) => {
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
   const member = getMemberWithRentHistory(memberId);
-  return member?.rentHistory.find((rh: RentHistory) => rh.id === currentMonth) || null;
+  return member?.rentHistory.find((rh: RentHistory) => rh.id === currentMonth) ?? null;
 };
 
 export const getActiveMembersWithRentHistory = () => {

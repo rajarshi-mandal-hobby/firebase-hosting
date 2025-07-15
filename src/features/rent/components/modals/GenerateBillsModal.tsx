@@ -18,7 +18,7 @@ import { MonthPickerInput } from '@mantine/dates';
 import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
 import { FirestoreService } from '../../../../data/firestoreService';
-import { useData } from '../../../../contexts/DataProvider';
+import { useData } from '../../../../hooks';
 import type { GlobalSettings, Member } from '../../../../shared/types/firestore-types';
 
 interface GenerateBillsModalProps {
@@ -165,13 +165,13 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
         secondFloorElectricity: 0,
         thirdFloorElectricity: 0,
         memberCountEditable: false,
-        secondFloorCount: globalSettings?.activememberCounts?.byFloor?.['2nd'] || 0,
-        thirdFloorCount: globalSettings?.activememberCounts?.byFloor?.['3rd'] || 0,
+        secondFloorCount: globalSettings?.activememberCounts?.byFloor?.['2nd'] ?? 0,
+        thirdFloorCount: globalSettings?.activememberCounts?.byFloor?.['3rd'] ?? 0,
         expenseMemberIds: [],
         expenseAmount: 0,
         expenseDescription: '',
         wifiMemberIds: [],
-        wifiAmount: globalSettings?.wifiMonthlyCharge || 0,
+        wifiAmount: globalSettings?.wifiMonthlyCharge ?? 0,
       });
     } catch (error) {
       console.error('Error generating bills:', error);

@@ -5,6 +5,7 @@ import { MemberDetailsList } from '../../../shared/components/MemberDetailsList'
 import type { UseMemberManagementData } from '../hooks/useMemberManagementData';
 import { IconFilter, IconPersonAdd, IconPhone, IconSearch } from '../../../shared/components/icons';
 import { MemberModal, DeleteMemberModal, DeactivationModal } from './modals';
+import type { Member } from '../../../shared/types/firestore-types';
 
 interface MembersManagementProps {
   memberData: UseMemberManagementData;
@@ -16,8 +17,7 @@ export function MembersManagement({ memberData }: MembersManagementProps) {
   const [editMemberModal, setEditMemberModal] = useState(false);
   const [deleteMemberModal, setDeleteMemberModal] = useState(false);
   const [deactivationModal, setDeactivationModal] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   // Early return if there's an error
   if (error) {

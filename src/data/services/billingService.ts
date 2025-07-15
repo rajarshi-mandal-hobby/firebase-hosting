@@ -1,6 +1,6 @@
 /**
  * Billing Service
- * 
+ *
  * Handles bill generation and electricity cost management.
  * Calls Firebase Cloud Functions for all operations.
  */
@@ -13,12 +13,12 @@ import type { ElectricBill, RentHistory } from '../../shared/types/firestore-typ
 interface GenerateBulkBillsRequest {
   billingMonth: string; // YYYY-MM format
   floorElectricity: {
-    "2nd": number;
-    "3rd": number;
+    '2nd': number;
+    '3rd': number;
   };
   floorMemberCounts: {
-    "2nd": number;
-    "3rd": number;
+    '2nd': number;
+    '3rd': number;
   };
   bulkExpenses?: {
     memberIds: string[];
@@ -46,7 +46,7 @@ interface BillingSummaryResponse {
   billingStatsByStatus: {
     Due: number;
     Paid: number;
-    "Partially Paid": number;
+    'Partially Paid': number;
     Overpaid: number;
   };
 }
@@ -103,12 +103,12 @@ export class BillingService {
   static async generateMonthlyBills(params: {
     billingMonth: string;
     floorElectricityCosts: Record<string, number>;
-    bulkExpenses: Array<{
+    bulkExpenses: {
       memberIds: string[];
       amount: number;
       description: string;
       type: 'individual' | 'split';
-    }>;
+    }[];
     wifiMemberIds: string[];
   }): Promise<{
     totalMembersProcessed: number;
@@ -119,22 +119,25 @@ export class BillingService {
     const newParams: GenerateBulkBillsRequest = {
       billingMonth: params.billingMonth,
       floorElectricity: {
-        "2nd": params.floorElectricityCosts["2nd"] || 0,
-        "3rd": params.floorElectricityCosts["3rd"] || 0,
+        '2nd': params.floorElectricityCosts['2nd'] || 0,
+        '3rd': params.floorElectricityCosts['3rd'] || 0,
       },
       floorMemberCounts: {
-        "2nd": 0, // This will need to be calculated by backend
-        "3rd": 0,
+        '2nd': 0, // This will need to be calculated by backend
+        '3rd': 0,
       },
-      bulkExpenses: params.bulkExpenses.map(expense => ({
+      bulkExpenses: params.bulkExpenses.map((expense) => ({
         memberIds: expense.memberIds,
         amount: expense.amount,
         description: expense.description,
       })),
-      wifiCharges: params.wifiMemberIds.length > 0 ? {
-        memberIds: params.wifiMemberIds,
-        amount: 0, // This will be calculated by backend
-      } : undefined,
+      wifiCharges:
+        params.wifiMemberIds.length > 0
+          ? {
+              memberIds: params.wifiMemberIds,
+              amount: 0, // This will be calculated by backend
+            }
+          : undefined,
     };
 
     return this.generateBulkBills(newParams);
@@ -154,6 +157,6 @@ export class BillingService {
    */
   static async getElectricBill(billingMonth: string): Promise<ElectricBill | null> {
     const currentBill = await this.getCurrentElectricBill();
-    return (currentBill?.id === billingMonth) ? currentBill : null;
+    return currentBill?.id === billingMonth ? currentBill : null;
   }
 }

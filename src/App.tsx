@@ -11,31 +11,31 @@ import { SignIn } from './pages/SignIn';
 import { DataProvider } from './contexts/DataProvider';
 
 const router = createBrowserRouter([
-    {
-        path: '/',
-        element: <AdminDashboard />,
-    },
-    {
-        path: '/admin',
-        element: <AdminDashboard />,
-    },
-    {
-        path: '/member',
-        element: <MemberDashboard />,
-    },
-    {
-        path: '/signin',
-        element: <SignIn />,
-    },
+  {
+    path: '/',
+    element: <AdminDashboard />,
+  },
+  {
+    path: '/admin',
+    element: <AdminDashboard />,
+  },
+  {
+    path: '/member',
+    element: <MemberDashboard />,
+  },
+  {
+    path: '/signin',
+    element: <SignIn />,
+  },
 ]);
 
 export default function App() {
-    return (
-        <MantineProvider theme={theme}>
-            <DataProvider>
-                <Notifications position="bottom-center" />
-                <RouterProvider router={router} />
-            </DataProvider>
-        </MantineProvider>
-    );
+  return (
+    <MantineProvider theme={theme}>
+      <DataProvider>
+        <Notifications position='bottom-center' />
+        <RouterProvider router={router} />
+      </DataProvider>
+    </MantineProvider>
+  );
 }

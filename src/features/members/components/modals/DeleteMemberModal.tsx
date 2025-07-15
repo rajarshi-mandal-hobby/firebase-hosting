@@ -66,6 +66,10 @@ export function DeleteMemberModal({
     }
   };
 
+  const handleDeleteClick = () => {
+    void handleDelete();
+  };
+
   if (!member) return null;
 
   return (
@@ -113,7 +117,7 @@ export function DeleteMemberModal({
           <Button variant="subtle" onClick={onClose}>
             Cancel
           </Button>
-          <Button color="red" onClick={handleDelete} loading={deleting}>
+          <Button color="red" onClick={handleDeleteClick} loading={deleting}>
             Delete Permanently
           </Button>
         </Group>

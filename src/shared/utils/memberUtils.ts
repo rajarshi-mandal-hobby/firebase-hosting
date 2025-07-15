@@ -58,7 +58,7 @@ export const formatMemberName = (member: Member): string => {
 export const getActiveMembersWithLatestBills = (
   members: Member[],
   memberRentHistories: Record<string, RentHistory[]> = {}
-): Array<Member & { latestBill?: RentHistory }> => {
+): (Member & { latestBill?: RentHistory })[] => {
   return members
     .filter(member => member.isActive)
     .map(member => {
@@ -137,10 +137,10 @@ export const getMembersWithOutstanding = (members: Member[]): Member[] => {
 /**
  * Get all members (deprecated - use DataProvider getMembers instead)
  */
-export const getAllMembers = async (): Promise<Member[]> => {
+export const getAllMembers = (): Promise<Member[]> => {
   // This is a temporary placeholder - components should use DataProvider
   console.warn('getAllMembers is deprecated - use DataProvider getMembers instead');
-  return [];
+  return Promise.resolve([]);
 };
 
 /**
@@ -157,10 +157,10 @@ export const getMemberCounts = (members: Member[]) => {
 /**
  * Get member with latest bill (deprecated - use DataProvider instead)
  */
-export const getMemberWithLatestBill = async (): Promise<Member | null> => {
+export const getMemberWithLatestBill = (): Promise<Member | null> => {
   // This is a temporary placeholder - components should use DataProvider
   console.warn('getMemberWithLatestBill is deprecated - use DataProvider instead');
-  return null;
+  return Promise.resolve(null);
 };
 
 

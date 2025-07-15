@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { mockCurrentUser } from '../data/mock/mockData';
-import { useData } from '../contexts/DataProvider';
+import { useData } from './useData';
 import type { Member, RentHistory } from '../shared/types/firestore-types';
 
 export interface UseMemberDashboardData {
@@ -120,15 +120,20 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
     }
   }, [historyLoaded, historyLoading, getMemberRentHistory]);
 
+  // Wrapper for loadHistory to handle async properly
+  const handleLoadHistory = useCallback(() => {
+    void loadHistory();
+  }, [loadHistory]);
+
   // Auto-load member data when hook is used
   useEffect(() => {
-    loadMemberData();
+    void loadMemberData();
   }, [loadMemberData]);
 
   // Auto-load friends when they're accessed
   useEffect(() => {
     if (otherMembers.length === 0 && !friendsLoaded && !friendsLoading) {
-      loadFriendsData();
+      void loadFriendsData();
     }
   }, [otherMembers.length, friendsLoaded, friendsLoading, loadFriendsData]);
 
@@ -152,7 +157,7 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
     },
     error,
     actions: {
-      loadHistory,
+      loadHistory: handleLoadHistory,
       refreshData,
     },
     cache: {

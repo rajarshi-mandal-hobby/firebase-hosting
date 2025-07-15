@@ -53,18 +53,18 @@ export class AuthService {
    * Verify user authentication token
    * Future: Will call Firebase Function for token verification
    */
-  static async verifyAuth(idToken: string): Promise<{
+  static verifyAuth(idToken: string): Promise<{
     uid: string;
     role: 'admin' | 'member' | 'unlinked';
     userData?: Admin | Member;
   }> {
     // Mock implementation
     if (!idToken || idToken === 'invalid-token') {
-      throw new ServiceError('auth/invalid-token', 'Invalid authentication token');
+      return Promise.reject(new ServiceError('auth/invalid-token', 'Invalid authentication token'));
     }
 
     // For testing, return mock data
-    return {
+    return Promise.resolve({
       uid: 'mock-uid',
       role: 'admin',
       userData: {
@@ -74,7 +74,7 @@ export class AuthService {
         addedAt: new Date() as unknown as import('firebase/firestore').Timestamp,
         addedBy: 'system',
       },
-    };
+    });
   }
 
   /**
@@ -101,6 +101,7 @@ export class RealtimeService {
   /**
    * Subscribe to global settings changes using onSnapshot
    */
+   
   static subscribeToGlobalSettings(callback: (settings: GlobalSettings) => void): () => void {
     const globalSettingsRef = doc(db, 'config', 'globalSettings');
     
@@ -125,6 +126,7 @@ export class RealtimeService {
   /**
    * Subscribe to admin config changes using onSnapshot
    */
+   
   static subscribeToAdminConfig(callback: (adminConfig: AdminConfig) => void): () => void {
     const adminConfigRef = doc(db, 'config', 'adminConfig');
     
@@ -149,6 +151,7 @@ export class RealtimeService {
   /**
    * Subscribe to active members changes using onSnapshot
    */
+   
   static subscribeToActiveMembers(callback: (members: Member[]) => void): () => void {
     const membersQuery = query(
       collection(db, 'members'),
@@ -179,6 +182,7 @@ export class RealtimeService {
   /**
    * Subscribe to all members changes using onSnapshot
    */
+   
   static subscribeToAllMembers(callback: (members: Member[]) => void): () => void {
     const membersQuery = query(
       collection(db, 'members'),
@@ -210,6 +214,7 @@ export class RealtimeService {
    */
   static subscribeToMemberRentHistory(
     memberId: string, 
+     
     callback: (rentHistory: RentHistory[]) => void
   ): () => void {
     const rentHistoryQuery = query(

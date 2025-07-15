@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getMemberCounts } from '../../../shared/utils/memberUtils';
-import { useData } from '../../../contexts/DataProvider';
+import { useData } from '../../../hooks/useData';
 import type { Member } from '../../../shared/types/firestore-types';
 
 export interface MemberCounts {
@@ -71,7 +71,7 @@ export const useMemberManagementData = (): UseMemberManagementData => {
 
   // Auto-load member data on mount
   useEffect(() => {
-    loadMemberData();
+    void loadMemberData();
   }, [loadMemberData, membersLoaded]);
 
   // Actions

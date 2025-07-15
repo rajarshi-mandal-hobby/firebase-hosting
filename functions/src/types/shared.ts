@@ -23,7 +23,7 @@ export interface GlobalSettings {
   };
   securityDeposit: number;
   wifiMonthlyCharge: number;
-  upiVpa: string;
+  upiPhoneNumber: string;
   activememberCounts: {
     total: number;
     byFloor: {

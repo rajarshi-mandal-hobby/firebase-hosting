@@ -10,31 +10,63 @@ import {
   Text,
   ActionIcon,
   Accordion,
+  Loader,
 } from '@mantine/core';
 import { useState, useEffect } from 'react';
-import { useData } from '../../../contexts/DataProvider';
-import type { GlobalSettings, AdminConfig } from '../../../shared/types/firestore-types';
 // import { IconTrash } from '@tabler/icons-react';
+import { useData } from '../../../hooks';
+import type { GlobalSettings, AdminConfig } from '../../../shared/types/firestore-types';
 
 export function ConfigManagement() {
   const { getGlobalSettings, getAdminConfig } = useData();
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
-  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    // Load data
-    Promise.all([
-      getGlobalSettings(),
-      getAdminConfig()
-    ]).then(([settings, admin]) => {
-      setGlobalSettings(settings);
-      setAdminConfig(admin);
-    }).catch(console.error);
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [settingsData, adminData] = await Promise.all([
+          getGlobalSettings(),
+          getAdminConfig(),
+        ]);
+        setGlobalSettings(settingsData);
+        setAdminConfig(adminData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load configuration data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadData();
   }, [getGlobalSettings, getAdminConfig]);
 
-  if (!globalSettings || !adminConfig) {
-    return <Text>Loading configuration...</Text>;
+  if (loading) {
+    return (
+      <Stack gap='lg' align='center'>
+        <Loader size='lg' />
+        <Text>Loading configuration...</Text>
+      </Stack>
+    );
   }
+
+  if (error || !globalSettings || !adminConfig) {
+    return (
+      <Stack gap='lg' align='center'>
+        <Text c='red'>Error: {error || 'Failed to load configuration data'}</Text>
+        <Button onClick={() => window.location.reload()} variant='outline'>
+          Retry
+        </Button>
+      </Stack>
+    );
+  }
+
+  // Get primary admin (first in the list)
+  const primaryAdmin = adminConfig.list[0];
+
   return (
     <Stack gap='lg'>
       {/* Admin Management - Collapsible and at the top */}
@@ -53,13 +85,18 @@ export function ConfigManagement() {
                   Current Admins
                 </Title>
                 <Stack gap='xs'>
-                  <Group justify='space-between' p='sm' bg='gray.0' style={{ borderRadius: '8px' }}>
+                  <Group
+                    justify='space-between'
+                    p='sm'
+                    bg='gray.0'
+                    style={{ borderRadius: '8px' }}
+                  >
                     <div>
                       <Text size='sm' fw={500}>
-                        {adminConfig.list[0]?.email.split('@')[0] || 'Admin'}
+                        {primaryAdmin.email.split('@')[0]}
                       </Text>
                       <Text size='xs' c='dimmed'>
-                        {adminConfig.list[0]?.email || 'No email'}
+                        {primaryAdmin.email}
                       </Text>
                       <Text size='xs' c='blue'>
                         Primary Admin (You)
@@ -70,22 +107,29 @@ export function ConfigManagement() {
                     </Text>
                   </Group>
 
-                  <Group justify='space-between' p='sm' bg='gray.0' style={{ borderRadius: '8px' }}>
-                    <div>
-                      <Text size='sm' fw={500}>
-                        Secondary Admin
-                      </Text>
-                      <Text size='xs' c='dimmed'>
-                        admin2@example.com
-                      </Text>
-                      <Text size='xs' c='orange'>
-                        Secondary Admin
-                      </Text>
-                    </div>
-                    <ActionIcon variant='subtle' color='red' size='sm'>
-                      {/* <IconTrash size={16} /> */}
-                    </ActionIcon>
-                  </Group>
+                  {adminConfig.list.length > 1 && (
+                    <Group
+                      justify='space-between'
+                      p='sm'
+                      bg='gray.0'
+                      style={{ borderRadius: '8px' }}
+                    >
+                      <div>
+                        <Text size='sm' fw={500}>
+                          Secondary Admin
+                        </Text>
+                        <Text size='xs' c='dimmed'>
+                          admin2@example.com
+                        </Text>
+                        <Text size='xs' c='orange'>
+                          Secondary Admin
+                        </Text>
+                      </div>
+                      <ActionIcon variant='subtle' color='red' size='sm'>
+                        {/* <IconTrash size={16} /> */}
+                      </ActionIcon>
+                    </Group>
+                  )}
                 </Stack>
               </div>
 
@@ -97,7 +141,12 @@ export function ConfigManagement() {
                   Add New Admin
                 </Title>
                 <Group align='flex-end' gap='md'>
-                  <TextInput label='Email Address' placeholder='admin@example.com' style={{ flex: 1 }} size='sm' />
+                  <TextInput
+                    label='Email Address'
+                    placeholder='admin@example.com'
+                    style={{ flex: 1 }}
+                    size='sm'
+                  />
                   <Button size='sm'>Add Admin</Button>
                 </Group>
               </div>
@@ -173,7 +222,11 @@ export function ConfigManagement() {
             leftSection='₹'
             size='sm'
           />
-          <TextInput label='UPI Phone Number' defaultValue={globalSettings.upiVpa} size='sm' />
+          <TextInput
+            label='UPI VPA'
+            defaultValue={globalSettings.upiVpa}
+            size='sm'
+          />
         </SimpleGrid>
         <Group justify='flex-end' mt='md'>
           <Button variant='default' size='sm'>

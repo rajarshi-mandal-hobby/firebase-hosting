@@ -46,7 +46,7 @@ export const simulateRandomError = (errorRate = 0.05): void => {
 };
 
 // ID generators
-export const generateId = (prefix: string = 'id'): string => {
+export const generateId = (prefix = 'id'): string => {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
@@ -225,10 +225,12 @@ export const searchInFields = <T extends Record<string, unknown>>(
 };
 
 // Statistics helpers
+ 
 export const calculateSum = <T>(items: T[], getValue: (item: T) => number): number => {
   return items.reduce((sum, item) => sum + getValue(item), 0);
 };
 
+ 
 export const calculateAverage = <T>(items: T[], getValue: (item: T) => number): number => {
   if (items.length === 0) return 0;
   return calculateSum(items, getValue) / items.length;
@@ -236,6 +238,7 @@ export const calculateAverage = <T>(items: T[], getValue: (item: T) => number): 
 
 export const groupBy = <T, K extends string | number | symbol>(
   items: T[],
+   
   getKey: (item: T) => K
 ): Record<K, T[]> => {
   return items.reduce((groups, item) => {
@@ -266,8 +269,8 @@ export const deepClone = <T>(obj: T): T => {
 // Retry mechanism for operations
 export const withRetry = async <T>(
   operation: () => Promise<T>,
-  maxRetries: number = 3,
-  delay: number = 1000
+  maxRetries = 3,
+  delay = 1000
 ): Promise<T> => {
   let lastError: Error;
   

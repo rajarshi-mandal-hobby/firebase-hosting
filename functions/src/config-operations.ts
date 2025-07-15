@@ -182,13 +182,8 @@ export const getMemberDashboard = onCall(
       }
 
       // Filter member data to exclude admin-only fields
-      const {
-        securityDeposit,
-        totalAgreedDeposit,
-        rentAtJoining,
-        advanceDeposit,
-        ...filteredMemberData
-      } = memberData;
+      // eslint-disable-next-line no-unused-vars
+      const { securityDeposit: _securityDeposit, totalAgreedDeposit: _totalAgreedDeposit, rentAtJoining: _rentAtJoining, advanceDeposit: _advanceDeposit, ...filteredMemberData } = memberData;
 
       return createSuccessResponse("Member dashboard data retrieved successfully", {
         member: filteredMemberData,
@@ -197,7 +192,11 @@ export const getMemberDashboard = onCall(
       });
 
     } catch (error) {
-      return handleFunctionError(error) as CloudFunctionResponse<any>;
+      return handleFunctionError(error) as CloudFunctionResponse<{
+        member: Omit<Member, "securityDeposit" | "rentAtJoining" | "advanceDeposit" | "totalAgreedDeposit">;
+        currentMonthRent?: RentHistory;
+        upiVpa: string;
+      }>;
     }
   }
 );
@@ -214,7 +213,7 @@ export const getAdminDashboard = onCall(
       active: number;
       inactive: number;
       wifiOptedIn: number;
-      byFloor: { [key: string]: number };
+      byFloor: Record<string, number>;
       recentJoinings: Member[];
     };
     billingStats: {
@@ -256,7 +255,7 @@ export const getAdminDashboard = onCall(
       const wifiOptedMembers = activeMembers.filter(m => m.optedForWifi);
 
       // Calculate floor distribution
-      const floorStats: { [key: string]: number } = {};
+      const floorStats: Record<string, number> = {};
       activeMembers.forEach(member => {
         floorStats[member.floor] = (floorStats[member.floor] || 0) + 1;
       });
@@ -317,7 +316,26 @@ export const getAdminDashboard = onCall(
 
       return createSuccessResponse("Admin dashboard data retrieved successfully", dashboardData);
     } catch (error) {
-      return handleFunctionError(error) as CloudFunctionResponse<any>;
+      return handleFunctionError(error) as CloudFunctionResponse<{
+        memberStats: {
+          total: number;
+          active: number;
+          inactive: number;
+          wifiOptedIn: number;
+          byFloor: Record<string, number>;
+          recentJoinings: Member[];
+        };
+        billingStats: {
+          currentMonth: string;
+          totalOutstanding: number;
+          membersWithOutstanding: number;
+          averageRent: number;
+        };
+        systemHealth: {
+          lastBillingGenerated?: string;
+          membersNeedingAttention: Member[];
+        };
+      }>;
     }
   }
 );
@@ -397,7 +415,12 @@ export const getAdminMemberDetails = onCall(
         averageMonthlyPayment: Math.round(averageMonthlyPayment),
       });
     } catch (error) {
-      return handleFunctionError(error) as CloudFunctionResponse<any>;
+      return handleFunctionError(error) as CloudFunctionResponse<{
+        member: Member;
+        recentRentHistory: RentHistory[];
+        totalPaidThisYear: number;
+        averageMonthlyPayment: number;
+      }>;
     }
   }
 );

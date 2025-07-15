@@ -18,9 +18,9 @@ import { lazy, useState, useCallback, useMemo, Suspense, useEffect } from 'react
 import { mockCurrentUser } from '../data/mock/mockData';
 import { useMemberDashboardData } from '../hooks';
 import { SharedAvatar, IconPhone, IconBed, AppContainer, IconLogout, MemberDetailsList, RentDetailsList, IconUpi, IconQrCode, CurrencyFormatter, StatusBadge } from '../shared/components';
-import type { Member, UPIPaymentParams, RentHistory } from '../shared/types/firestore-types';
+import type { Member, UPIPaymentParams } from '../shared/types/firestore-types';
 import { getStatusAlertConfig } from '../shared/utils';
-import { useData } from '../contexts/DataProvider';
+import { useData } from '../hooks';
 
 
 // Lazy load the Friends section for better performance
@@ -81,7 +81,7 @@ export function MemberDashboard() {
 
   const upiUri = (amount: number, name: string): string => {
     const upiParams: UPIPaymentParams = {
-      pa: `${globalSettings?.upiVpa || '+918777529394'}@paytm`, // UPI ID from global settings
+      pa: `${globalSettings?.upiVpa ?? '+918777529394'}@paytm`, // UPI ID from global settings
       pn: 'Rajarshi', // Payee name (e.g., "Rent Payment")
       am: amount, // Amount
       cu: 'INR', // Currency (e.g., "INR")
@@ -209,7 +209,7 @@ export function MemberDashboard() {
                 Rent for {currentMonthHistory ? formatMonthYear(currentMonthHistory.id) : 'Current Month'}
               </Title>
 
-              {currentMonthHistory && <RentDetailsList data={currentMonthHistory as RentHistory} showStatus={true} />}
+              {currentMonthHistory && <RentDetailsList data={currentMonthHistory} showStatus={true} />}
 
               {/* Status Alert with Pay Button */}
               {alertConfig && (
@@ -239,7 +239,7 @@ export function MemberDashboard() {
                           ? undefined
                           : upiUri(currentMonthHistory.currentOutstanding, currentMember.name)
                       }>
-                      <CurrencyFormatter value={currentMonthHistory?.currentOutstanding || 0} prefix='Pay ₹' />
+                      <CurrencyFormatter value={currentMonthHistory?.currentOutstanding ?? 0} prefix='Pay ₹' />
                     </Button>
                   </Group>
 
@@ -280,7 +280,7 @@ export function MemberDashboard() {
                       </Group>
                     </Accordion.Control>
                     <Accordion.Panel>
-                      <RentDetailsList data={history as RentHistory} />
+                      <RentDetailsList data={history} />
                     </Accordion.Panel>
                   </Accordion.Item>
                 ))}
