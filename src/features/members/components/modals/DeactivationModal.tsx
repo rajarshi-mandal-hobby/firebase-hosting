@@ -1,30 +1,25 @@
 // Deactivation Modal Component - Handles member deactivation with settlement calculation
-import { useCallback, useEffect, useMemo, useState, type FC } from 'react';
-import { Stack, Group, Text, Badge, Avatar, Button, Divider, NumberFormatter, Loader } from '@mantine/core';
-import { MonthPickerInput } from '@mantine/dates';
-import { notifications } from '@mantine/notifications';
-import { SharedModal } from '../../../../shared/components/SharedModal';
-
-// Mock data and types for Phase 1
-interface Member {
-  id: string;
-  name: string;
-  phone: string;
-  floor: string;
-  bedType: string;
-  isActive: boolean;
-  totalAgreedDeposit?: number;
-  outstandingBalance?: number;
-}
-
-interface SettlementPreview {
-  memberName: string;
-  totalAgreedDeposit: number;
-  outstandingBalance: number;
-  refundAmount: number;
-  status: string;
-  leaveDate: string;
-}
+import { useCallback, useEffect, useMemo, useState, type FC } from "react";
+import {
+  Stack,
+  Group,
+  Text,
+  Badge,
+  Avatar,
+  Button,
+  Divider,
+  NumberFormatter,
+  Loader,
+} from "@mantine/core";
+import { MonthPickerInput } from "@mantine/dates";
+import { notifications } from "@mantine/notifications";
+import { SharedModal } from "../../../../shared/components/SharedModal";
+import { useAppContext } from "../../../../contexts/AppContext";
+import type {
+  Member,
+  SettlementPreview,
+} from "../../../../shared/types/firestore-types";
+import { calculateSettlementPreview } from "../../../../shared/utils/memberUtils";
 
 interface DeactivationModalProps {
   opened: boolean;
@@ -32,29 +27,20 @@ interface DeactivationModalProps {
   member: Member | null;
 }
 
-export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose, member }) => {
+export const DeactivationModal: FC<DeactivationModalProps> = ({
+  opened,
+  onClose,
+  member,
+}) => {
+  const { deactivateMember } = useAppContext();
   const [leaveDate, setLeaveDate] = useState<Date>(new Date());
   const [deactivating, setDeactivating] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
-  const [settlementPreview, setSettlementPreview] = useState<SettlementPreview | null>(null);
+  const [settlementPreview, setSettlementPreview] =
+    useState<SettlementPreview | null>(null);
 
-  // Mock settlement calculation function
-  const calculateMockSettlement = useCallback((currentMember: Member, currentLeaveDate: Date) => {
-    if (!currentMember) return null;
-
-    const totalDeposit = Number(currentMember.totalAgreedDeposit) || 5500;
-    const outstanding = Number(currentMember.outstandingBalance) || 1200;
-    const refund = totalDeposit - outstanding;
-
-    return {
-      memberName: currentMember.name,
-      totalAgreedDeposit: totalDeposit,
-      outstandingBalance: outstanding,
-      refundAmount: refund,
-      status: refund > 0 ? 'Refund Due' : refund < 0 ? 'Payment Due' : 'Settled',
-      leaveDate: currentLeaveDate.toISOString().split('T')[0] || '',
-    };
-  }, []);
+  // Settlement calculation will be handled by backend
+  // Frontend only displays the data received from AppContext
 
   // Calculate display data - using useMemo for performance
   const displayData = useMemo(() => {
@@ -67,7 +53,7 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
         totalAgreedDeposit: 0,
         outstandingBalance: 0,
         refundAmount: 0,
-        status: 'Loading...',
+        status: "Loading...",
       };
     }
 
@@ -80,7 +66,8 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
       totalAgreedDeposit: totalDeposit,
       outstandingBalance: outstanding,
       refundAmount: refund,
-      status: refund > 0 ? 'Refund Due' : refund < 0 ? 'Payment Due' : 'Settled',
+      status:
+        refund > 0 ? "Refund Due" : refund < 0 ? "Payment Due" : "Settled",
     };
   }, [settlementPreview, member]);
 
@@ -91,28 +78,28 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
 
       try {
         setLoadingPreview(true);
-        
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const preview = calculateMockSettlement(currentMember, currentLeaveDate);
+
+        // Call backend for settlement calculation preview
+        // This will be implemented when backend is ready
+        // For now, use settlement calculation utilities for preview
+        const preview = calculateSettlementPreview(
+          currentMember,
+          currentLeaveDate
+        );
         setSettlementPreview(preview);
       } catch (error) {
-        console.error('Error calculating settlement preview:', error);
+        console.error("Error calculating settlement preview:", error);
         notifications.show({
-          title: 'Error',
-          message: 'Failed to calculate settlement preview. Using basic calculation.',
-          color: 'orange',
+          title: "Error",
+          message:
+            "Failed to calculate settlement preview. Using basic calculation.",
+          color: "orange",
         });
-
-        // Fallback to basic calculation
-        const preview = calculateMockSettlement(currentMember, currentLeaveDate);
-        setSettlementPreview(preview);
       } finally {
         setLoadingPreview(false);
       }
     },
-    [calculateMockSettlement]
+    []
   );
 
   // Effect for handling settlement preview - includes debouncing for leave date changes
@@ -140,31 +127,21 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
 
     try {
       setDeactivating(true);
-      
-      // Mock deactivation API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      notifications.show({
-        title: 'Success',
-        message: `${member.name} has been deactivated successfully`,
-        color: 'green',
-      });
+      // Call the real deactivateMember function from AppContext
+      const settlementResult = await deactivateMember(member.id, leaveDate);
 
-      console.log('Member deactivated:', {
+      console.log("Member deactivated:", {
         memberId: member.id,
         memberName: member.name,
         leaveDate: leaveDate.toISOString(),
-        settlement: displayData,
+        settlement: settlementResult,
       });
 
       onClose();
     } catch (error) {
-      console.error('Error deactivating member:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to deactivate member. Please try again.',
-        color: 'red',
-      });
+      console.error("Error deactivating member:", error);
+      // Error notification is handled by the AppContext
     } finally {
       setDeactivating(false);
     }
@@ -193,7 +170,7 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
         {/* Member Info */}
         <Group>
           <Avatar size="lg" radius="xl" color="blue">
-            {(member.name?.[0] || 'M').toUpperCase()}
+            {(member.name?.[0] || "M").toUpperCase()}
           </Avatar>
           <Stack gap={2}>
             <Text fw={500} size="lg">
@@ -222,15 +199,27 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
               Total Agreed Deposit:
             </Text>
             <Text size="sm" fw={500}>
-              <NumberFormatter value={displayData.totalAgreedDeposit} prefix="₹" thousandSeparator />
+              <NumberFormatter
+                value={displayData.totalAgreedDeposit}
+                prefix="₹"
+                thousandSeparator
+              />
             </Text>
           </Group>
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
               Outstanding Balance:
             </Text>
-            <Text size="sm" fw={500} c={displayData.outstandingBalance > 0 ? 'red' : 'green'}>
-              <NumberFormatter value={displayData.outstandingBalance} prefix="₹" thousandSeparator />
+            <Text
+              size="sm"
+              fw={500}
+              c={displayData.outstandingBalance > 0 ? "red" : "green"}
+            >
+              <NumberFormatter
+                value={displayData.outstandingBalance}
+                prefix="₹"
+                thousandSeparator
+              />
             </Text>
           </Group>
           <Divider />
@@ -239,7 +228,13 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
               Settlement Status:
             </Text>
             <Badge
-              color={displayData.refundAmount > 0 ? 'green' : displayData.refundAmount < 0 ? 'red' : 'gray'}
+              color={
+                displayData.refundAmount > 0
+                  ? "green"
+                  : displayData.refundAmount < 0
+                  ? "red"
+                  : "gray"
+              }
               variant="light"
             >
               {displayData.status}
@@ -248,17 +243,27 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
           <Group justify="space-between">
             <Text fw={500} size="sm">
               {displayData.refundAmount > 0
-                ? 'Refund Amount:'
+                ? "Refund Amount:"
                 : displayData.refundAmount < 0
-                ? 'Amount Due:'
-                : 'Settlement:'}
+                ? "Amount Due:"
+                : "Settlement:"}
             </Text>
             <Text
               fw={600}
               size="sm"
-              c={displayData.refundAmount > 0 ? 'green' : displayData.refundAmount < 0 ? 'red' : 'gray'}
+              c={
+                displayData.refundAmount > 0
+                  ? "green"
+                  : displayData.refundAmount < 0
+                  ? "red"
+                  : "gray"
+              }
             >
-              <NumberFormatter value={Math.abs(displayData.refundAmount)} prefix="₹" thousandSeparator />
+              <NumberFormatter
+                value={Math.abs(displayData.refundAmount)}
+                prefix="₹"
+                thousandSeparator
+              />
             </Text>
           </Group>
         </Stack>
@@ -268,11 +273,15 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
         <MonthPickerInput
           label="Leave Month"
           placeholder="Select leave month and year"
-          value={leaveDate && leaveDate instanceof Date ? leaveDate.toISOString().slice(0, 7) : null}
+          value={
+            leaveDate && leaveDate instanceof Date
+              ? leaveDate.toISOString().slice(0, 7)
+              : null
+          }
           onChange={(value: string | null) => {
             if (value) {
               // Convert string (YYYY-MM) to Date object
-              const [year, month] = value.split('-');
+              const [year, month] = value.split("-");
               const date = new Date(parseInt(year), parseInt(month) - 1, 1);
               setLeaveDate(date);
             } else {
@@ -288,7 +297,11 @@ export const DeactivationModal: FC<DeactivationModalProps> = ({ opened, onClose,
           <Button variant="subtle" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button color="orange" onClick={handleDeactivationClick} loading={deactivating}>
+          <Button
+            color="orange"
+            onClick={handleDeactivationClick}
+            loading={deactivating}
+          >
             Deactivate Member
           </Button>
         </Group>

@@ -14,11 +14,10 @@ import {
 } from '@mantine/core';
 import { useState, useEffect } from 'react';
 // import { IconTrash } from '@tabler/icons-react';
-import { useData } from '../../../hooks';
+import { FirestoreService } from '../../../data/firestoreService';
 import type { GlobalSettings, AdminConfig } from '../../../shared/types/firestore-types';
 
 export function ConfigManagement() {
-  const { getGlobalSettings, getAdminConfig } = useData();
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,8 +28,8 @@ export function ConfigManagement() {
       try {
         setLoading(true);
         const [settingsData, adminData] = await Promise.all([
-          getGlobalSettings(),
-          getAdminConfig(),
+          FirestoreService.Config.getGlobalSettings(),
+          FirestoreService.Config.getAdminConfig(),
         ]);
         setGlobalSettings(settingsData);
         setAdminConfig(adminData);
@@ -42,7 +41,7 @@ export function ConfigManagement() {
     };
 
     void loadData();
-  }, [getGlobalSettings, getAdminConfig]);
+  }, []);
 
   if (loading) {
     return (
@@ -85,12 +84,7 @@ export function ConfigManagement() {
                   Current Admins
                 </Title>
                 <Stack gap='xs'>
-                  <Group
-                    justify='space-between'
-                    p='sm'
-                    bg='gray.0'
-                    style={{ borderRadius: '8px' }}
-                  >
+                  <Group justify='space-between' p='sm' bg='gray.0' style={{ borderRadius: '8px' }}>
                     <div>
                       <Text size='sm' fw={500}>
                         {primaryAdmin.email.split('@')[0]}
@@ -108,12 +102,7 @@ export function ConfigManagement() {
                   </Group>
 
                   {adminConfig.list.length > 1 && (
-                    <Group
-                      justify='space-between'
-                      p='sm'
-                      bg='gray.0'
-                      style={{ borderRadius: '8px' }}
-                    >
+                    <Group justify='space-between' p='sm' bg='gray.0' style={{ borderRadius: '8px' }}>
                       <div>
                         <Text size='sm' fw={500}>
                           Secondary Admin
@@ -141,12 +130,7 @@ export function ConfigManagement() {
                   Add New Admin
                 </Title>
                 <Group align='flex-end' gap='md'>
-                  <TextInput
-                    label='Email Address'
-                    placeholder='admin@example.com'
-                    style={{ flex: 1 }}
-                    size='sm'
-                  />
+                  <TextInput label='Email Address' placeholder='admin@example.com' style={{ flex: 1 }} size='sm' />
                   <Button size='sm'>Add Admin</Button>
                 </Group>
               </div>
@@ -162,18 +146,8 @@ export function ConfigManagement() {
           2nd Floor
         </Title>
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing='md'>
-          <NumberInput
-            label='Bed Rent'
-            defaultValue={globalSettings.bedTypes['2nd'].Bed}
-            leftSection='₹'
-            size='sm'
-          />
-          <NumberInput
-            label='Room Rent'
-            defaultValue={globalSettings.bedTypes['2nd'].Room}
-            leftSection='₹'
-            size='sm'
-          />
+          <NumberInput label='Bed Rent' defaultValue={globalSettings.bedTypes['2nd'].Bed} leftSection='₹' size='sm' />
+          <NumberInput label='Room Rent' defaultValue={globalSettings.bedTypes['2nd'].Room} leftSection='₹' size='sm' />
           <NumberInput
             label='Special Rent'
             defaultValue={globalSettings.bedTypes['2nd'].Special}
@@ -188,18 +162,8 @@ export function ConfigManagement() {
           3rd Floor
         </Title>
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing='md'>
-          <NumberInput
-            label='Bed Rent'
-            defaultValue={globalSettings.bedTypes['3rd'].Bed}
-            leftSection='₹'
-            size='sm'
-          />
-          <NumberInput
-            label='Room Rent'
-            defaultValue={globalSettings.bedTypes['3rd'].Room}
-            leftSection='₹'
-            size='sm'
-          />
+          <NumberInput label='Bed Rent' defaultValue={globalSettings.bedTypes['3rd'].Bed} leftSection='₹' size='sm' />
+          <NumberInput label='Room Rent' defaultValue={globalSettings.bedTypes['3rd'].Room} leftSection='₹' size='sm' />
           {/* Empty div to maintain grid alignment */}
           <div></div>
         </SimpleGrid>
@@ -222,11 +186,7 @@ export function ConfigManagement() {
             leftSection='₹'
             size='sm'
           />
-          <TextInput
-            label='UPI VPA'
-            defaultValue={globalSettings.upiVpa}
-            size='sm'
-          />
+          <TextInput label='UPI VPA' defaultValue={globalSettings.upiVpa} size='sm' />
         </SimpleGrid>
         <Group justify='flex-end' mt='md'>
           <Button variant='default' size='sm'>

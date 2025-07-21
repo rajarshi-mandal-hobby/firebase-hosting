@@ -18,7 +18,6 @@ import { MonthPickerInput } from '@mantine/dates';
 import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
 import { FirestoreService } from '../../../../data/firestoreService';
-import { useData } from '../../../../hooks';
 import type { GlobalSettings, Member } from '../../../../shared/types/firestore-types';
 
 interface GenerateBillsModalProps {
@@ -30,7 +29,6 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
   const [loading, setLoading] = useState(false);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [activeMembers, setActiveMembers] = useState<{ value: string; label: string }[]>([]);
-  const { getGlobalSettings, getMembers } = useData();
 
   const [formData, setFormData] = useState({
     billingMonth: new Date(),
@@ -52,27 +50,29 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
   useEffect(() => {
     if (opened) {
       Promise.all([
-        getGlobalSettings(),
-        getMembers({ isActive: true })
-      ]).then(([settings, members]) => {
-        setGlobalSettings(settings);
-        
-        const memberOptions = members.map((member: Member) => ({
-          value: member.id,
-          label: `${member.name} (${member.floor})`,
-        }));
-        setActiveMembers(memberOptions);
+        FirestoreService.Config.getGlobalSettings(),
+        FirestoreService.Members.getMembers({ isActive: true }),
+      ])
+        .then(([settings, members]) => {
+          setGlobalSettings(settings);
 
-        // Update form data with settings
-        setFormData(prev => ({
-          ...prev,
-          secondFloorCount: settings.activememberCounts?.byFloor?.['2nd'] || 0,
-          thirdFloorCount: settings.activememberCounts?.byFloor?.['3rd'] || 0,
-          wifiAmount: settings.wifiMonthlyCharge,
-        }));
-      }).catch(console.error);
+          const memberOptions = members.map((member: Member) => ({
+            value: member.id,
+            label: `${member.name} (${member.floor})`,
+          }));
+          setActiveMembers(memberOptions);
+
+          // Update form data with settings
+          setFormData((prev) => ({
+            ...prev,
+            secondFloorCount: settings.activememberCounts?.byFloor?.['2nd'] || 0,
+            thirdFloorCount: settings.activememberCounts?.byFloor?.['3rd'] || 0,
+            wifiAmount: settings.wifiMonthlyCharge,
+          }));
+        })
+        .catch(console.error);
     }
-  }, [opened, getGlobalSettings, getMembers]);
+  }, [opened]);
 
   const expenseCombobox = useCombobox({
     onDropdownClose: () => expenseCombobox.resetSelectedOption(),
@@ -142,15 +142,23 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
           '2nd': formData.secondFloorCount,
           '3rd': formData.thirdFloorCount,
         },
-        bulkExpenses: formData.expenseAmount > 0 ? [{
-          memberIds: formData.expenseMemberIds,
-          amount: formData.expenseAmount,
-          description: formData.expenseDescription,
-        }] : [],
-        wifiCharges: formData.wifiMemberIds.length > 0 ? {
-          memberIds: formData.wifiMemberIds,
-          amount: formData.wifiAmount,
-        } : undefined,
+        bulkExpenses:
+          formData.expenseAmount > 0
+            ? [
+                {
+                  memberIds: formData.expenseMemberIds,
+                  amount: formData.expenseAmount,
+                  description: formData.expenseDescription,
+                },
+              ]
+            : [],
+        wifiCharges:
+          formData.wifiMemberIds.length > 0
+            ? {
+                memberIds: formData.wifiMemberIds,
+                amount: formData.wifiAmount,
+              }
+            : undefined,
       });
 
       notifications.show({

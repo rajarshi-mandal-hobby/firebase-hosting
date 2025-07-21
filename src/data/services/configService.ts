@@ -1,6 +1,6 @@
 /**
  * Config Service
- * 
+ *
  * Handles global settings and admin configuration operations.
  * Uses real Firestore with proper error handling.
  */
@@ -8,11 +8,7 @@
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import type { GlobalSettings, AdminConfig, Admin } from '../../shared/types/firestore-types';
-import { 
-  ServiceError,
-  validateEmail,
-  generateId,
-} from '../utils/serviceUtils';
+import { ServiceError, validateEmail, generateId } from '../utils/serviceUtils';
 
 export class ConfigService {
   /**
@@ -22,11 +18,11 @@ export class ConfigService {
     try {
       const globalSettingsRef = doc(db, 'config', 'globalSettings');
       const globalSettingsDoc = await getDoc(globalSettingsRef);
-      
+
       if (!globalSettingsDoc.exists()) {
         throw new ServiceError('firestore/document-not-found', 'Global settings not found');
       }
-      
+
       return globalSettingsDoc.data() as GlobalSettings;
     } catch (error) {
       if (error instanceof ServiceError) {
@@ -82,11 +78,11 @@ export class ConfigService {
     try {
       const adminConfigRef = doc(db, 'config', 'adminConfig');
       const adminConfigDoc = await getDoc(adminConfigRef);
-      
+
       if (!adminConfigDoc.exists()) {
         throw new ServiceError('firestore/document-not-found', 'Admin configuration not found');
       }
-      
+
       return adminConfigDoc.data() as AdminConfig;
     } catch (error) {
       if (error instanceof ServiceError) {
@@ -107,15 +103,15 @@ export class ConfigService {
 
       const adminConfigRef = doc(db, 'config', 'adminConfig');
       const adminConfigDoc = await getDoc(adminConfigRef);
-      
+
       if (!adminConfigDoc.exists()) {
         throw new ServiceError('firestore/document-not-found', 'Admin configuration not found');
       }
 
       const adminConfig = adminConfigDoc.data() as AdminConfig;
-      
+
       // Check if admin already exists
-      const existingAdmin = adminConfig.list.find(admin => admin.email === email);
+      const existingAdmin = adminConfig.list.find((admin) => admin.email === email);
       if (existingAdmin) {
         throw new ServiceError('business/duplicate-admin', 'Admin with this email already exists');
       }
@@ -136,7 +132,7 @@ export class ConfigService {
 
       const updatedList = [...adminConfig.list, newAdmin];
       await updateDoc(adminConfigRef, { list: updatedList });
-      
+
       return newAdmin;
     } catch (error) {
       if (error instanceof ServiceError) {
@@ -153,14 +149,14 @@ export class ConfigService {
     try {
       const adminConfigRef = doc(db, 'config', 'adminConfig');
       const adminConfigDoc = await getDoc(adminConfigRef);
-      
+
       if (!adminConfigDoc.exists()) {
         throw new ServiceError('firestore/document-not-found', 'Admin configuration not found');
       }
 
       const adminConfig = adminConfigDoc.data() as AdminConfig;
-      
-      const adminIndex = adminConfig.list.findIndex(admin => admin.uid === adminUid);
+
+      const adminIndex = adminConfig.list.findIndex((admin) => admin.uid === adminUid);
       if (adminIndex === -1) {
         throw new ServiceError('business/admin-not-found', 'Admin not found');
       }
@@ -174,7 +170,7 @@ export class ConfigService {
         throw new ServiceError('business/self-removal', 'Cannot remove yourself');
       }
 
-      const updatedList = adminConfig.list.filter(admin => admin.uid !== adminUid);
+      const updatedList = adminConfig.list.filter((admin) => admin.uid !== adminUid);
       await updateDoc(adminConfigRef, { list: updatedList });
     } catch (error) {
       if (error instanceof ServiceError) {
@@ -191,35 +187,35 @@ export class ConfigService {
     try {
       const adminConfigRef = doc(db, 'config', 'adminConfig');
       const adminConfigDoc = await getDoc(adminConfigRef);
-      
+
       if (!adminConfigDoc.exists()) {
         throw new ServiceError('firestore/document-not-found', 'Admin configuration not found');
       }
 
       const adminConfig = adminConfigDoc.data() as AdminConfig;
-      
-      const adminIndex = adminConfig.list.findIndex(admin => admin.uid === adminUid);
+
+      const adminIndex = adminConfig.list.findIndex((admin) => admin.uid === adminUid);
       if (adminIndex === -1) {
         throw new ServiceError('business/admin-not-found', 'Admin not found');
       }
 
       const admin = adminConfig.list[adminIndex];
-      
+
       // Only primary admin can change roles
-      const updater = adminConfig.list.find(a => a.uid === updatedBy);
+      const updater = adminConfig.list.find((a) => a.uid === updatedBy);
       if (!updater || updater.role !== 'primary') {
         throw new ServiceError('auth/permission-denied', 'Only primary admin can update roles');
       }
 
       const updatedList = [...adminConfig.list];
-      
+
       // If promoting to primary, demote current primary
       if (newRole === 'primary') {
-        const currentPrimaryIndex = updatedList.findIndex(a => a.role === 'primary');
+        const currentPrimaryIndex = updatedList.findIndex((a) => a.role === 'primary');
         if (currentPrimaryIndex !== -1 && updatedList[currentPrimaryIndex].uid !== adminUid) {
           updatedList[currentPrimaryIndex] = {
             ...updatedList[currentPrimaryIndex],
-            role: 'secondary'
+            role: 'secondary',
           };
         }
       }
@@ -227,7 +223,7 @@ export class ConfigService {
       // Update the target admin's role
       updatedList[adminIndex] = {
         ...admin,
-        role: newRole
+        role: newRole,
       };
 
       // Prepare updates
@@ -237,7 +233,7 @@ export class ConfigService {
       }
 
       await updateDoc(adminConfigRef, updates);
-      
+
       return updatedList[adminIndex];
     } catch (error) {
       if (error instanceof ServiceError) {

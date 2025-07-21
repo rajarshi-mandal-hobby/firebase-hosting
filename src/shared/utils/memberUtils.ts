@@ -1,8 +1,200 @@
-import type { Member, RentHistory, PaymentStatus } from '../types/firestore-types';
+import type { Member, RentHistory, PaymentStatus, SettlementPreview } from '../types/firestore-types';
 
 /**
  * Utility functions for member data processing using real Firestore data
  */
+
+// ======================================
+// VALIDATION UTILITIES
+// ======================================
+
+/**
+ * Validate member name (minimum 2 words requirement)
+ */
+export const validateMemberName = (name: string): { isValid: boolean; error?: string } => {
+  const trimmedName = name.trim();
+  
+  if (!trimmedName) {
+    return { isValid: false, error: 'Name is required' };
+  }
+  
+  const nameParts = trimmedName.split(/\s+/);
+  if (nameParts.length < 2) {
+    return { isValid: false, error: 'Please enter full name (minimum 2 words)' };
+  }
+  
+  // Check for valid characters (letters, spaces, common punctuation)
+  if (!/^[a-zA-Z\s\.\-']+$/.test(trimmedName)) {
+    return { isValid: false, error: 'Name can only contain letters, spaces, dots, hyphens, and apostrophes' };
+  }
+  
+  return { isValid: true };
+};
+
+/**
+ * Validate phone number (10 digits only, +91 added by UI/backend)
+ */
+export const validatePhoneNumber = (phone: string): { isValid: boolean; error?: string } => {
+  const cleanPhone = phone.replace(/\D/g, ''); // Remove non-digits
+  
+  if (!cleanPhone) {
+    return { isValid: false, error: 'Phone number is required' };
+  }
+  
+  if (cleanPhone.length !== 10) {
+    return { isValid: false, error: 'Phone number must be exactly 10 digits' };
+  }
+  
+  // Check if starts with valid Indian mobile prefixes (6, 7, 8, 9)
+  if (!/^[6-9]/.test(cleanPhone)) {
+    return { isValid: false, error: 'Phone number must start with 6, 7, 8, or 9' };
+  }
+  
+  return { isValid: true };
+};
+
+/**
+ * Format phone number with +91 prefix
+ */
+export const formatPhoneNumber = (phone: string): string => {
+  const cleanPhone = phone.replace(/\D/g, '');
+  return `+91${cleanPhone}`;
+};
+
+/**
+ * Check if phone number is unique across all members
+ */
+export const isPhoneNumberUnique = (phone: string, members: Member[], excludeMemberId?: string): boolean => {
+  const formattedPhone = formatPhoneNumber(phone);
+  return !members.some(member => 
+    member.id !== excludeMemberId && member.phone === formattedPhone
+  );
+};
+
+/**
+ * Check if member name is unique (case-insensitive)
+ */
+export const isMemberNameUnique = (name: string, members: Member[], excludeMemberId?: string): boolean => {
+  const normalizedName = name.trim().toLowerCase();
+  return !members.some(member => 
+    member.id !== excludeMemberId && member.name.toLowerCase() === normalizedName
+  );
+};
+
+/**
+ * Validate member uniqueness
+ */
+export const validateMemberUniqueness = (
+  name: string, 
+  phone: string, 
+  members: Member[], 
+  excludeMemberId?: string
+): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  
+  if (!isPhoneNumberUnique(phone, members, excludeMemberId)) {
+    errors.push('Phone number is already registered with another member');
+  }
+  
+  if (!isMemberNameUnique(name, members, excludeMemberId)) {
+    errors.push('Member name already exists');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+// ======================================
+// FINANCIAL CALCULATION UTILITIES
+// ======================================
+
+/**
+ * Calculate total deposit for a new member
+ */
+export const calculateTotalDeposit = (
+  securityDeposit: number,
+  advanceDeposit: number,
+  rentAtJoining: number
+): number => {
+  return securityDeposit + advanceDeposit + rentAtJoining;
+};
+
+/**
+ * Calculate settlement preview for member deactivation
+ */
+export const calculateSettlementPreview = (
+  member: Member,
+  leaveDate: Date
+): SettlementPreview => {
+  const refundAmount = member.totalAgreedDeposit - member.outstandingBalance;
+  
+  let status: 'Refund Due' | 'Payment Due' | 'Settled';
+  if (refundAmount > 0) {
+    status = 'Refund Due';
+  } else if (refundAmount < 0) {
+    status = 'Payment Due';
+  } else {
+    status = 'Settled';
+  }
+  
+  return {
+    memberName: member.name,
+    totalAgreedDeposit: member.totalAgreedDeposit,
+    outstandingBalance: member.outstandingBalance,
+    refundAmount,
+    status,
+    leaveDate: leaveDate.toISOString()
+  };
+};
+
+/**
+ * Calculate outstanding balance after payment
+ */
+export const calculateOutstandingAfterPayment = (
+  currentOutstanding: number,
+  paymentAmount: number
+): number => {
+  return Math.max(0, currentOutstanding - paymentAmount);
+};
+
+/**
+ * Calculate advance deposit from rent (business rule: advance = rent at joining)
+ */
+export const calculateAdvanceDeposit = (rentAtJoining: number): number => {
+  return rentAtJoining;
+};
+
+/**
+ * Validate payment amount
+ */
+export const validatePaymentAmount = (
+  amount: number,
+  maxAmount?: number
+): { isValid: boolean; error?: string } => {
+  if (amount < 0) {
+    return { isValid: false, error: 'Payment amount cannot be negative' };
+  }
+  
+  if (amount === 0) {
+    return { isValid: false, error: 'Payment amount must be greater than zero' };
+  }
+  
+  if (maxAmount && amount > maxAmount) {
+    return { isValid: false, error: `Payment amount cannot exceed ₹${maxAmount.toLocaleString()}` };
+  }
+  
+  return { isValid: true };
+};
+
+/**
+ * Calculate partial payment percentage
+ */
+export const calculatePaymentPercentage = (paidAmount: number, totalAmount: number): number => {
+  if (totalAmount === 0) return 0;
+  return Math.round((paidAmount / totalAmount) * 100);
+};
 
 /**
  * Calculate payment status based on outstanding balance

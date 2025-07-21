@@ -7,7 +7,7 @@ import {
   ModalOverlay,
   SegmentedControl,
 } from '@mantine/core';
-import classes from './pages/MemberDashboard.module.css';
+import classes from './features/member-dashboard/containers/MemberDashboard.module.css';
 
 export const theme = createTheme({
   fontFamily: `Work Sans, ${DEFAULT_THEME.fontFamily}`,

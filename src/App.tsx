@@ -6,9 +6,9 @@ import { Notifications } from '@mantine/notifications';
 import { theme } from './theme';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { AdminDashboard } from './pages/AdminDashboard';
-import { MemberDashboard } from './pages/MemberDashboard';
+import { MemberDashboard } from './features/member-dashboard';
 import { SignIn } from './pages/SignIn';
-import { DataProvider } from './contexts/DataProvider';
+import { AppProvider } from './contexts/AppContext';
 
 const router = createBrowserRouter([
   {
@@ -29,13 +29,15 @@ const router = createBrowserRouter([
   },
 ]);
 
-export default function App() {
+function App() {
   return (
     <MantineProvider theme={theme}>
-      <DataProvider>
+      <AppProvider>
         <Notifications position='bottom-center' />
         <RouterProvider router={router} />
-      </DataProvider>
+      </AppProvider>
     </MantineProvider>
   );
 }
+
+export default App;

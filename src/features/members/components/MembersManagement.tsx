@@ -1,41 +1,130 @@
-import { Accordion, ActionIcon, Button, Center, Group, rem, Stack, Text, TextInput, Title } from '@mantine/core';
-import { useState } from 'react';
+import { Accordion, ActionIcon, Button, Center, Group, rem, Stack, Text, TextInput, Title, Select, Popover, Checkbox } from '@mantine/core';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useDebouncedValue } from '@mantine/hooks';
 import { SharedAvatar, StatusIndicator } from '../../../shared/components';
 import { MemberDetailsList } from '../../../shared/components/MemberDetailsList';
-import type { UseMemberManagementData } from '../hooks/useMemberManagementData';
 import { IconFilter, IconPersonAdd, IconPhone, IconSearch } from '../../../shared/components/icons';
 import { MemberModal, DeleteMemberModal, DeactivationModal } from './modals';
+import { useAppContext } from '../../../contexts/AppContext';
 import type { Member } from '../../../shared/types/firestore-types';
 
-interface MembersManagementProps {
-  memberData: UseMemberManagementData;
-}
-
-export function MembersManagement({ memberData }: MembersManagementProps) {
-  const { members, memberCounts, error, actions, cache } = memberData;
+export function MembersManagement() {
+  const { 
+    activeMembers, 
+    loading, 
+    errors, 
+    retryConnection, 
+    getMemberStats,
+    searchMembers,
+    filterMembers,
+    fetchInactiveMembers 
+  } = useAppContext();
+  
+  // Modal states
   const [addMemberModal, setAddMemberModal] = useState(false);
   const [editMemberModal, setEditMemberModal] = useState(false);
   const [deleteMemberModal, setDeleteMemberModal] = useState(false);
   const [deactivationModal, setDeactivationModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery] = useDebouncedValue(searchQuery, 300);
+  const [filterOpened, setFilterOpened] = useState(false);
+  const [filters, setFilters] = useState({
+    floor: 'all',
+    accountStatus: 'all' as 'linked' | 'unlinked' | 'all',
+    showInactive: false
+  });
+  
+  // Inactive members state
+  const [inactiveMembers, setInactiveMembers] = useState<Member[]>([]);
+  const [loadingInactive, setLoadingInactive] = useState(false);
+
+  // Calculate member statistics from active members
+  const memberStats = useMemo(() => getMemberStats(), [getMemberStats]);
+
+  // Get available floors from active members
+  const availableFloors = useMemo(() => {
+    const floors = Array.from(new Set(activeMembers.map(member => member.floor))).sort();
+    return [{ value: 'all', label: 'All Floors' }, ...floors.map(floor => ({ value: floor, label: `Floor ${floor}` }))];
+  }, [activeMembers]);
+
+  // Fetch inactive members when needed
+  const loadInactiveMembers = useCallback(async () => {
+    if (inactiveMembers.length > 0) return; // Already loaded
+    
+    setLoadingInactive(true);
+    try {
+      const inactive = await fetchInactiveMembers();
+      setInactiveMembers(inactive);
+    } catch (error) {
+      console.error('Failed to load inactive members:', error);
+    } finally {
+      setLoadingInactive(false);
+    }
+  }, [fetchInactiveMembers, inactiveMembers.length]);
+
+  // Load inactive members when showInactive filter is enabled
+  useEffect(() => {
+    if (filters.showInactive) {
+      loadInactiveMembers();
+    }
+  }, [filters.showInactive, loadInactiveMembers]);
+
+  // Get the base member list (active + inactive if needed)
+  const baseMemberList = useMemo(() => {
+    if (filters.showInactive) {
+      return [...activeMembers, ...inactiveMembers];
+    }
+    return activeMembers;
+  }, [activeMembers, inactiveMembers, filters.showInactive]);
+
+  // Apply search and filters
+  const filteredMembers = useMemo(() => {
+    // First apply search
+    let members = searchMembers(debouncedSearchQuery, baseMemberList);
+    
+    // Then apply filters
+    members = filterMembers(members, {
+      floor: filters.floor,
+      accountStatus: filters.accountStatus
+    });
+    
+    return members;
+  }, [searchMembers, filterMembers, debouncedSearchQuery, baseMemberList, filters]);
+
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return filters.floor !== 'all' || filters.accountStatus !== 'all' || filters.showInactive;
+  }, [filters]);
+
+  // Reset filters
+  const resetFilters = useCallback(() => {
+    setFilters({
+      floor: 'all',
+      accountStatus: 'all',
+      showInactive: false
+    });
+  }, []);
 
   // Early return if there's an error
-  if (error) {
+  if (errors.members || errors.connection) {
     return (
       <Stack gap='lg' align='center'>
-        <Text c='red'>Error: {error}</Text>
-        <Button onClick={actions.refetch} variant='outline'>
+        <Text c='red'>Error: {errors.members || errors.connection}</Text>
+        <Button onClick={retryConnection} variant='outline'>
           Retry
         </Button>
       </Stack>
     );
   }
 
-  // Show loading while initial data is being fetched (exactly like RentManagement pattern)
-  if (!cache.membersLoaded) {
+  // Show loading while initial data is being fetched
+  if (loading.members) {
     return (
       <Stack gap='lg'>
-        <Text>Loading...</Text>
+        <Text>Loading members...</Text>
       </Stack>
     );
   }
@@ -43,14 +132,91 @@ export function MembersManagement({ memberData }: MembersManagementProps) {
   return (
     <Stack>
       <Title order={4}>
-        Active Members: {memberCounts.active} | WiFi: {memberCounts.wifiOptedIn} | Total: {memberCounts.total}
+        Active Members: {memberStats.totalActive} | WiFi: {memberStats.wifiOptedIn} | Total: {memberStats.totalActive}
       </Title>
 
       <Group>
-        <TextInput placeholder='Search...' leftSection={<IconSearch />} radius='xl' flex={1} />
-        <ActionIcon size={rem(32)} aria-label='Filter' variant='filled' color='dark.8'>
-          <IconFilter size={'70%'} />
-        </ActionIcon>
+        <TextInput 
+          placeholder='Search by name or phone...' 
+          leftSection={<IconSearch />} 
+          radius='xl' 
+          flex={1}
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.currentTarget.value)}
+        />
+        
+        <Popover 
+          width={300} 
+          position="bottom-end" 
+          withArrow 
+          shadow="md"
+          opened={filterOpened}
+          onChange={setFilterOpened}
+        >
+          <Popover.Target>
+            <ActionIcon 
+              size={rem(32)} 
+              aria-label='Filter' 
+              variant={hasActiveFilters ? 'filled' : 'outline'}
+              color={hasActiveFilters ? 'blue' : 'dark.8'}
+              onClick={() => setFilterOpened((o) => !o)}
+            >
+              <IconFilter size={'70%'} />
+            </ActionIcon>
+          </Popover.Target>
+          <Popover.Dropdown>
+            <Stack gap="md">
+              <Text size="sm" fw={500}>Filter Members</Text>
+              
+              <Select
+                label="Floor"
+                placeholder="Select floor"
+                data={availableFloors}
+                value={filters.floor}
+                onChange={(value) => setFilters(prev => ({ ...prev, floor: value || 'all' }))}
+                clearable
+                searchable
+              />
+              
+              <Select
+                label="Account Status"
+                placeholder="Select account status"
+                data={[
+                  { value: 'all', label: 'All Members' },
+                  { value: 'linked', label: 'Account Linked' },
+                  { value: 'unlinked', label: 'Account Not Linked' }
+                ]}
+                value={filters.accountStatus}
+                onChange={(value) => setFilters(prev => ({ 
+                  ...prev, 
+                  accountStatus: (value as 'linked' | 'unlinked' | 'all') || 'all' 
+                }))}
+              />
+              
+              <Checkbox
+                label={`Include inactive members ${loadingInactive ? '(loading...)' : ''}`}
+                checked={filters.showInactive}
+                onChange={(event) => setFilters(prev => ({ 
+                  ...prev, 
+                  showInactive: event.currentTarget.checked 
+                }))}
+                disabled={loadingInactive}
+              />
+              
+              {hasActiveFilters && (
+                <Button 
+                  variant="light" 
+                  size="xs" 
+                  onClick={resetFilters}
+                  fullWidth
+                >
+                  Clear All Filters
+                </Button>
+              )}
+            </Stack>
+          </Popover.Dropdown>
+        </Popover>
+        
         <ActionIcon 
           size={rem(32)} 
           aria-label='Add Member' 
@@ -63,7 +229,7 @@ export function MembersManagement({ memberData }: MembersManagementProps) {
       </Group>
 
       <Accordion>
-        {members.map((member) => (
+        {filteredMembers.map((member) => (
           <Accordion.Item key={member.id} value={member.id}>
             <Center>
               <Accordion.Control>
@@ -112,17 +278,30 @@ export function MembersManagement({ memberData }: MembersManagementProps) {
                     Deactivate
                   </Button>
                 ) : (
-                  <Button 
-                    color='red' 
-                    size='xs' 
-                    variant='light'
-                    onClick={() => {
-                      setSelectedMember(member);
-                      setDeleteMemberModal(true);
-                    }}
-                  >
-                    Delete
-                  </Button>
+                  <>
+                    <Button 
+                      color='green' 
+                      size='xs' 
+                      variant='light'
+                      onClick={() => {
+                        setSelectedMember(member);
+                        setAddMemberModal(true);
+                      }}
+                    >
+                      Reactivate
+                    </Button>
+                    <Button 
+                      color='red' 
+                      size='xs' 
+                      variant='light'
+                      onClick={() => {
+                        setSelectedMember(member);
+                        setDeleteMemberModal(true);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </>
                 )}
               </Group>
             </Accordion.Panel>

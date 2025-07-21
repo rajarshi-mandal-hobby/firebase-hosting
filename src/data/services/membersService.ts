@@ -1,44 +1,35 @@
 /**
  * Members Service
- * 
+ *
  * Handles member data and operations using real Firestore.
  */
 
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  Timestamp 
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import type { Member, Floor, RentHistory } from '../../shared/types/firestore-types';
-import { 
-  ServiceError,
-  validatePhoneNumber,
-  validateAmount,
-  generateMemberId,
-} from '../utils/serviceUtils';
+import { ServiceError, validatePhoneNumber, validateAmount, generateMemberId } from '../utils/serviceUtils';
 
 export class MembersService {
   /**
    * Fetch all members with optional filtering using Firestore
    */
-  static async getMembers(filters?: {
-    isActive?: boolean;
-    floor?: Floor;
-    optedForWifi?: boolean;
-  }): Promise<Member[]> {
+  static async getMembers(filters?: { isActive?: boolean; floor?: Floor; optedForWifi?: boolean }): Promise<Member[]> {
     try {
       const membersQuery = collection(db, 'members');
-      
+
       // Apply filters
       const constraints = [];
       if (filters?.isActive !== undefined) {
@@ -50,22 +41,23 @@ export class MembersService {
       if (filters?.optedForWifi !== undefined) {
         constraints.push(where('optedForWifi', '==', filters.optedForWifi));
       }
-      
+
       // Create filtered query
-      const q = constraints.length > 0 
-        ? query(membersQuery, ...constraints, orderBy('name'))
-        : query(membersQuery, orderBy('name'));
-      
+      const q =
+        constraints.length > 0
+          ? query(membersQuery, ...constraints, orderBy('name'))
+          : query(membersQuery, orderBy('name'));
+
       const snapshot = await getDocs(q);
       const members: Member[] = [];
-      
+
       snapshot.forEach((doc) => {
-        members.push({ 
-          id: doc.id, 
-          ...doc.data() 
+        members.push({
+          id: doc.id,
+          ...doc.data(),
         } as Member);
       });
-      
+
       return members;
     } catch (error) {
       console.error('Error fetching members:', error);
@@ -80,14 +72,14 @@ export class MembersService {
     try {
       const memberRef = doc(db, 'members', memberId);
       const memberDoc = await getDoc(memberRef);
-      
+
       if (!memberDoc.exists()) {
         return null;
       }
-      
-      return { 
-        id: memberDoc.id, 
-        ...memberDoc.data() 
+
+      return {
+        id: memberDoc.id,
+        ...memberDoc.data(),
       } as Member;
     } catch (error) {
       console.error('Error fetching member:', error);
@@ -105,17 +97,17 @@ export class MembersService {
         orderBy('generatedAt', 'desc'),
         limit(limitCount)
       );
-      
+
       const snapshot = await getDocs(rentHistoryQuery);
       const rentHistory: RentHistory[] = [];
-      
+
       snapshot.forEach((doc) => {
-        rentHistory.push({ 
-          id: doc.id, 
-          ...doc.data() 
+        rentHistory.push({
+          id: doc.id,
+          ...doc.data(),
         } as RentHistory);
       });
-      
+
       return rentHistory;
     } catch (error) {
       console.error('Error fetching member rent history:', error);
@@ -130,12 +122,11 @@ export class MembersService {
     try {
       // Get all members first (Firestore doesn't support full-text search)
       const members = await this.getMembers({ isActive: activeOnly ? true : undefined });
-      
+
       // Filter by search term
       const searchLower = searchTerm.toLowerCase();
-      return members.filter(member =>
-        member.name.toLowerCase().includes(searchLower) ||
-        member.phone.includes(searchTerm)
+      return members.filter(
+        (member) => member.name.toLowerCase().includes(searchLower) || member.phone.includes(searchTerm)
       );
     } catch (error) {
       console.error('Error searching members:', error);
@@ -177,7 +168,7 @@ export class MembersService {
 
       // Check for duplicate phone number
       const existingMembers = await this.getMembers();
-      const existingMember = existingMembers.find(m => m.phone === memberData.phone);
+      const existingMember = existingMembers.find((m) => m.phone === memberData.phone);
       if (existingMember) {
         throw new ServiceError('business/duplicate-phone', 'Member with this phone number already exists');
       }
@@ -252,16 +243,14 @@ export class MembersService {
       // Check for duplicate phone if phone is being updated
       if (updates.phone && updates.phone !== member.phone) {
         const existingMembers = await this.getMembers();
-        const existingMember = existingMembers.find(m => m.phone === updates.phone && m.id !== memberId);
+        const existingMember = existingMembers.find((m) => m.phone === updates.phone && m.id !== memberId);
         if (existingMember) {
           throw new ServiceError('business/duplicate-phone', 'Member with this phone number already exists');
         }
       }
 
       // Remove undefined fields and prepare updates
-      const cleanUpdates = Object.fromEntries(
-        Object.entries(updates).filter(([, value]) => value !== undefined)
-      );
+      const cleanUpdates = Object.fromEntries(Object.entries(updates).filter(([, value]) => value !== undefined));
 
       // Update in Firestore
       const memberRef = doc(db, 'members', memberId);
@@ -282,7 +271,10 @@ export class MembersService {
   /**
    * Deactivate a member (set isActive to false)
    */
-  static async deactivateMember(memberId: string, leaveDate: Date): Promise<{
+  static async deactivateMember(
+    memberId: string,
+    leaveDate: Date
+  ): Promise<{
     finalOutstanding: number;
     refundAmount: number;
     settlementDetails: string;
@@ -307,7 +299,7 @@ export class MembersService {
       await updateDoc(memberRef, {
         isActive: false,
         leaveDate: Timestamp.fromDate(leaveDate),
-        ttlExpiry: Timestamp.fromDate(new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)) // 6 months from now
+        ttlExpiry: Timestamp.fromDate(new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000)), // 6 months from now
       });
 
       return {
@@ -362,28 +354,215 @@ export class MembersService {
   }> {
     try {
       const allMembers = await this.getMembers();
-      const activeMembers = allMembers.filter(m => m.isActive);
-      const inactiveMembers = allMembers.filter(m => !m.isActive);
-      
+      const activeMembers = allMembers.filter((m) => m.isActive);
+      const inactiveMembers = allMembers.filter((m) => !m.isActive);
+
       const byFloor = activeMembers.reduce((acc, member) => {
         acc[member.floor] = (acc[member.floor] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
       const totalOutstanding = activeMembers
-        .filter(m => m.outstandingBalance > 0)
+        .filter((m) => m.outstandingBalance > 0)
         .reduce((sum, m) => sum + m.outstandingBalance, 0);
 
       return {
         totalActive: activeMembers.length,
         totalInactive: inactiveMembers.length,
-        wifiOptedIn: activeMembers.filter(m => m.optedForWifi).length,
+        wifiOptedIn: activeMembers.filter((m) => m.optedForWifi).length,
         byFloor,
         totalOutstanding,
       };
     } catch (error) {
       console.error('Error getting member stats:', error);
       throw new ServiceError('firestore/read-error', 'Failed to get member statistics');
+    }
+  }
+
+  // Member Dashboard Specific Methods
+
+  /**
+   * Get member dashboard data by Firebase UID
+   * Used for authenticated member dashboard access
+   */
+  static async getMemberByFirebaseUid(firebaseUid: string): Promise<Member | null> {
+    try {
+      const membersQuery = query(
+        collection(db, 'members'),
+        where('firebaseUid', '==', firebaseUid),
+        where('isActive', '==', true),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(membersQuery);
+
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const memberDoc = snapshot.docs[0];
+      return {
+        id: memberDoc.id,
+        ...memberDoc.data(),
+      } as Member;
+    } catch (error) {
+      console.error('Error fetching member by Firebase UID:', error);
+      throw new ServiceError('firestore/read-error', 'Failed to fetch member by Firebase UID');
+    }
+  }
+
+  /**
+   * Get current month rent history for a member
+   * Returns the most recent rent history entry
+   */
+  static async getMemberCurrentMonth(memberId: string): Promise<RentHistory | null> {
+    try {
+      const rentHistoryQuery = query(
+        collection(db, 'members', memberId, 'rentHistory'),
+        orderBy('generatedAt', 'desc'),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(rentHistoryQuery);
+
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const historyDoc = snapshot.docs[0];
+      return {
+        id: historyDoc.id,
+        ...historyDoc.data(),
+      } as RentHistory;
+    } catch (error) {
+      console.error('Error fetching member current month:', error);
+      throw new ServiceError('firestore/read-error', 'Failed to fetch current month data');
+    }
+  }
+
+  /**
+   * Get other active members (excluding the specified member)
+   * Used for member dashboard friends directory
+   */
+  static async getOtherActiveMembers(excludeMemberId: string): Promise<
+    Array<{
+      id: string;
+      name: string;
+      phone: string;
+      floor: string;
+      bedType: string;
+    }>
+  > {
+    try {
+      const membersQuery = query(collection(db, 'members'), where('isActive', '==', true), orderBy('name'));
+
+      const snapshot = await getDocs(membersQuery);
+      const otherMembers: Array<{
+        id: string;
+        name: string;
+        phone: string;
+        floor: string;
+        bedType: string;
+      }> = [];
+
+      snapshot.forEach((doc) => {
+        // Exclude the current member from the friends list
+        if (doc.id !== excludeMemberId) {
+          const memberData = doc.data() as Member;
+          otherMembers.push({
+            id: doc.id,
+            name: memberData.name,
+            phone: memberData.phone,
+            floor: memberData.floor,
+            bedType: memberData.bedType,
+          });
+        }
+      });
+
+      return otherMembers;
+    } catch (error) {
+      console.error('Error fetching other active members:', error);
+      throw new ServiceError('firestore/read-error', 'Failed to fetch other active members');
+    }
+  }
+
+  /**
+   * Update member's FCM token for push notifications
+   */
+  static async updateMemberFCMToken(memberId: string, fcmToken: string): Promise<void> {
+    try {
+      const memberRef = doc(db, 'members', memberId);
+      await updateDoc(memberRef, {
+        fcmToken: fcmToken,
+      });
+    } catch (error) {
+      console.error('Error updating FCM token:', error);
+      throw new ServiceError('firestore/write-error', 'Failed to update FCM token');
+    }
+  }
+
+  /**
+   * Link member account to Firebase UID
+   * Used during account linking process
+   */
+  static async linkMemberToFirebaseUid(memberId: string, firebaseUid: string): Promise<Member> {
+    try {
+      // Check if Firebase UID is already linked to another member
+      const existingMember = await this.getMemberByFirebaseUid(firebaseUid);
+      if (existingMember && existingMember.id !== memberId) {
+        throw new ServiceError('business/uid-already-linked', 'Firebase UID is already linked to another member');
+      }
+
+      // Update member with Firebase UID
+      const memberRef = doc(db, 'members', memberId);
+      await updateDoc(memberRef, {
+        firebaseUid: firebaseUid,
+      });
+
+      // Return updated member
+      const updatedMember = await this.getMember(memberId);
+      if (!updatedMember) {
+        throw new ServiceError('business/member-not-found', 'Member not found after update');
+      }
+
+      return updatedMember;
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      console.error('Error linking member to Firebase UID:', error);
+      throw new ServiceError('firestore/write-error', 'Failed to link member account');
+    }
+  }
+
+  /**
+   * Get member dashboard data with error handling and retry mechanism
+   * Combines member data and current month rent history
+   */
+  static async getMemberDashboardData(firebaseUid: string): Promise<{
+    member: Member;
+    currentMonth: RentHistory | null;
+  }> {
+    try {
+      // Get member by Firebase UID
+      const member = await this.getMemberByFirebaseUid(firebaseUid);
+      if (!member) {
+        throw new ServiceError('business/member-not-found', 'No active member found for this account');
+      }
+
+      // Get current month data
+      const currentMonth = await this.getMemberCurrentMonth(member.id);
+
+      return {
+        member,
+        currentMonth,
+      };
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      console.error('Error fetching member dashboard data:', error);
+      throw new ServiceError('firestore/read-error', 'Failed to fetch member dashboard data');
     }
   }
 }

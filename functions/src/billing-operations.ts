@@ -1,27 +1,23 @@
 /**
  * Billing Operations - Cloud Functions
- * 
+ *
  * This file contains HTTP callable functions for managing
  * billing, rent generation, and payment processing.
  */
 
-import { onCall } from "firebase-functions/v2/https";
-import { getFirestore } from "firebase-admin/firestore";
+import { onCall } from 'firebase-functions/v2/https';
+import { getFirestore } from 'firebase-admin/firestore';
+import { validateAuth, createSuccessResponse, handleFunctionError } from './utils/validation';
 import {
-  validateAuth,
-  createSuccessResponse,
-  handleFunctionError,
-} from "./utils/validation";
-import { 
-  ElectricBill, 
-  AdminConfig, 
-  Member, 
-  RentHistory, 
+  ElectricBill,
+  AdminConfig,
+  Member,
+  RentHistory,
   CloudFunctionResponse,
   PaymentStatus,
   GlobalSettings,
-  Expense
-} from "./types/shared";
+  Expense,
+} from './types/shared';
 
 const db = getFirestore();
 
@@ -29,12 +25,12 @@ const db = getFirestore();
 interface GenerateBulkBillsRequest {
   billingMonth: string; // YYYY-MM format
   floorElectricity: {
-    "2nd": number;
-    "3rd": number;
+    '2nd': number;
+    '3rd': number;
   };
   floorMemberCounts: {
-    "2nd": number;
-    "3rd": number;
+    '2nd': number;
+    '3rd': number;
   };
   bulkExpenses?: {
     memberIds: string[];
@@ -54,50 +50,45 @@ interface RecordPaymentRequest {
   note?: string;
 }
 
-interface GetMemberBillsRequest {
-  memberId: string;
-  limit?: number;
-  startAfter?: string; // For pagination
-}
-
 /**
  * Generate bulk bills for all active members (Admin only)
  * Creates rent history entries based on electricity distribution and expenses
  */
 export const generateBulkBills = onCall(
   { cors: true },
-  async (request): Promise<CloudFunctionResponse<{
-    generatedCount: number;
-    skippedCount: number;
-    errors: string[];
-  }>> => {
+  async (
+    request
+  ): Promise<
+    CloudFunctionResponse<{
+      generatedCount: number;
+      skippedCount: number;
+      errors: string[];
+    }>
+  > => {
     try {
       const uid = validateAuth(request);
 
       // Check if user is admin
-      const adminDoc = await db.collection("config").doc("admins").get();
+      const adminDoc = await db.collection('config').doc('admins').get();
       if (!adminDoc.exists) {
-        throw new Error("Admin configuration not found");
+        throw new Error('Admin configuration not found');
       }
 
       const adminConfig = adminDoc.data() as AdminConfig;
-      const isAdmin = adminConfig.list.some(admin => admin.uid === uid);
-      
+      const isAdmin = adminConfig.list.some((admin) => admin.uid === uid);
+
       if (!isAdmin) {
-        throw new Error("Unauthorized: Admin access required");
+        throw new Error('Unauthorized: Admin access required');
       }
 
       const requestData = request.data as GenerateBulkBillsRequest;
 
       if (!requestData?.billingMonth || !requestData?.floorElectricity) {
-        throw new Error("Billing month and floor electricity data are required");
+        throw new Error('Billing month and floor electricity data are required');
       }
 
       // Get all active members
-      const membersSnapshot = await db
-        .collection("members")
-        .where("isActive", "==", true)
-        .get();
+      const membersSnapshot = await db.collection('members').where('isActive', '==', true).get();
 
       const activeMembers = membersSnapshot.docs.map((doc: any) => ({
         id: doc.id,
@@ -105,9 +96,9 @@ export const generateBulkBills = onCall(
       })) as Member[];
 
       // Get global settings
-      const settingsDoc = await db.collection("config").doc("globalSettings").get();
+      const settingsDoc = await db.collection('config').doc('globalSettings').get();
       if (!settingsDoc.exists) {
-        throw new Error("Global settings not found");
+        throw new Error('Global settings not found');
       }
       const settings = settingsDoc.data() as GlobalSettings;
 
@@ -120,9 +111,9 @@ export const generateBulkBills = onCall(
         try {
           // Check if bill already exists for this month
           const existingBillDoc = await db
-            .collection("members")
+            .collection('members')
             .doc(member.id)
-            .collection("rentHistory")
+            .collection('rentHistory')
             .doc(requestData.billingMonth)
             .get();
 
@@ -140,8 +131,8 @@ export const generateBulkBills = onCall(
           let memberExpenses: Expense[] = [];
           if (requestData.bulkExpenses) {
             memberExpenses = requestData.bulkExpenses
-              .filter(expense => expense.memberIds.includes(member.id))
-              .map(expense => ({
+              .filter((expense) => expense.memberIds.includes(member.id))
+              .map((expense) => ({
                 amount: expense.amount,
                 description: expense.description,
               }));
@@ -160,7 +151,7 @@ export const generateBulkBills = onCall(
           const totalCharges = member.currentRent + electricityCost + wifiCost + totalExpenses;
 
           // Create rent history entry
-          const rentHistoryData: Omit<RentHistory, "id"> = {
+          const rentHistoryData: Omit<RentHistory, 'id'> = {
             generatedAt: new Date() as any, // Will be converted to Timestamp by Firestore
             rent: member.currentRent,
             electricity: electricityCost,
@@ -170,20 +161,20 @@ export const generateBulkBills = onCall(
             totalCharges,
             amountPaid: 0,
             currentOutstanding: member.outstandingBalance + totalCharges,
-            note: member.outstandingNote || "",
-            status: "Due" as PaymentStatus,
+            note: member.outstandingNote || '',
+            status: 'Due' as PaymentStatus,
           };
 
           // Save to Firestore
           await db
-            .collection("members")
+            .collection('members')
             .doc(member.id)
-            .collection("rentHistory")
+            .collection('rentHistory')
             .doc(requestData.billingMonth)
             .set(rentHistoryData);
 
           // Update member's outstanding balance
-          await db.collection("members").doc(member.id).update({
+          await db.collection('members').doc(member.id).update({
             outstandingBalance: rentHistoryData.currentOutstanding,
           });
 
@@ -195,36 +186,34 @@ export const generateBulkBills = onCall(
 
       // Create/update electric bill record
       try {
-        const electricBillData: Omit<ElectricBill, "id"> = {
-          billingMonth: new Date(requestData.billingMonth + "-01") as any,
+        const electricBillData: Omit<ElectricBill, 'id'> = {
+          billingMonth: new Date(requestData.billingMonth + '-01') as any,
           generatedAt: new Date() as any,
           lastUpdated: new Date() as any,
           floorCosts: {
-            "2nd": {
-              bill: requestData.floorElectricity["2nd"],
-              totalMembers: requestData.floorMemberCounts["2nd"],
+            '2nd': {
+              bill: requestData.floorElectricity['2nd'],
+              totalMembers: requestData.floorMemberCounts['2nd'],
             },
-            "3rd": {
-              bill: requestData.floorElectricity["3rd"],
-              totalMembers: requestData.floorMemberCounts["3rd"],
+            '3rd': {
+              bill: requestData.floorElectricity['3rd'],
+              totalMembers: requestData.floorMemberCounts['3rd'],
             },
           },
-          appliedBulkExpenses: requestData.bulkExpenses?.map(expense => ({
-            members: expense.memberIds,
-            amount: expense.amount,
-            description: expense.description,
-          })) || [],
+          appliedBulkExpenses:
+            requestData.bulkExpenses?.map((expense) => ({
+              members: expense.memberIds,
+              amount: expense.amount,
+              description: expense.description,
+            })) || [],
         };
 
-        await db
-          .collection("electricBills")
-          .doc(requestData.billingMonth)
-          .set(electricBillData);
+        await db.collection('electricBills').doc(requestData.billingMonth).set(electricBillData);
       } catch (error) {
         errors.push(`Error creating electric bill record: ${error}`);
       }
 
-      return createSuccessResponse("Bills generated successfully", {
+      return createSuccessResponse('Bills generated successfully', {
         generatedCount,
         skippedCount,
         errors,
@@ -245,42 +234,46 @@ export const generateBulkBills = onCall(
  */
 export const recordPayment = onCall(
   { cors: true },
-  async (request): Promise<CloudFunctionResponse<{ 
-    success: boolean;
-    updatedRent: RentHistory;
-  }>> => {
+  async (
+    request
+  ): Promise<
+    CloudFunctionResponse<{
+      success: boolean;
+      updatedRent: RentHistory;
+    }>
+  > => {
     try {
       const uid = validateAuth(request);
 
       // Check if user is admin
-      const adminDoc = await db.collection("config").doc("admins").get();
+      const adminDoc = await db.collection('config').doc('admins').get();
       if (!adminDoc.exists) {
-        throw new Error("Admin configuration not found");
+        throw new Error('Admin configuration not found');
       }
 
       const adminConfig = adminDoc.data() as AdminConfig;
-      const isAdmin = adminConfig.list.some(admin => admin.uid === uid);
-      
+      const isAdmin = adminConfig.list.some((admin) => admin.uid === uid);
+
       if (!isAdmin) {
-        throw new Error("Unauthorized: Admin access required");
+        throw new Error('Unauthorized: Admin access required');
       }
 
       const requestData = request.data as RecordPaymentRequest;
 
       if (!requestData?.memberId || !requestData?.month || typeof requestData?.amountPaid !== 'number') {
-        throw new Error("Member ID, month, and amount paid are required");
+        throw new Error('Member ID, month, and amount paid are required');
       }
 
       // Get the rent history document
       const rentHistoryRef = db
-        .collection("members")
+        .collection('members')
         .doc(requestData.memberId)
-        .collection("rentHistory")
+        .collection('rentHistory')
         .doc(requestData.month);
 
       const rentHistoryDoc = await rentHistoryRef.get();
       if (!rentHistoryDoc.exists) {
-        throw new Error("Rent history not found for the specified month");
+        throw new Error('Rent history not found for the specified month');
       }
 
       const rentData = { id: rentHistoryDoc.id, ...rentHistoryDoc.data() } as RentHistory;
@@ -288,15 +281,15 @@ export const recordPayment = onCall(
       // Calculate new payment details
       const newAmountPaid = Math.max(0, requestData.amountPaid);
       const newCurrentOutstanding = rentData.previousOutstanding + rentData.totalCharges - newAmountPaid;
-      
+
       // Determine payment status
       let newStatus: PaymentStatus;
       if (newAmountPaid === 0) {
-        newStatus = "Due";
+        newStatus = 'Due';
       } else if (newAmountPaid >= rentData.totalCharges) {
-        newStatus = newAmountPaid > rentData.totalCharges ? "Overpaid" : "Paid";
+        newStatus = newAmountPaid > rentData.totalCharges ? 'Overpaid' : 'Paid';
       } else {
-        newStatus = "Partially Paid";
+        newStatus = 'Partially Paid';
       }
 
       // Update rent history
@@ -310,13 +303,13 @@ export const recordPayment = onCall(
       await rentHistoryRef.update(updateData);
 
       // Update member's outstanding balance
-      await db.collection("members").doc(requestData.memberId).update({
+      await db.collection('members').doc(requestData.memberId).update({
         outstandingBalance: newCurrentOutstanding,
       });
 
       const updatedRentData = { ...rentData, ...updateData };
 
-      return createSuccessResponse("Payment recorded successfully", {
+      return createSuccessResponse('Payment recorded successfully', {
         success: true,
         updatedRent: updatedRentData,
       });
@@ -340,33 +333,29 @@ export const getCurrentElectricBill = onCall(
       const uid = validateAuth(request);
 
       // Check if user is admin
-      const adminDoc = await db.collection("config").doc("admins").get();
+      const adminDoc = await db.collection('config').doc('admins').get();
       if (!adminDoc.exists) {
-        throw new Error("Admin configuration not found");
+        throw new Error('Admin configuration not found');
       }
 
       const adminConfig = adminDoc.data() as AdminConfig;
-      const isAdmin = adminConfig.list.some(admin => admin.uid === uid);
-      
+      const isAdmin = adminConfig.list.some((admin) => admin.uid === uid);
+
       if (!isAdmin) {
-        throw new Error("Unauthorized: Admin access required");
+        throw new Error('Unauthorized: Admin access required');
       }
 
       // Get the most recent electric bill
-      const billsSnapshot = await db
-        .collection("electricBills")
-        .orderBy("billingMonth", "desc")
-        .limit(1)
-        .get();
+      const billsSnapshot = await db.collection('electricBills').orderBy('billingMonth', 'desc').limit(1).get();
 
       if (billsSnapshot.empty) {
-        return createSuccessResponse("No electric bills found", null);
+        return createSuccessResponse('No electric bills found', null);
       }
 
       const billDoc = billsSnapshot.docs[0];
       const billData = { id: billDoc.id, ...billDoc.data() } as ElectricBill;
 
-      return createSuccessResponse("Current electric bill retrieved successfully", billData);
+      return createSuccessResponse('Current electric bill retrieved successfully', billData);
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<ElectricBill | null>;
     }
@@ -379,50 +368,51 @@ export const getCurrentElectricBill = onCall(
  */
 export const getBillingSummary = onCall(
   { cors: true },
-  async (request): Promise<CloudFunctionResponse<{
-    currentMonth: {
-      totalGenerated: number;
-      totalCollected: number;
-      totalOutstanding: number;
-      paymentRate: number;
-    };
-    recentPayments: {
-      memberId: string;
-      memberName: string;
-      amount: number;
-      month: string;
-      paidDate: string;
-    }[];
-    upcomingDues: {
-      memberId: string;
-      memberName: string;
-      amount: number;
-      daysOverdue: number;
-    }[];
-  }>> => {
+  async (
+    request
+  ): Promise<
+    CloudFunctionResponse<{
+      currentMonth: {
+        totalGenerated: number;
+        totalCollected: number;
+        totalOutstanding: number;
+        paymentRate: number;
+      };
+      recentPayments: {
+        memberId: string;
+        memberName: string;
+        amount: number;
+        month: string;
+        paidDate: string;
+      }[];
+      upcomingDues: {
+        memberId: string;
+        memberName: string;
+        amount: number;
+        daysOverdue: number;
+      }[];
+    }>
+  > => {
     try {
       const uid = validateAuth(request);
 
       // Check if user is admin
-      const adminDoc = await db.collection("config").doc("admins").get();
+      const adminDoc = await db.collection('config').doc('admins').get();
       if (!adminDoc.exists) {
-        throw new Error("Admin configuration not found");
+        throw new Error('Admin configuration not found');
       }
 
       const adminConfig = adminDoc.data() as AdminConfig;
-      const isAdmin = adminConfig.list.some(admin => admin.uid === uid);
-      
+      const isAdmin = adminConfig.list.some((admin) => admin.uid === uid);
+
       if (!isAdmin) {
-        throw new Error("Unauthorized: Admin access required");
+        throw new Error('Unauthorized: Admin access required');
       }
 
       const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
       // Get all active members
-      const membersSnapshot = await db
-        .collection("members")
-        .where("isActive", "==", true)
-        .get();
+      const membersSnapshot = await db.collection('members').where('isActive', '==', true).get();
 
       const activeMembers = membersSnapshot.docs.map((doc: any) => ({
         id: doc.id,
@@ -441,27 +431,30 @@ export const getBillingSummary = onCall(
       for (const member of activeMembers) {
         try {
           const rentHistoryDoc = await db
-            .collection("members")
+            .collection('members')
             .doc(member.id)
-            .collection("rentHistory")
+            .collection('rentHistory')
             .doc(currentMonth)
             .get();
 
           if (rentHistoryDoc.exists) {
             const rentData = rentHistoryDoc.data() as RentHistory;
-            
+
             totalGenerated += rentData.totalCharges;
             totalCollected += rentData.amountPaid;
-            
+
             const outstanding = rentData.totalCharges - rentData.amountPaid;
             if (outstanding > 0) {
               totalOutstanding += outstanding;
-              
+
               // Calculate days overdue (assuming bills are due on 5th of each month)
               const currentDate = new Date();
               const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 5);
-              const daysOverdue = Math.max(0, Math.floor((currentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-              
+              const daysOverdue = Math.max(
+                0,
+                Math.floor((currentDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+              );
+
               upcomingDues.push({
                 memberId: member.id,
                 memberName: member.name,
@@ -503,7 +496,7 @@ export const getBillingSummary = onCall(
         upcomingDues: upcomingDues.slice(0, 10),
       };
 
-      return createSuccessResponse("Billing summary retrieved successfully", summary);
+      return createSuccessResponse('Billing summary retrieved successfully', summary);
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<any>;
     }

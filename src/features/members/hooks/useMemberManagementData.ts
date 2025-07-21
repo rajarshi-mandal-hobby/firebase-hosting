@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getMemberCounts } from '../../../shared/utils/memberUtils';
-import { useData } from '../../../hooks/useData';
+import { FirestoreService } from '../../../data/firestoreService';
 import type { Member } from '../../../shared/types/firestore-types';
 
 export interface MemberCounts {
@@ -29,9 +29,6 @@ export interface UseMemberManagementData {
  * Now used at AdminDashboard level to persist across tab switches
  */
 export const useMemberManagementData = (): UseMemberManagementData => {
-  // Data provider
-  const dataProvider = useData();
-  
   // State
   const [members, setMembers] = useState<Member[]>([]);
   const [memberCounts, setMemberCounts] = useState<MemberCounts>({
@@ -54,11 +51,11 @@ export const useMemberManagementData = (): UseMemberManagementData => {
     try {
       setMembersLoading(true);
       setError(null);
-      
-      // Load members from DataProvider
-      const allMembers = await dataProvider.getMembers();
+
+      // Load members from FirestoreService
+      const allMembers = await FirestoreService.Members.getMembers();
       const counts = getMemberCounts(allMembers);
-      
+
       setMembers(allMembers);
       setMemberCounts(counts);
       setMembersLoaded(true);
@@ -67,7 +64,7 @@ export const useMemberManagementData = (): UseMemberManagementData => {
     } finally {
       setMembersLoading(false);
     }
-  }, [membersLoaded, dataProvider]);
+  }, [membersLoaded]);
 
   // Auto-load member data on mount
   useEffect(() => {
@@ -81,7 +78,7 @@ export const useMemberManagementData = (): UseMemberManagementData => {
       setMembers([]);
       setMemberCounts({ total: 0, active: 0, wifiOptedIn: 0 });
       setError(null);
-    }, [])
+    }, []),
   };
 
   return {
@@ -94,6 +91,6 @@ export const useMemberManagementData = (): UseMemberManagementData => {
     actions,
     cache: {
       membersLoaded,
-    }
+    },
   };
 };

@@ -6,19 +6,13 @@ import {
   Avatar, 
   Badge, 
   Button,
-  Alert
+  Alert,
+  TextInput
 } from '@mantine/core';
 import { SharedModal } from '../../../../shared/components/SharedModal';
 import { notifications } from '@mantine/notifications';
-
-interface Member {
-  id?: string;
-  name: string;
-  phone: string;
-  floor: string;
-  bedType: string;
-  isActive: boolean;
-}
+import { useAppContext } from '../../../../contexts/AppContext';
+import type { Member } from '../../../../shared/types/firestore-types';
 
 interface DeleteMemberModalProps {
   opened: boolean;
@@ -31,36 +25,40 @@ export function DeleteMemberModal({
   onClose, 
   member 
 }: DeleteMemberModalProps) {
+  const { deleteMember } = useAppContext();
   const [deleting, setDeleting] = useState(false);
+  const [confirmationText, setConfirmationText] = useState('');
 
   const handleDelete = async () => {
     if (!member) return;
 
+    // Validate "DELETE" confirmation
+    if (confirmationText !== 'DELETE') {
+      notifications.show({
+        title: 'Confirmation Required',
+        message: 'Please type "DELETE" to confirm permanent deletion',
+        color: 'red'
+      });
+      return;
+    }
+
     try {
       setDeleting(true);
       
-      // Mock API call for permanent deletion
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the real deleteMember function from AppContext
+      await deleteMember(member.id);
       
-      notifications.show({
-        title: 'Success',
-        message: `${member.name} has been permanently deleted`,
-        color: 'green'
-      });
-
       console.log('Member permanently deleted:', {
         memberId: member.id,
         memberName: member.name
       });
 
+      // Reset confirmation text and close modal
+      setConfirmationText('');
       onClose();
     } catch (error) {
       console.error('Error deleting member:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to delete member. Please try again.',
-        color: 'red'
-      });
+      // Error notification is handled by the AppContext
     } finally {
       setDeleting(false);
     }
@@ -112,12 +110,34 @@ export function DeleteMemberModal({
           This action cannot be undone.
         </Text>
 
+        {/* DELETE Confirmation Input */}
+        <Stack gap="xs">
+          <Text size="sm" fw={500}>
+            Type "DELETE" to confirm permanent deletion:
+          </Text>
+          <TextInput
+            placeholder="Type DELETE here"
+            value={confirmationText}
+            onChange={(event) => setConfirmationText(event.currentTarget.value)}
+            error={confirmationText && confirmationText !== 'DELETE' ? 'Must type "DELETE" exactly' : null}
+            required
+          />
+        </Stack>
+
         {/* Action Buttons */}
         <Group justify="flex-end" gap="sm">
-          <Button variant="subtle" onClick={onClose}>
+          <Button variant="subtle" onClick={() => {
+            setConfirmationText('');
+            onClose();
+          }}>
             Cancel
           </Button>
-          <Button color="red" onClick={handleDeleteClick} loading={deleting}>
+          <Button 
+            color="red" 
+            onClick={handleDeleteClick} 
+            loading={deleting}
+            disabled={confirmationText !== 'DELETE'}
+          >
             Delete Permanently
           </Button>
         </Group>
