@@ -4,7 +4,7 @@ import { RentManagement } from '../features/rent/components/RentManagement';
 import { MembersManagement } from '../features/members/components/MembersManagement';
 import { ConfigManagement } from '../features/config/components/ConfigManagement';
 import { AppContainer, SharedAvatar } from '../shared/components';
-import { FirestoreService } from '../data/firestoreService';
+import { ConfigService } from '../contexts/services';
 import { IconLogout } from '../shared/components/icons';
 import { useRentManagementData } from '../features/rent/hooks/useRentManagementData';
 import type { AdminConfig } from '../shared/types/firestore-types';
@@ -16,7 +16,7 @@ export function AdminDashboard() {
   const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
 
   useEffect(() => {
-    FirestoreService.Config.getAdminConfig().then(setAdminConfig).catch(console.error);
+    ConfigService.getAdminConfig().then(setAdminConfig).catch(console.error);
   }, []);
 
   // Lift data to dashboard level so it persists across tab switches

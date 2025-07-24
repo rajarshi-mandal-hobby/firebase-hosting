@@ -14,7 +14,7 @@ import {
 } from '@mantine/core';
 import { useState, useEffect } from 'react';
 // import { IconTrash } from '@tabler/icons-react';
-import { FirestoreService } from '../../../data/firestoreService';
+import { ConfigService } from '../../../contexts/services';
 import type { GlobalSettings, AdminConfig } from '../../../shared/types/firestore-types';
 
 export function ConfigManagement() {
@@ -28,8 +28,8 @@ export function ConfigManagement() {
       try {
         setLoading(true);
         const [settingsData, adminData] = await Promise.all([
-          FirestoreService.Config.getGlobalSettings(),
-          FirestoreService.Config.getAdminConfig(),
+          ConfigService.getGlobalSettings(),
+          ConfigService.getAdminConfig(),
         ]);
         setGlobalSettings(settingsData);
         setAdminConfig(adminData);

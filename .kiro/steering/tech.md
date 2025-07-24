@@ -29,14 +29,7 @@
 ### React Best Practices
 
 - **Follow react-patterns.md** - Comprehensive React guidelines and hook selection
-- **Custom Hooks**: Extract complex logic into reusable hooks
-- **Component Composition**: Break large components into smaller, focused ones
-- **State Management**: Use useReducer for complex state, useState for simple state
-- **Performance**: Use React.memo, useMemo, useCallback strategically
-- **Data fetching**: Use useEffect to synchronize with some external system
-- **Error Boundaries**: Implement proper error handling at component boundaries
-- **Prop Types**: Use TypeScript interfaces for all component props
-- **Event Handlers**: Use useCallback for event handlers passed to child components
+- .kiro\steering\react-patterns.md
 
 ### Mantine UI Standards
 

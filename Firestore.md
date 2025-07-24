@@ -2,7 +2,9 @@
 
 ## 1. Introduction
 
-This document outlines the complete Firestore database structure, UI specifications, and backend logic for a rent management application. Designed for practical workflows with emphasis on **batch operations**, **financial accuracy**, and **essential security**.
+This document outlines the complete Firestore database structure, UI specifications, and backend logic for a rent
+management application. Designed for practical workflows with emphasis on **batch operations**, **financial accuracy**,
+and **essential security**.
 
 ---
 
@@ -107,11 +109,6 @@ This document outlines the complete Firestore database structure, UI specificati
   - Data validation at database level
   - Rate limiting and abuse prevention
 
-- **React 19 Performance Features**
-  - Automatic batching improvements
-  - Enhanced Suspense for better loading states
-  - Optimistic updates with automatic rollback
-
 ### Key References
 
 - [React 19 Features](https://react.dev/blog/2024/12/05/react-19)
@@ -141,7 +138,8 @@ Stores global, slowly changing application settings.
 - `bedTypes`: (Map of floor-specific bed rates)
   - Structure: Floor name as key, with nested map of bed/room types and their rates
   - Example structure: Each floor contains bed types (Bed, Special Room, Room) with corresponding Number values
-  - For implementation details, see [Firestore Maps documentation](https://firebase.google.com/docs/firestore/manage-data/data-types#map_fields)
+  - For implementation details, see
+    [Firestore Maps documentation](https://firebase.google.com/docs/firestore/manage-data/data-types#map_fields)
 - `securityDeposit`: Number
 - `wifiMonthlyCharge`: Number - Total monthly WiFi cost for the building
 - `upiPhoneNumber`: String - Admin's UPI phone number for payment links (e.g., "+918777529394")
@@ -151,11 +149,13 @@ Stores global, slowly changing application settings.
   - `wifiOptedIn`: Number
 - `currentBillingMonth`: Timestamp (Hidden, set when generating bills)
 - `nextBillingMonth`: Timestamp (Hidden, set when generating bills)
+- `upiVpa`: String - Upi address for payment links (e.g., "upi://pay?pa=upi-uid@upi")
 
 #### Document ID: `admins`
 
 - `list`: Array of Maps containing admin information
-  - Structure: `[{ "email": "admin@example.com", "uid": "firebase-uid", "role": "primary|secondary", "addedAt": Timestamp, "addedBy": "primary-admin-uid" }]`
+  - Structure:
+    `[{ "email": "admin@example.com", "uid": "firebase-uid", "role": "primary|secondary", "addedAt": Timestamp, "addedBy": "primary-admin-uid" }]`
   - **Primary Admin**: Firebase account holder with full system access (role: "primary")
   - **Secondary Admins**: Added by primary admin with standard access (role: "secondary")
 - `primaryAdminUid`: String - Firebase UID of the account holder (cannot be changed)
@@ -179,7 +179,8 @@ Each document represents a member. The Document ID is Firestore's auto-generated
 - `advanceDeposit`: Number
 - `currentRent`: Number (Member's current monthly rent)
 - `totalAgreedDeposit`: Number (`rentAtJoining` + `advanceDeposit` + `securityDeposit`)
-- `outstandingBalance`: Number (Single source of truth for debt/credit. Positive = member owes, Negative = member has credit)
+- `outstandingBalance`: Number (Single source of truth for debt/credit. Positive = member owes, Negative = member has
+  credit)
 - `outstandingNote`: Text (Nullable)
 - `isActive`: Boolean
 - `optedForWifi`: Boolean
@@ -216,7 +217,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 - `floorCosts`: Map
   - `"2nd"`: `{ "bill": Number, "totalMembers": Number }`
   - `"3rd"`: `{ "bill": Number, "totalMembers": Number }`
-- `appliedBulkExpenses`: Array of Maps `[{ "members": [String], "amount": Number, "description": String }]` (Auditing field to track bulk expenses applied during this billing event)
+- `appliedBulkExpenses`: Array of Maps `[{ "members": [String], "amount": Number, "description": String }]` (Auditing
+  field to track bulk expenses applied during this billing event)
 
 ---
 
@@ -229,12 +231,14 @@ Stores the last 12 months of electricity bills for calculations and statistics.
   - **2nd Floor Config**: Fields for "Bed Rate", "Special Room Rate", "Room Rate".
   - **3rd Floor Config**: Fields for "Bed Rate", "Room Rate".
   - **General Settings**: Fields for "Security Deposit", "WiFi Monthly Charge".
-- **Auto-Calculation**: Room Rate field displays calculated value based on Bed Rate (typically double the bed rate), but administrators can manually override this value as needed.
+- **Auto-Calculation**: Room Rate field displays calculated value based on Bed Rate (typically double the bed rate), but
+  administrators can manually override this value as needed.
 - **Validation**:
-  - **Client-side**: Real-time validation for required fields and positive number formats
+  - **Client-side**: HTML5 validation for required fields
   - **Server-side**: Complete data validation through backend functions with duplicate checking
   - **Reference**: [Form Validation Best Practices](https://firebase.google.com/docs/functions/callable#handle_errors)
-- **User Experience**: Save button activates when valid changes are detected. Reset functionality restores original session values. Success/error feedback through Mantine notification system.
+- **User Experience**: Save button activates when valid changes are detected. Reset functionality restores original
+  session values. Success/error feedback through Mantine notification system. Form validation error in form.
 
 ### 5.2. Members Management
 
@@ -249,7 +253,7 @@ Stores the last 12 months of electricity bills for calculations and statistics.
   - Advanced filters: Account linking status, floor-based filtering
   - "Add Member" Action button to open a modal.
 - **Member List (Accordion)**:
-  - **Header**: Shows member's name, phone (`tel:` link), Avatar, Menu button.
+  - **Header**: Shows member's avatar, name.
   - **Content (Expanded)**: Displays all other member details.
   - **Action Buttons**:
   - **Active Members**: Edit, Deactivate, History.
@@ -257,19 +261,24 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 
 #### Add/Edit Member Modal
 
-- **Fields**: All member fields are present. On "Add", financial fields like `rentAtJoining`, `advanceDeposit`, and `securityDeposit` are auto-populated from `config` but are editable.
+- **Fields**: All member fields are present. On "Add", financial fields like `rentAtJoining`, `advanceDeposit`, and
+  `securityDeposit` are auto-populated from the selection of Floor and Bed Type form `config` but are editable.
 - **Auto-Calculations (Display Only)**:
   - **Total Agreed Deposit**: Automatically calculated sum of security deposit, rent at joining, and advance deposit
-  - **Outstanding Balance**: Real-time calculation of member's current financial position based on agreed deposits and actual payments received
-  - **Reference**: [Real-time Calculations Guide](https://firebase.google.com/docs/firestore/query-data/listen#listen_to_multiple_documents_in_a_collection)
+  - **Outstanding Balance**: Real-time calculation of member's current financial position based on agreed deposits and
+    actual payments received
+  - **Reference**:
+    [Real-time Calculations Guide](https://firebase.google.com/docs/firestore/query-data/listen#listen_to_multiple_documents_in_a_collection)
 - **Validation**:
   - Client-side: Required fields, 10-digit phone.
   - Server-side: Full validation via a Cloud Function, duplicate name/phone check.
 
 #### Deactivation & Deletion Modals
 
-- **Deactivation**: Shows a final settlement calculation before confirming. Requires a leave date. Includes confirmation dialog with settlement details.
-- **Hard Delete**: For inactive members only. Requires typing "DELETE" to confirm permanent removal. Includes detailed confirmation dialog with member information.
+- **Deactivation**: Shows a final settlement calculation before confirming. Requires a leave date. Includes confirmation
+  dialog with settlement details.
+- **Hard Delete**: For inactive members only. Requires typing "DELETE" to confirm permanent removal. Includes detailed
+  confirmation dialog with member information.
 
 ### 5.3. Rent Management UI
 
@@ -277,7 +286,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 
 - **Layout**: A primary view for monthly rent and billing management.
 - **Top Bar**:
-  - **Total Outstanding Balance**: A prominently displayed, auto-updating card showing the sum of all positive `outstandingBalance` values from all active members for the current month.
+  - **Total Outstanding Balance**: A prominently displayed, auto-updating card showing the sum of all positive
+    `outstandingBalance` values from all active members for the current month.
   - **Generate Bills Button**: A primary action button that opens the "Generate/Update Bills Modal".
 - **Member List (Accordion)**:
   - **Header**:
@@ -316,7 +326,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
     - **Total Charges**: Calculated total charges across all members
     - **Preview**: Summary of changes before bill generation
   - **Floor Bills**:
-    - **2nd Floor**: An input for the total electricity bill for the floor. Displays the number of active members on that floor for reference (editable).
+    - **2nd Floor**: An input for the total electricity bill for the floor. Displays the number of active members on
+      that floor for reference (editable).
     - **3rd Floor**: Same as the 2nd floor.
   - **Bulk Expenses Section**:
     - A multi-select input to choose one or more members.
@@ -328,7 +339,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
     - **Validation**: If any field in this section is filled, all fields are required.
   - **Bulk WiFi Section**:
     - A multi-select input for members, pre-populated with those where `optedForWifi` is `true`.
-    - The total WiFi charge is automatically fetched from `config.wifiMonthlyCharge` and divided among the selected members.
+    - The total WiFi charge is automatically fetched from `config.wifiMonthlyCharge` and divided among the selected
+      members.
 
 #### 5.3.3. Record Payment Modal
 
@@ -352,7 +364,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
     - **Amount**: A number input for the expense amount.
     - **Description**: A text input for the expense description/note.
   - **Add More Button**: A button to add another expense item row to the form.
-  - **Submit Button**: Triggers a backend function to add all expense items to the member's `rentHistory` for the current billing month.
+  - **Submit Button**: Triggers a backend function to add all expense items to the member's `rentHistory` for the
+    current billing month.
 
 ### 5.4. Admin Management UI
 
@@ -398,7 +411,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 - **Implementation Strategy**: HTTP Callable Cloud Function ensures secure server-side processing and data consistency
 - **Business Process Workflow**:
   1.  **Input Validation**: Validate all member information against business rules and format requirements
-  2.  **Uniqueness Verification**: Check for existing members with identical name/phone combinations to prevent duplicates
+  2.  **Uniqueness Verification**: Check for existing members with identical name/phone combinations to prevent
+      duplicates
   3.  **Financial Calculation**: Calculate initial financial setup using precise business formulas
       - `totalAgreedInitialDue = securityDeposit + rentAtJoining + advanceDeposit`
       - `initialOutstandingBalance = totalAgreedInitialDue - actualAmountPaid`
@@ -415,7 +429,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
   6.  **System Updates**: Atomically update global member counters
       - Increment `activememberCounts.total` and `activememberCounts.byFloor[member.floor]`
       - If `optedForWifi` is true, increment `activememberCounts.wifiOptedIn`
-  7.  **Transaction Integrity**: All operations (member creation + rentHistory + counter updates) execute in single atomic transaction
+  7.  **Transaction Integrity**: All operations (member creation + rentHistory + counter updates) execute in single
+      atomic transaction
   8.  **Error Recovery**: Provide retry mechanisms and detailed error reporting for failed operations
 - **Business Rules**:
   - Each member must have unique phone number across all active and inactive members
@@ -429,7 +444,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 
 ### 6.2. Generating Monthly Bills
 
-- **Business Purpose**: Create comprehensive monthly billing for all active members including rent, utilities, and expenses
+- **Business Purpose**: Create comprehensive monthly billing for all active members including rent, utilities, and
+  expenses
 - **Trigger**: Admin initiates monthly billing process through the rent management interface
 - **Implementation Strategy**: HTTP Callable Cloud Function with idempotency to prevent duplicate billing operations
 - **Business Process Workflow**:
@@ -440,7 +456,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
   5.  **Cost Distribution Formulas**:
       - **Electricity**: `perMemberElectricityCost = Math.ceil(floorTotalElectricity / membersOnFloorCount)`
       - **WiFi**: `perMemberWifiCost = Math.ceil(wifiMonthlyCharge / wifiOptedInCount)`
-      - **Bulk Expenses**: Applied either individually (each member pays full amount) or split equally among selected members using `Math.ceil()` for divisions
+      - **Bulk Expenses**: Applied either individually (each member pays full amount) or split equally among selected
+        members using `Math.ceil()` for divisions
   6.  **WiFi Preference Updates**: Atomically update member `optedForWifi` boolean based on admin selections
   7.  **Batch Processing**: Process members efficiently while maintaining transaction integrity
   8.  **Individual Billing**: For each active member, run atomic transaction:
@@ -475,7 +492,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 - **Business Process Workflow**:
   1.  **Payment Validation**: Verify member identity, payment amount, and optional payment notes
   2.  **History Access**: Retrieve current month's billing record for payment application
-  3.  **Payment Logging**: Add detailed payment entry to `payments` array with unique identifier, amount, date, and notes
+  3.  **Payment Logging**: Add detailed payment entry to `payments` array with unique identifier, amount, date, and
+      notes
   4.  **Amount Reconciliation**: Recalculate rentHistory amounts:
       - Update `amountPaid` by summing all payment entries in the payments array
       - Recalculate `currentOutstanding = previousOutstanding + totalCharges - amountPaid`
@@ -519,7 +537,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 
 - **Business Purpose**: Process member departures with complete financial settlement and account closure
 - **Trigger**: Admin confirms member deactivation through the management interface
-- **Implementation Strategy**: HTTP Callable Cloud Function with automated settlement calculations and account status updates
+- **Implementation Strategy**: HTTP Callable Cloud Function with automated settlement calculations and account status
+  updates
 - **Business Process Workflow**:
   1.  **Departure Validation**: Verify member identity and validate departure date
   2.  **Settlement Analysis**: Calculate final financial settlement using precise business logic:
@@ -542,7 +561,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
   5.  **Settlement Reporting**: Return calculated settlement details to admin interface for review
   6.  **Data Retention**: Configure TTL policy for automatic cleanup of inactive member records
 - **Business Rules**:
-  - **Settlement Accuracy**: Final settlement must account for security deposits, advance payments, and outstanding charges
+  - **Settlement Accuracy**: Final settlement must account for security deposits, advance payments, and outstanding
+    charges
   - **Advance Deposit Logic**: Advance deposit covers unpaid current month rent if applicable
   - **Data Retention**: TTL policy automatically removes inactive member data after specified period
   - **Counter Consistency**: System-wide member counts must reflect active status changes
@@ -553,7 +573,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 
 ### 6.6. Member Login & Account Linking
 
-- **Business Purpose**: Enable secure access to personal rent information for members and administrative access for admins through Google authentication
+- **Business Purpose**: Enable secure access to personal rent information for members and administrative access for
+  admins through Google authentication
 - **Trigger**: User initiates Google Sign-In through the application interface
 - **Implementation Strategy**: Secure authentication workflow with role-based routing and account linking capability
 
@@ -593,7 +614,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 - **Link Account Function Process**:
 
   1.  **Token Verification**: Verify `idToken` using Firebase Admin SDK
-  2.  **Phone Number Search**: Query members where `phone` matches provided number and `isActive == true` and `firebaseUid == null`
+  2.  **Phone Number Search**: Query members where `phone` matches provided number and `isActive == true` and
+      `firebaseUid == null`
   3.  **OTP Verification Process**:
       - If member found: Initiate OTP verification to the registered phone number
       - Send OTP via SMS using Firebase phone authentication or third-party service
@@ -734,7 +756,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 #### 7.2.4. UPI Payment Integration (Simplified)
 
 - **Trigger**: Clicking "Pay ₹[amount]" button on outstanding balance
-- **UPI URI Format**: `upi://pay?pa=[upiPhoneNumber]@paytm&pn=Rent Payment&am=[amount]&cu=INR&tn=Rent for [memberName] - [billingMonth]`
+- **UPI URI Format**:
+  `upi://pay?pa=[upiPhoneNumber]@paytm&pn=Rent Payment&am=[amount]&cu=INR&tn=Rent for [memberName] - [billingMonth]`
 - **Parameters**:
   - `pa`: Admin's UPI ID from `config.upiPhoneNumber`
   - `pn`: "Rent Payment"
@@ -773,7 +796,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
   - Allow minimal `config/globalSettings` read access for UPI payment information
   - Follow official guide: [Firestore Security Rules](https://firebase.google.com/docs/firestore/security/get-started)
 - **Data Response Structure** (Backend filtering):
-  - Return only member-relevant fields: `id`, `name`, `phone`, `floor`, `bedType`, `moveInDate`, `currentRent`, `outstandingBalance`, `optedForWifi`
+  - Return only member-relevant fields: `id`, `name`, `phone`, `floor`, `bedType`, `moveInDate`, `currentRent`,
+    `outstandingBalance`, `optedForWifi`
   - Include `profilePicture` from Google Auth token
   - Exclude admin-only fields: `securityDeposit`, `totalAgreedDeposit`, `rentAtJoining`, `advanceDeposit`
 
@@ -800,7 +824,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 ### 8.1. Member Dashboard Data Fetching
 
 - **Business Purpose**: Provide members with secure, personalized access to their rent and payment information
-- **Implementation Strategy**: HTTP Callable Cloud Function `getMemberDashboard` with comprehensive authentication and data filtering
+- **Implementation Strategy**: HTTP Callable Cloud Function `getMemberDashboard` with comprehensive authentication and
+  data filtering
 - **Authentication Requirements**:
   - **Identity Verification**: Confirm member identity through Firebase authentication token validation
   - **Access Control**: Ensure authenticated users can only access their own data
@@ -817,7 +842,8 @@ Stores the last 12 months of electricity bills for calculations and statistics.
 ### 8.2. Member Rent History Fetching
 
 - **Business Purpose**: Enable members to view their complete payment and billing history with efficient loading
-- **Implementation Strategy**: HTTP Callable Cloud Function `getMemberRentHistory` with pagination support for optimal performance
+- **Implementation Strategy**: HTTP Callable Cloud Function `getMemberRentHistory` with pagination support for optimal
+  performance
 - **Pagination Design**:
   - **Efficient Loading**: Load 12 months of history per request with cursor-based pagination
   - **User Experience**: Display newest records first with option to load more historical data
@@ -916,7 +942,8 @@ For optimal query performance in the Members Management UI (Section 5.2):
     2.  **Data Identification**: Query electricity bills collection for outdated records
     3.  **Batch Removal**: Use efficient batch operations to remove multiple outdated documents
     4.  **Operation Logging**: Record cleanup results for system monitoring and compliance
-  - **Technical Implementation**: [Schedule Functions with Cloud Scheduler](https://firebase.google.com/docs/functions/schedule-functions)
+  - **Technical Implementation**:
+    [Schedule Functions with Cloud Scheduler](https://firebase.google.com/docs/functions/schedule-functions)
 - **Member Data Retention**:
   - **Business Purpose**: Automatically manage inactive member data while preserving necessary records
   - **TTL Configuration**: Set Firestore Time-To-Live policy on member collection using `ttlExpiry` field
@@ -1008,7 +1035,8 @@ For optimal query performance in the Members Management UI (Section 5.2):
 ### 11.2. Payment Allocation and Balance Management
 
 - **Outstanding Balance Calculation**:
-  - **Monthly Recalculation**: `outstandingBalance` recalculated each billing cycle based on cumulative charges and payments
+  - **Monthly Recalculation**: `outstandingBalance` recalculated each billing cycle based on cumulative charges and
+    payments
   - **Single Source of Truth**: Member's `outstandingBalance` reflects total amount owed across all months
   - **No Monthly Allocation**: Payments reduce overall outstanding balance, not allocated to specific months
   - **Balance Formula**: `Sum of all (previousOutstanding + totalCharges - amountPaid)` across all rentHistory records
@@ -1056,7 +1084,8 @@ For optimal query performance in the Members Management UI (Section 5.2):
 
 - **Fixed Floor Structure**: System supports exactly 2 floors ('2nd', '3rd') as configured
 - **Dynamic Rent Updates**: Admins can modify bed/room rates in global configuration
-- **Member Rent Impact**: When bed rates are updated in configuration, existing members' `currentRent` automatically updates via batch operation
+- **Member Rent Impact**: When bed rates are updated in configuration, existing members' `currentRent` automatically
+  updates via batch operation
   - **Implementation**: Batch update all members with matching floor/bedType to apply new rates
   - **Scope**: All active members with the same floor and bed type receive the updated rate
   - **Timing**: Rate changes apply immediately to all affected members
@@ -1240,7 +1269,9 @@ When reactivating an inactive member:
 4. **Phase 4**: Advanced Firebase logging and monitoring
 5. **Phase 5**: Performance optimization and comprehensive testing
 
-This validation framework ensures robust data integrity, security, and user experience while maintaining simplicity. The framework leverages Zod 4's enhanced performance, enforces business-critical uniqueness constraints, and provides clear error handling patterns that integrate seamlessly with the modern React 19 technology stack.
+This validation framework ensures robust data integrity, security, and user experience while maintaining simplicity. The
+framework leverages Zod 4's enhanced performance, enforces business-critical uniqueness constraints, and provides clear
+error handling patterns that integrate seamlessly with the modern React 19 technology stack.
 
 ---
 

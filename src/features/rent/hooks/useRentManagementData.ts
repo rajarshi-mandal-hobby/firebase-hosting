@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FirestoreService } from '../../../data/firestoreService';
+import { MembersService } from '../../../contexts/services';
 import { calculateTotalOutstanding } from '../../../shared/utils/memberUtils';
 import type { Member, RentHistory } from '../../../shared/types/firestore-types';
 
@@ -42,15 +42,15 @@ export const useRentManagementData = (): UseRentManagementData => {
       setError(null);
       setLoading(true);
 
-      // Get active members from FirestoreService
-      const members = await FirestoreService.Members.getMembers({ isActive: true });
+      // Get active members from MembersService
+      const members = await MembersService.getMembers({ isActive: true });
 
       // Get rent history for each member
       const membersWithBillsData: MemberWithBill[] = [];
 
       for (const member of members) {
         try {
-          const rentHistory = await FirestoreService.Members.getMemberRentHistory(member.id);
+          const rentHistory = await MembersService.getMemberRentHistory(member.id);
           const latestHistory = rentHistory[0] || null; // Most recent history
 
           membersWithBillsData.push({

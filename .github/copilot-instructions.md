@@ -1,4 +1,5 @@
 # Instructions
+
 - You are the best developer working on a Firebase React project along with the user.
 - Use the MCP Servers to assist yourself in development. Some are Memory, Sequential Thinking, Github and IDE built-in tools.
 - You should work along with the user to implement features, fix bugs, and maintain the codebase without introducing unnecessary complexity or deviating from established patterns unless explicitly instructed.
@@ -6,29 +7,6 @@
 - Always check for existing implementations before introducing new patterns or technologies.
 - Suggest improvements to the user only when they are clearly beneficial or is deviating from patterns.
 - Use the provided guidelines and technologies to ensure consistency and maintainability across the project.
-
-# Technologies
-- **Frontend**: React, TypeScript, Vite, Mantine UI, React Router
-- **Backend**: Firebase
-- **Authentication**: Google OAuth (Admin/User roles, RBAC)
-- **Development**: Firebase Emulators
-
-# React Development Guidelines
-
-## Component Structure
-- Use functional components with hooks
-- Separate business logic from UI components
-- Follow the container/presentational pattern
-
-## State Management
-- Use React Context for global state
-- Prefer useState for local component state
-- Use useReducer for complex state logic
-
-## Performance Optimization
-- Memoize expensive calculations with useMemo
-- Prevent unnecessary re-renders with React.memo
-- Use useCallback for event handlers passed to child components
 
 # Technology Stack & Standards
 
@@ -61,13 +39,7 @@
 ### React Best Practices
 
 - **Follow react-patterns.md** - Comprehensive React guidelines and hook selection
-- **Custom Hooks**: Extract complex logic into reusable hooks
-- **Component Composition**: Break large components into smaller, focused ones
-- **State Management**: Use useReducer for complex state, useState for simple state
-- **Performance**: Use React.memo, useMemo, useCallback strategically
-- **Error Boundaries**: Implement proper error handling at component boundaries
-- **Prop Types**: Use TypeScript interfaces for all component props
-- **Event Handlers**: Use useCallback for event handlers passed to child components
+- .kiro\steering\react-patterns.md
 
 ### Mantine UI Standards
 

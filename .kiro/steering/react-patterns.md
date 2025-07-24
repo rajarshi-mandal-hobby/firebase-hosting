@@ -1,307 +1,325 @@
-# React Patterns & Best Practices
+---
+inclusion: fileMatch
+fileMatchPattern: ['**/*.ts', '**/*.tsx']
+---
 
-## Fundamental React Rules
+# React Hook Selection Guide
 
-### Rules of Hooks
+## State Hooks
 
-- **Only call hooks at the top level** - Never inside loops, conditions, or nested functions
-- **Only call hooks from React functions** - Components or custom hooks only
-- **Custom hooks must start with "use"** - This enables React's linting rules
-- **Hooks must be called in the same order every time** - React relies on call order to track state
+State lets a component "remember" information like user input. Use these hooks to add state to components:
 
-### Component and Hook Purity
+**useState** - Component state for simple values
 
-- **Components must be pure functions** - Same inputs always produce same outputs
-- **No side effects during rendering** - Don't mutate variables, make API calls, or update DOM during render
-- **Hooks should not cause side effects during render** - Side effects belong in useEffect or event handlers
-- **Don't call components as functions** - Let React handle component lifecycle
+- Primitive values (boolean, string, number)
+- Form inputs, toggles, counters
+- When state doesn't depend on other state
+- Single values that change independently
 
-## Hook Selection Guidelines
+**useReducer** - Component state with complex update logic
 
-### State Management Hooks
+- Multiple related state values
+- State transitions based on action types
+- Complex update patterns requiring validation
+- When next state depends on current state and action
+- Centralized state update logic
 
-**useState** - Use for:
+## Context Hooks
 
-- Simple, independent state values
-- Boolean flags, strings, numbers
-- State that doesn't depend on other state
-- When you need direct state updates
+Context lets a component receive information from distant parents without passing it as props:
 
-**useReducer** - Use for:
+**useContext** - Read and subscribe to context
 
-- Complex state with multiple sub-values
-- State transitions that depend on previous state
-- When next state depends on the action type
-- Complex update logic that would benefit from centralization
-
-**useContext** - Use for:
-
-- Sharing data across many components
+- Access shared data across component tree
+- Theme, authentication, global settings
 - Avoiding prop drilling
-- Global application state (theme, auth, settings)
-- When multiple components need the same data
+- When multiple components need same data
 
-### Performance Hooks
+## Ref Hooks
 
-**useMemo** - Use for:
+Refs let a component hold information that isn't used for rendering, like DOM nodes or timeout IDs:
 
-- Expensive calculations that depend on specific values
-- Creating objects/arrays that are passed as props
-- Preventing unnecessary re-computations
-- When child components depend on referential equality
+**useRef** - Reference a value that's not needed for rendering
 
-**useCallback** - Use for:
+- Direct DOM element access
+- Storing mutable values without re-renders
+- Previous values, timers, intervals
+- Imperative operations (focus, scroll, animations)
+- Instance variables that persist across renders
 
-- Event handlers passed to child components
-- Functions passed as dependencies to other hooks
-- Preventing unnecessary re-renders of memoized components
-- When function identity matters for performance
+**useImperativeHandle** - Customize the ref exposed by your component
 
-**React.memo** - Use for:
+- Control what parent components can access via ref
+- Limit exposed imperative API
+- Custom component libraries
+- When forwardRef needs specific behavior
 
-- Components that render often with same props
-- Components with expensive render logic
-- Child components that receive stable props
-- When parent re-renders frequently but child props rarely change
+## Effect Hooks
 
-### Side Effect Hooks
+Effects let a component connect to and synchronize with external systems:
 
-**useEffect** - Use ONLY for:
+**useEffect** - Connect to an external system
 
-- Synchronizing with external systems (APIs, subscriptions, timers)
-- Setting up event listeners
-- Manually updating DOM
-- Cleanup operations
-- Data fetching on mount or prop changes
+- External system synchronization (APIs, subscriptions)
+- Event listeners setup/cleanup
+- Firebase real-time listeners
+- Timer/interval management
+- NOT for derived state or event handlers
 
-**useLayoutEffect** - Use for:
+**useLayoutEffect** - Fire before the browser repaints the screen
 
 - DOM measurements before browser paint
-- Synchronous DOM mutations
 - Preventing visual flicker
-- When timing of DOM updates matters
+- Synchronous DOM mutations
+- When timing of DOM updates is critical
 
-### Ref Hooks
+**useInsertionEffect** - Fire before React makes DOM changes
 
-**useRef** - Use for:
+- Inserting styles before layout effects
+- CSS-in-JS library implementations
+- Dynamic style injection
+- Rarely needed in application code
 
-- Accessing DOM elements directly
-- Storing mutable values that don't trigger re-renders
-- Keeping references to previous values
-- Imperative operations (focus, scroll, animations)
+## Performance Hooks
 
-**useImperativeHandle** - Use for:
+Optimize re-rendering performance by skipping unnecessary work or prioritizing updates:
 
-- Customizing ref value exposed to parent components
-- Limiting exposed imperative API
-- Creating reusable component libraries
-- When forwardRef needs custom behavior
+**useMemo** - Cache the result of a calculation between re-renders
 
-### Advanced Hooks
+- Heavy computations with specific dependencies
+- Creating objects/arrays passed as props
+- When child components depend on referential equality
+- Expensive filtering/transforming operations
 
-**useId** - Use for:
+**useCallback** - Cache a function definition between re-renders
 
-- Generating unique IDs for accessibility attributes
-- Avoiding hydration mismatches in SSR
-- Creating stable IDs across renders
-- Form field associations
+- Event handlers passed to child components
+- Functions used in other hook dependencies
+- When function identity affects child re-renders
+- Stable references for optimized components
 
-**useDeferredValue** - Use for:
+**useTransition** - Update state without blocking the UI
 
-- Deferring updates to non-urgent UI parts
-- Keeping UI responsive during heavy computations
+- Marking updates as low priority
+- Keeping UI responsive during heavy operations
+- Background data processing
+- Search filtering, sorting operations
+
+**useDeferredValue** - Defer updating a part of the UI
+
 - Showing stale content while new content loads
-- Performance optimization for expensive renders
+- Keeping UI responsive during computations
+- Debouncing expensive operations
+- Progressive enhancement patterns
 
-**useTransition** - Use for:
+## Resource Hooks
 
-- Marking state updates as non-urgent
-- Keeping UI responsive during state transitions
-- Showing loading states for slow updates
-- Prioritizing user interactions over background updates
+Access resources without them being part of your component's state:
+
+**use** - Read the value of a resource like Promise or context
+
+- Reading promises that suspend rendering
+- Conditional context consumption
+- Suspense integration
+- Data fetching with concurrent features
+
+## Action Hooks
+
+Handle actions, form submissions, and state transitions:
+
+**useActionState** - Update state based on the result of a form action
+
+- Form submissions with pending/error states
+- Server actions integration
+- Progressive enhancement
+- Built-in loading and error handling
+
+**useOptimistic** - Show optimistic state while async action is underway
+
+- Immediate UI feedback before server response
+- Better UX for slow network operations
+- Automatic rollback on errors
+- Social interactions (likes, comments)
+
+## Other Hooks
+
+Mostly useful for library authors, not commonly used in application code:
+
+**useId** - Generate unique IDs that can be passed to accessibility attributes
+
+- Accessibility attributes (aria-describedby, aria-labelledby)
+- Form field associations
+- Avoiding hydration mismatches in SSR
+- Stable IDs across renders
+
+**useDebugValue** - Add a label to a custom Hook in React DevTools
+
+- Display custom hook values in React DevTools
+- Debugging custom hook behavior
+- Development-time diagnostics
+- Optional formatting function for complex values
+
+**useSyncExternalStore** - Subscribe to an external store
+
+- Subscribing to external data sources
+- Browser APIs (localStorage, window size)
+- Third-party state management libraries
+- Global state not managed by React
 
 ## You Might Not Need useEffect
 
-### Don't Use useEffect For:
+### ❌ Don't Use useEffect For:
 
-**Derived State** - Use useMemo instead:
+- **Derived State** → Calculate in render or use `useMemo`
+- **Event Handlers** → Handle directly in event callbacks
+- **Resetting State** → Use `key` prop or conditional initialization
+- **Expensive Calculations** → Use `useMemo` for memoization
+- **Updating state based on props** → Derive state or use `useMemo`
 
-- Calculating values from existing state/props
-- Filtering or transforming data
-- Computing totals or aggregations
+### ✅ DO Use useEffect For:
 
-**Event Handlers** - Handle directly in event handlers:
+- External system synchronization (APIs, WebSockets)
+- Firebase real-time listeners and subscriptions
+- Timer/interval setup and cleanup
+- Event listener registration/removal
+- DOM manipulation after render
+- Cleanup operations when component unmounts
 
-- Responding to user interactions
-- Form submissions
-- Button clicks
+## Hook Decision Tree
 
-**Resetting State** - Use key prop or state initialization:
+### State Management Decision
 
-- Clearing form when user changes
-- Resetting component state based on props
+- **Simple value?** → `useState`
+- **Complex state with actions?** → `useReducer`
+- **Shared across components?** → `useContext`
+- **External store?** → `useSyncExternalStore`
 
-**Expensive Calculations** - Use useMemo instead:
+### Performance Decision
 
-- Heavy computations during render
-- Creating objects or arrays
+- **Expensive calculation?** → `useMemo`
+- **Stable function reference?** → `useCallback`
+- **Component re-renders often?** → `React.memo`
+- **Non-urgent updates?** → `useTransition`
+- **Defer expensive updates?** → `useDeferredValue`
 
-### When You DO Need useEffect:
+### Side Effect Decision
 
-**External System Synchronization**:
+- **External system sync?** → `useEffect`
+- **DOM measurement before paint?** → `useLayoutEffect`
+- **CSS injection?** → `useInsertionEffect`
 
-- API calls and data fetching
-- Setting up subscriptions
-- Timer and interval management
-- WebSocket connections
+### Form/Action Decision
 
-**DOM Manipulation**:
+- **Form with server actions?** → `useActionState`
+- **Optimistic updates?** → `useOptimistic`
+- **Read promises in render?** → `use`
 
-- Focus management
-- Scroll position
-- Third-party library integration
+## Project-Specific Patterns
 
-**Cleanup Operations**:
+### Mantine Integration
 
-- Removing event listeners
-- Canceling network requests
-- Clearing timers
+- Use Mantine's built-in form hooks for validation
+- Leverage Mantine components over custom implementations
+- Apply consistent theming through MantineProvider
+- Use Mantine's responsive utilities and breakpoints
 
-## Component Design Principles
+### Firebase Integration
 
-### Single Responsibility Principle
+- Extract Firestore operations into custom hooks
+- Use `useEffect` for real-time listeners with proper cleanup
+- Handle loading and error states consistently
+- Implement optimistic updates for better UX
 
-- Each component should have one clear purpose
-- Extract complex logic into custom hooks
-- Break large components into smaller, focused ones
-- Separate UI logic from business logic
+### Modal Management
 
-### Composition Over Inheritance
+- Use SharedModal wrapper for consistent styling
+- Extract form logic into reusable custom hooks
+- Handle loading states during form submissions
+- Implement proper error handling and user feedback
 
-- Use component composition instead of complex prop drilling
-- Create reusable compound components
-- Leverage children props and render props patterns
-- Build flexible component APIs
+### Component Organization
 
-### State Colocation
+- Custom hooks first, built-in hooks second
+- Memoized values third, event handlers fourth
+- Early returns for loading/error states
+- Main render logic last
+- Always set displayName for debugging
+
+## Critical Anti-Patterns
+
+### ❌ Never Do
+
+- Use `useEffect` to sync state with props
+- Store derived state in `useState`
+- Mutate state directly
+- Call hooks conditionally or in loops
+- Create objects/functions in render without memoization
+- Use array indices as keys for dynamic lists
+- Call components as functions
+- Perform side effects during render
+
+### ⚠️ Common Mistakes
+
+- Missing cleanup functions in `useEffect`
+- Incorrect or missing dependency arrays
+- Overusing `useMemo`/`useCallback` without measuring
+- Mixing business logic directly in components
+- Not handling loading and error states
+- Creating unstable dependencies in effect arrays
+- Using `useLayoutEffect` when `useEffect` suffices
+
+## Rules of Hooks
+
+### Fundamental Rules
+
+- Only call hooks at the top level of components or custom hooks
+- Never call hooks inside loops, conditions, or nested functions
+- Custom hooks must start with "use" prefix
+- Hooks must be called in the same order every render
+- Components must be pure functions during render
+
+### Dependency Array Rules
+
+- Include all values from component scope used inside the effect
+- Use ESLint exhaustive-deps rule to catch missing dependencies
+- Prefer primitive values over objects/arrays as dependencies
+- Extract functions outside component if they don't need component scope
+- Use `useCallback` for functions that are dependencies
+
+## Project Standards
+
+### Component Architecture
+
+- Export components as named exports (not default)
+- Use absolute imports with path mapping
+- Follow feature-based folder structure
+- Set displayName for all components
+- Handle loading and error states consistently
+
+### State Management
 
 - Keep state as close to where it's used as possible
-- Don't lift state up unnecessarily
-- Use local state when possible
-- Only share state when multiple components need it
+- Use `useReducer` for complex state logic
+- Extract business logic into custom hooks
+- Use context sparingly for truly global state
 
-## Performance Optimization
+### Performance
 
-### Memoization Strategy
+- Measure before optimizing with memoization
+- Use `React.memo` for components that render frequently
+- Implement proper error boundaries
+- Use `useTransition` for non-urgent updates
 
-- **Measure first** - Don't optimize without profiling
-- **useMemo for expensive calculations** - Only when computation is actually expensive
-- **useCallback for stable references** - When function identity affects child renders
-- **React.memo for stable props** - When component renders frequently with same props
+### Firebase Integration
 
-### Dependency Array Best Practices
+- Extract Firestore operations into custom hooks
+- Use `useEffect` for real-time listeners with cleanup
+- Implement optimistic updates where appropriate
+- Handle offline states and errors gracefully
 
-- **Include all dependencies** - Don't omit values used inside the effect
-- **Use ESLint exhaustive-deps rule** - Catch missing dependencies automatically
-- **Prefer primitive dependencies** - Objects and arrays change reference frequently
-- **Extract functions outside component** - When they don't need component scope
+### Mantine Integration
 
-## Error Handling Patterns
-
-### Error Boundaries
-
-- Implement error boundaries for feature sections
-- Provide fallback UI for component errors
-- Log errors for debugging and monitoring
-- Don't use error boundaries for event handlers
-
-### Async Error Handling
-
-- Handle errors in async operations explicitly
-- Use try-catch in async functions
-- Provide loading and error states
-- Show user-friendly error messages
-
-## Custom Hook Patterns
-
-### Hook Naming and Structure
-
-- Always start with "use" prefix
-- Return objects with descriptive property names
-- Keep hooks focused on single responsibility
-- Extract reusable logic from components
-
-### Common Custom Hook Types
-
-- **Data fetching hooks** - Manage API calls and state
-- **Form hooks** - Handle form state and validation
-- **Local storage hooks** - Sync state with browser storage
-- **Window size hooks** - Track viewport dimensions
-
-## Testing Approaches
-
-### Component Testing
-
-- Focus on user interactions and behavior
-- Test what users see and do, not implementation details
-- Use React Testing Library for user-centric tests
-- Mock external dependencies appropriately
-
-### Hook Testing
-
-- Test custom hooks in isolation
-- Use renderHook from testing library
-- Test hook behavior, not implementation
-- Verify state changes and side effects
-
-## Anti-Patterns to Avoid
-
-### State Management Anti-Patterns
-
-- ❌ Using useEffect to sync state with props
-- ❌ Storing derived state in useState
-- ❌ Mutating state directly
-- ❌ Using array indices as keys in dynamic lists
-
-### Performance Anti-Patterns
-
-- ❌ Overusing useMemo and useCallback without measuring
-- ❌ Creating objects/functions in render without memoization
-- ❌ Not memoizing expensive calculations
-- ❌ Unnecessary re-renders due to unstable dependencies
-
-### Effect Anti-Patterns
-
-- ❌ Using useEffect for derived state
-- ❌ Missing cleanup functions
-- ❌ Incorrect dependency arrays
-- ❌ Using useEffect for event handlers
-
-### General Anti-Patterns
-
-- ❌ Calling hooks conditionally
-- ❌ Calling components as functions
-- ❌ Side effects during render
-- ❌ Mixing business logic with UI components
-
-## Best Practices Summary
-
-### Always Do
-
-- ✅ Follow Rules of Hooks consistently
-- ✅ Keep components pure and predictable
-- ✅ Use proper TypeScript types for all props and state
-- ✅ Extract business logic into custom hooks
-- ✅ Handle loading and error states appropriately
-- ✅ Use meaningful component and variable names
-- ✅ Implement proper error boundaries
-- ✅ Test user behavior, not implementation details
-
-### Project-Specific Guidelines
-
-- Use Mantine UI components consistently
-- Follow feature-based folder structure
-- Export components as named exports
-- Use absolute imports with path mapping
-- Implement SharedModal wrapper for consistency
-- Handle Firebase operations in custom hooks
+- Use Mantine components consistently
+- Leverage Mantine's theming system
+- Use SharedModal wrapper for all modals
+- Apply responsive design with Mantine utilities
