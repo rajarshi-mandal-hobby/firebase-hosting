@@ -1,4 +1,5 @@
 import { List } from '@mantine/core';
+import { memo, useMemo } from 'react';
 import type { RentHistory, PaymentStatus } from '../types/firestore-types';
 import { CurrencyFormatter } from './CurrencyFormatter';
 import {
@@ -19,15 +20,43 @@ interface RentDetailsListProps {
   showStatus?: boolean;
 }
 
-export const RentDetailsList: React.FC<RentDetailsListProps> = ({ data, showStatus = false }) => {
+export const RentDetailsList = memo<RentDetailsListProps>(({ data, showStatus = false }) => {
+  // Memoize expensive calculations
+  const expensesTotal = useMemo(() => data.expenses.reduce((sum, exp) => sum + exp.amount, 0), [data.expenses]);
+
+  // Memoize status-related computations
+  const statusInfo = useMemo(() => {
+    if (!showStatus || !data.status) return null;
+
+    const status = data.status as PaymentStatus;
+    return {
+      color: getStatusColor(status),
+      icon: getStatusIcon(status),
+      status,
+    };
+  }, [showStatus, data.status]);
+
+  // Memoize expense list items to prevent unnecessary re-renders
+  const expenseItems = useMemo(
+    () =>
+      data.expenses.map((expense, idx) => (
+        <List.Item key={`${expense.description}-${idx}`}>
+          {expense.description}: <CurrencyFormatter value={expense.amount} />
+        </List.Item>
+      )),
+    [data.expenses]
+  );
+
   return (
     <List spacing='xs' size='sm' listStyleType='none'>
       <List.Item icon={<IconRupee size={16} />}>
         Rent: <CurrencyFormatter value={data.rent} />
       </List.Item>
+
       <List.Item icon={<IconBulb size={16} />}>
         Electricity: <CurrencyFormatter value={data.electricity} />
       </List.Item>
+
       <List.Item icon={<IconWifi size={16} />}>
         WiFi: <CurrencyFormatter value={data.wifi} />
       </List.Item>
@@ -35,14 +64,10 @@ export const RentDetailsList: React.FC<RentDetailsListProps> = ({ data, showStat
       {data.expenses.length > 0 && (
         <>
           <List.Item icon={<IconUniversalCurrency size={16} />}>
-            Expenses: <CurrencyFormatter value={data.expenses.reduce((sum, exp) => sum + exp.amount, 0)} />
+            Expenses: <CurrencyFormatter value={expensesTotal} />
           </List.Item>
           <List withPadding size='sm' listStyleType='disc' mt='xs'>
-            {data.expenses.map((expense, idx) => (
-              <List.Item key={idx}>
-                {expense.description}: <CurrencyFormatter value={expense.amount} />
-              </List.Item>
-            ))}
+            {expenseItems}
           </List>
         </>
       )}
@@ -50,28 +75,27 @@ export const RentDetailsList: React.FC<RentDetailsListProps> = ({ data, showStat
       <List.Item icon={<IconMoneyBag size={16} />} fw={500}>
         Total: <CurrencyFormatter value={data.totalCharges} />
       </List.Item>
+
       <List.Item icon={<IconRupeeCircle size={16} />}>
         Amount Paid: <CurrencyFormatter value={data.amountPaid} />
       </List.Item>
+
       <List.Item icon={<IconPayments size={16} />} fw={500}>
         Outstanding: <CurrencyFormatter value={data.currentOutstanding} />
       </List.Item>
+
       {data.note && <List.Item icon={<IconNotes size={16} />}>Note: {data.note}</List.Item>}
 
-      {showStatus && data.status && (
+      {statusInfo && (
         <List.Item
           fw={500}
-          c={getStatusColor(data.status as PaymentStatus)}
-          icon={
-            <MyThemeIcon
-              icon={getStatusIcon(data.status as PaymentStatus)}
-              size={16}
-              color={getStatusColor(data.status as PaymentStatus)}
-            />
-          }>
-          Status: {data.status}
+          c={statusInfo.color}
+          icon={<MyThemeIcon icon={statusInfo.icon} size={16} color={statusInfo.color} />}>
+          Status: {statusInfo.status}
         </List.Item>
       )}
     </List>
   );
-};
+});
+
+RentDetailsList.displayName = 'RentDetailsList';

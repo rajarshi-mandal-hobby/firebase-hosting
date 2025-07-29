@@ -14,7 +14,6 @@ import type {
   AddMemberFormData,
   EditMemberFormData,
   SettlementPreview,
-  RentHistory,
 } from '../shared/types/firestore-types';
 import { useMemberOperations } from './hooks/useMemberOperations';
 import { useBillingOperations } from './hooks/useBillingOperations';
@@ -26,36 +25,6 @@ import { usePaymentSettings } from './hooks/usePaymentSettings';
 interface AppContextType {
   activeMembers: Member[];
   globalSettings: GlobalSettings | null;
-  memberDashboard: {
-    member: Member | null;
-    currentMonth: RentHistory | null;
-    rentHistory: RentHistory[];
-    hasMoreHistory: boolean;
-    nextHistoryCursor?: string;
-    otherMembers: Array<{
-      id: string;
-      name: string;
-      phone: string;
-      floor: string;
-      bedType: string;
-    }>;
-  };
-  loading: {
-    members: boolean;
-    settings: boolean;
-    operations: boolean;
-    memberDashboard: boolean;
-    memberHistory: boolean;
-    otherMembers: boolean;
-  };
-  errors: {
-    members: string | null;
-    settings: string | null;
-    connection: string | null;
-    memberDashboard: string | null;
-    memberHistory: string | null;
-    otherMembers: string | null;
-  };
   retryConnection: () => void;
   memberOperations: ReturnType<typeof useMemberOperations>;
   billingOperations: ReturnType<typeof useBillingOperations>;
@@ -67,11 +36,6 @@ interface AppContextType {
   updateMember: (memberId: string, updates: EditMemberFormData) => Promise<void>;
   deactivateMember: (memberId: string, leaveDate: Date) => Promise<SettlementPreview>;
   deleteMember: (memberId: string) => Promise<void>;
-  getMemberDashboard: () => Promise<void>;
-  getMemberRentHistory: (limit?: number, startAfter?: string) => Promise<void>;
-  getOtherActiveMembers: () => Promise<void>;
-  updateFCMToken: (fcmToken: string) => Promise<void>;
-  linkMemberAccount: (phoneNumber: string) => Promise<Member>;
   setupMemberDashboardListeners: (memberId: string) => () => void;
   getMemberStats: () => {
     totalActive: number;
@@ -99,22 +63,6 @@ interface AppProviderProps {
 export function AppProvider({ children }: AppProviderProps) {
   const [activeMembers, setActiveMembers] = useState<Member[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
-  const [loading, setLoading] = useState({
-    members: true,
-    settings: true,
-    operations: false,
-    memberDashboard: false,
-    memberHistory: false,
-    otherMembers: false,
-  });
-  const [errors, setErrors] = useState({
-    members: null as string | null,
-    settings: null as string | null,
-    connection: null as string | null,
-    memberDashboard: null as string | null,
-    memberHistory: null as string | null,
-    otherMembers: null as string | null,
-  });
   const [retryCount, setRetryCount] = useState({
     members: 0,
     settings: 0,
@@ -123,13 +71,14 @@ export function AppProvider({ children }: AppProviderProps) {
   const memberOperations = useMemberOperations();
   const billingOperations = useBillingOperations();
   const adminOperations = useAdminOperations();
-  const memberDashboardOps = useMemberDashboard();
   const auth = useAuth();
   const paymentSettings = usePaymentSettings();
 
+  // Directly use the hook - it's already optimized with proper memoization
+  const memberDashboardOps = useMemberDashboard();
+
   const retryConnection = useCallback(() => {
-    setLoading((prev) => ({ ...prev, members: true, settings: true }));
-    setErrors((prev) => ({ ...prev, members: null, settings: null, connection: null }));
+    // Reset retry counters to trigger re-subscription
     setRetryCount({ members: 0, settings: 0 });
   }, []);
 
@@ -141,19 +90,10 @@ export function AppProvider({ children }: AppProviderProps) {
       try {
         membersUnsubscribe = RealtimeService.subscribeToActiveMembers((members: Member[]) => {
           setActiveMembers(members);
-          setLoading((prev) => ({ ...prev, members: false }));
-          setErrors((prev) => ({ ...prev, members: null, connection: null }));
           setRetryCount((prev) => ({ ...prev, members: 0 }));
         });
       } catch (error: any) {
         console.error('Failed to setup members subscription:', error);
-        const errorMessage = error?.message || 'Failed to connect to member data';
-        setErrors((prev) => ({
-          ...prev,
-          members: errorMessage,
-          connection: 'Database connection failed. Please check your internet connection.',
-        }));
-        setLoading((prev) => ({ ...prev, members: false }));
         notifications.show({
           title: 'Connection Error',
           message: 'Unable to load member data. Please check your connection.',
@@ -176,19 +116,10 @@ export function AppProvider({ children }: AppProviderProps) {
       try {
         settingsUnsubscribe = RealtimeService.subscribeToGlobalSettings((settings: GlobalSettings) => {
           setGlobalSettings(settings);
-          setLoading((prev) => ({ ...prev, settings: false }));
-          setErrors((prev) => ({ ...prev, settings: null }));
           setRetryCount((prev) => ({ ...prev, settings: 0 }));
         });
       } catch (error: any) {
         console.error('Failed to setup settings subscription:', error);
-        const errorMessage = error?.message || 'Failed to connect to settings data';
-        setErrors((prev) => ({
-          ...prev,
-          settings: errorMessage,
-          connection: 'Database connection failed. Please check your internet connection.',
-        }));
-        setLoading((prev) => ({ ...prev, settings: false }));
         notifications.show({
           title: 'Settings Error',
           message: 'Unable to load application settings. Some features may not work correctly.',
@@ -224,99 +155,30 @@ export function AppProvider({ children }: AppProviderProps) {
   );
   const addMember = useCallback(
     async (memberData: AddMemberFormData): Promise<void> => {
-      setLoading((prev) => ({ ...prev, operations: true }));
-      try {
-        await memberOperations.addMember(memberData);
-      } finally {
-        setLoading((prev) => ({ ...prev, operations: false }));
-      }
+      await memberOperations.addMember(memberData);
     },
     [memberOperations]
   );
 
   const updateMember = useCallback(
     async (memberId: string, updates: EditMemberFormData): Promise<void> => {
-      setLoading((prev) => ({ ...prev, operations: true }));
-      try {
-        await memberOperations.updateMember(memberId, updates);
-      } finally {
-        setLoading((prev) => ({ ...prev, operations: false }));
-      }
+      await memberOperations.updateMember(memberId, updates);
     },
     [memberOperations]
   );
 
   const deactivateMember = useCallback(
     async (memberId: string, leaveDate: Date): Promise<SettlementPreview> => {
-      setLoading((prev) => ({ ...prev, operations: true }));
-      try {
-        return await memberOperations.deactivateMember(memberId, leaveDate);
-      } finally {
-        setLoading((prev) => ({ ...prev, operations: false }));
-      }
+      return await memberOperations.deactivateMember(memberId, leaveDate);
     },
     [memberOperations]
   );
 
   const deleteMember = useCallback(
     async (memberId: string): Promise<void> => {
-      setLoading((prev) => ({ ...prev, operations: true }));
-      try {
-        await memberOperations.deleteMember(memberId);
-      } finally {
-        setLoading((prev) => ({ ...prev, operations: false }));
-      }
+      await memberOperations.deleteMember(memberId);
     },
     [memberOperations]
-  );
-
-  const getMemberDashboard = useCallback(async (): Promise<void> => {
-    setLoading((prev) => ({ ...prev, memberDashboard: true }));
-    setErrors((prev) => ({ ...prev, memberDashboard: null }));
-    try {
-      await memberDashboardOps.getMemberDashboard();
-    } catch (error: any) {
-      setErrors((prev) => ({ ...prev, memberDashboard: error?.message || 'Failed to load dashboard data' }));
-      throw error;
-    } finally {
-      setLoading((prev) => ({ ...prev, memberDashboard: false }));
-    }
-  }, [memberDashboardOps]);
-
-  const getMemberRentHistory = useCallback(
-    async (limit: number = 12, startAfter?: string): Promise<void> => {
-      setLoading((prev) => ({ ...prev, memberHistory: true }));
-      setErrors((prev) => ({ ...prev, memberHistory: null }));
-      try {
-        await memberDashboardOps.getMemberRentHistory(limit, startAfter);
-      } catch (error: any) {
-        setErrors((prev) => ({ ...prev, memberHistory: error?.message || 'Failed to load rent history' }));
-        throw error;
-      } finally {
-        setLoading((prev) => ({ ...prev, memberHistory: false }));
-      }
-    },
-    [memberDashboardOps]
-  );
-
-  const getOtherActiveMembers = useCallback(async (): Promise<void> => {
-    setLoading((prev) => ({ ...prev, otherMembers: true }));
-    setErrors((prev) => ({ ...prev, otherMembers: null }));
-    try {
-      await memberDashboardOps.getOtherActiveMembers();
-    } catch (error: any) {
-      setErrors((prev) => ({ ...prev, otherMembers: error?.message || 'Failed to load friends list' }));
-      throw error;
-    } finally {
-      setLoading((prev) => ({ ...prev, otherMembers: false }));
-    }
-  }, [memberDashboardOps]);
-
-  const updateFCMToken = useCallback(
-    async (fcmToken: string): Promise<void> => {
-      await memberDashboardOps.updateFCMToken(fcmToken);
-    },
-    [memberDashboardOps]
   );
 
   const linkMemberAccount = useCallback(
@@ -382,36 +244,10 @@ export function AppProvider({ children }: AppProviderProps) {
     []
   );
 
-  const memberDashboard = useMemo(
-    () => ({
-      member: memberDashboardOps.dashboardData.member,
-      currentMonth: memberDashboardOps.dashboardData.currentMonth,
-      rentHistory: memberDashboardOps.dashboardData.rentHistory,
-      hasMoreHistory: memberDashboardOps.dashboardData.hasMoreHistory,
-      nextHistoryCursor: memberDashboardOps.dashboardData.nextHistoryCursor,
-      otherMembers: memberDashboardOps.dashboardData.otherMembers,
-    }),
-    [memberDashboardOps.dashboardData]
-  );
-
   const contextValue = useMemo<AppContextType>(
     () => ({
       activeMembers,
       globalSettings,
-      memberDashboard,
-      loading: {
-        ...loading,
-        operations: memberOperations.isLoading,
-        memberDashboard: memberDashboardOps.loading.dashboard,
-        memberHistory: memberDashboardOps.loading.history,
-        otherMembers: memberDashboardOps.loading.otherMembers,
-      },
-      errors: {
-        ...errors,
-        memberDashboard: memberDashboardOps.errors.dashboard,
-        memberHistory: memberDashboardOps.errors.history,
-        otherMembers: memberDashboardOps.errors.otherMembers,
-      },
       retryConnection,
       memberOperations,
       billingOperations,
@@ -423,10 +259,6 @@ export function AppProvider({ children }: AppProviderProps) {
       updateMember,
       deactivateMember,
       deleteMember,
-      getMemberDashboard,
-      getMemberRentHistory,
-      getOtherActiveMembers,
-      updateFCMToken,
       linkMemberAccount,
       setupMemberDashboardListeners,
       getMemberStats,
@@ -437,9 +269,6 @@ export function AppProvider({ children }: AppProviderProps) {
     [
       activeMembers,
       globalSettings,
-      memberDashboard,
-      loading,
-      errors,
       retryConnection,
       memberOperations,
       billingOperations,
@@ -451,10 +280,6 @@ export function AppProvider({ children }: AppProviderProps) {
       updateMember,
       deactivateMember,
       deleteMember,
-      getMemberDashboard,
-      getMemberRentHistory,
-      getOtherActiveMembers,
-      updateFCMToken,
       linkMemberAccount,
       setupMemberDashboardListeners,
       getMemberStats,

@@ -1,12 +1,25 @@
 import { Stack, Title, Group, Loader, Text, rem, Space } from '@mantine/core';
-import { SharedAvatar, IconPhone, IconBed } from '../../../shared/components';
-import type { SimplifiedMember } from '../hooks/useMemberDashboardData';
+import { SharedAvatar, IconPhone, IconBed, AlertRetry } from '../../../shared/components';
+import { useMemberDashboardData } from '../hooks/useMemberDashboardData';
 
-export function FriendsSection({ members, isLoading }: { members: SimplifiedMember[]; isLoading: boolean }) {
+export function FriendsSection() {
+  const { otherMembers, loading, errors, actions } = useMemberDashboardData();
+
+  if (errors.otherMembers) {
+    return (
+      <AlertRetry
+        handleRetry={actions.retryFriendsData}
+        alertMessage={`Failed to load your Friends' data`}
+        errorMessage={errors.otherMembers}
+        loading={loading.otherMembers}
+      />
+    );
+  }
+
   return (
     <Stack gap='lg'>
       <Title order={4}>Active Friends</Title>
-      {isLoading ? (
+      {loading.otherMembers ? (
         <Group justify='center'>
           <Loader size='sm' />
           <Text size='sm' c='dimmed'>
@@ -14,7 +27,7 @@ export function FriendsSection({ members, isLoading }: { members: SimplifiedMemb
           </Text>
         </Group>
       ) : (
-        members.map((member, i) => (
+        otherMembers.map((member, i) => (
           <Group key={member.id} mt={i === 0 ? 0 : 'xs'}>
             <SharedAvatar name={member.name} src={null} />
             <Stack gap={0}>

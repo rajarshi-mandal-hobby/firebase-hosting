@@ -1,22 +1,10 @@
 /**
  * useMemberDashboard Hook
- *
- * Custom hook for member dashboard operations including:
- * - Member dashboard data fetching
- * - Member rent history with pagination
- * - Other active members (friends directory)
- * - FCM token management
- * - Real-time dashboard listeners setup
- *
- * Extracted from AppContext as part of the refactoring to improve code organization.
- * Follows React patterns guidelines with proper error handling and loading states.
- *
- * Requirements: 3.4, 3.7, 5.1, 5.2, 8.1, 8.4
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, use, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFunctions, httpsCallable, type HttpsCallableResult } from 'firebase/functions';
 import { RealtimeService } from '../services';
 import type { Member, RentHistory } from '../../shared/types/firestore-types';
 import type { BaseHookReturn } from './types';
@@ -31,13 +19,19 @@ export interface MemberDashboardState {
   rentHistory: RentHistory[];
   hasMoreHistory: boolean;
   nextHistoryCursor?: string;
-  otherMembers: Array<{
-    id: string;
-    name: string;
-    phone: string;
-    floor: string;
-    bedType: string;
-  }>;
+  otherMembers: SimplifiedMember[];
+  upi: {
+    upiVpa: string;
+    payeeName: string;
+  };
+}
+
+export interface SimplifiedMember {
+  id: string;
+  name: string;
+  phone: string;
+  floor: string;
+  bedType: string;
 }
 
 /**
@@ -58,6 +52,19 @@ export interface MemberDashboardErrorState {
   history: string | null;
   otherMembers: string | null;
   fcmToken: string | null;
+}
+
+interface MemberProfileResult extends HttpsCallableResult {
+  success: boolean;
+  message: string;
+  data: {
+    member: Member;
+    currentMonth?: RentHistory;
+    globalSettings: {
+      upiVpa: string;
+      payeeName: string;
+    };
+  };
 }
 
 /**
@@ -102,6 +109,10 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
     hasMoreHistory: false,
     nextHistoryCursor: undefined,
     otherMembers: [],
+    upi: {
+      upiVpa: '',
+      payeeName: '',
+    },
   });
 
   // Loading states for different operations
@@ -165,54 +176,56 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
   }, []);
 
   // Get member dashboard data operation
-  const getMemberDashboard = useCallback(async (): Promise<void> => {
+  const getMemberDashboard = useCallback(async () => {
     setErrors((prev) => ({ ...prev, dashboard: null }));
     setLoading((prev) => ({ ...prev, dashboard: true }));
 
-    try {
-      const functions = getFunctions();
-      const getMemberDashboardFn = httpsCallable(functions, 'getMemberDashboard');
+    console.log('getMemberDashboard called');
 
-      const result = await getMemberDashboardFn();
-      console.log('getMemberDashboard result:', result.data);
-      const response = result.data as {
-        success: boolean;
-        message: string;
-        data: {
-          member: Member;
-          currentMonth?: RentHistory;
-          globalSettings: {
-            upiVpa?: string;
-            payeeName?: string;
-          };
-        };
-      };
+    const functions = getFunctions();
+    const getMemberDashboardFn = httpsCallable(functions, 'getMemberDashboard');
+    await getMemberDashboardFn()
+      .then((result) => {
+        const data = result.data as MemberProfileResult;
 
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to fetch member dashboard');
-      }
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to fetch member dashboard');
+        }
 
-      setDashboardData((prev) => ({
-        ...prev,
-        member: response.data.member,
-        currentMonth: response.data.currentMonth || null,
-      }));
+        setDashboardData((prev) => ({
+          ...prev,
+          member: data.data.member,
+          currentMonth: data.data.currentMonth || null,
+          upi: {
+            upiVpa: data.data.globalSettings.upiVpa,
+            payeeName: data.data.globalSettings.payeeName,
+          },
+        }));
 
-      notifications.show({
-        ...SUCCESS_NOTIFICATION,
-        message: 'Dashboard data loaded successfully',
+        notifications.show({
+          ...SUCCESS_NOTIFICATION,
+          message: 'Dashboard data loaded successfully',
+        });
+      })
+      .catch((error) => {
+        handleError(error, HOOK_OPERATIONS.GET_MEMBER_DASHBOARD, 'dashboard');
+        console.error('Error fetching member dashboard:', error);
+        throw error;
+      })
+      .finally(() => {
+        setLoading((prev) => ({ ...prev, dashboard: false }));
       });
-    } catch (error) {
-      handleError(error, HOOK_OPERATIONS.GET_MEMBER_DASHBOARD, 'dashboard');
-      throw error;
-    } finally {
-      setLoading((prev) => ({ ...prev, dashboard: false }));
-    }
   }, [handleError]);
+
+  // Automatically fetch member dashboard data on mount
+  useEffect(() => {
+    getMemberDashboard();
+  }, [getMemberDashboard]);
 
   // Get member rent history with pagination
   const getMemberRentHistory = useCallback(
     async (limit: number = 12, startAfter?: string): Promise<void> => {
+      console.log('getMemberRentHistory called');
       setErrors((prev) => ({ ...prev, history: null }));
       setLoading((prev) => ({ ...prev, history: true }));
 
@@ -261,13 +274,20 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
     },
     [handleError]
   );
-
+  const [simulateError, setSimulateError] = useState(true); // Start with error simulation
   // Get other active members for friends directory
   const getOtherActiveMembers = useCallback(async (): Promise<void> => {
+    console.log('getOtherActiveMembers called');
     setErrors((prev) => ({ ...prev, otherMembers: null }));
     setLoading((prev) => ({ ...prev, otherMembers: true }));
 
     try {
+      if (simulateError) {
+        console.log('Intentional error triggered');
+        // Simulate an error for testing purposes
+        setSimulateError(false); // Prevent further error simulation
+        throw new Error('This is an intentional error.');
+      }
       const functions = getFunctions();
       const getOtherActiveMembersFn = httpsCallable(functions, 'getOtherActiveMembers');
 
@@ -305,11 +325,12 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
     } finally {
       setLoading((prev) => ({ ...prev, otherMembers: false }));
     }
-  }, [handleError]);
+  }, [handleError, simulateError]);
 
   // Update FCM token for push notifications
   const updateFCMToken = useCallback(
     async (fcmToken: string): Promise<void> => {
+      console.log('updateFCMToken called');
       setErrors((prev) => ({ ...prev, fcmToken: null }));
       setLoading((prev) => ({ ...prev, fcmToken: true }));
 
@@ -391,7 +412,7 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
       // Data
       dashboardData,
 
-      // Operations
+      // Operations - these are already memoized with useCallback
       getMemberDashboard,
       getMemberRentHistory,
       getOtherActiveMembers,
@@ -415,16 +436,25 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
       clearAllErrors,
     }),
     [
+      // Data dependencies
       dashboardData,
+
+      // Operation dependencies (these should be stable due to useCallback)
       getMemberDashboard,
       getMemberRentHistory,
       getOtherActiveMembers,
       updateFCMToken,
       setupMemberDashboardListeners,
+
+      // State dependencies
       loading,
       errors,
+
+      // Computed dependencies
       generalLoading,
       generalError,
+
+      // Utility dependencies
       clearError,
       clearAllErrors,
     ]

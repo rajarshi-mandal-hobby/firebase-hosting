@@ -16,7 +16,6 @@
 - **Vite 7** for development and build
 - **Mantine UI (latest)** component library
 - **React Router DOM 7.6** for routing
-- **Zod 4.0** for validation
 
 ## Backend Stack
 
@@ -65,33 +64,14 @@
 - **Modal Patterns**: Consistent modal structure with SharedModal wrapper
 - **Loading States**: Implement proper loading and error states for all async operations
 
-### File Organization
-
-- **features/**: Feature-based modules
-- **shared/**: Reusable components/utils
-- **pages/**: Route components
-- **contexts/**: React contexts
-- **data/**: Services and mock data
-- **hooks/**: Custom hooks
-
-### Firebase Rules
-
-- Authentication last (Phase 5)
-- Use emulators for development
-- Cloud Functions in TypeScript
-- Firestore security rules with RBAC
-
 ## Current Development Mode
 
-- Mock data for all components
 - Authentication bypass enabled
 - Firebase emulators for testing
 
 ## Cross-Reference Guidelines
 
 - **React Patterns**: See `.kiro/steering/react-patterns.md` for comprehensive React best practices and hook selection
-- **Project Structure**: See `.kiro/steering/structure.md` for architecture patterns and component organization
-- **Product Context**: See `.kiro/steering/product.md` for business requirements and feature specifications
 
 ## Mantine Documentation References
 

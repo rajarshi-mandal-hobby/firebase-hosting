@@ -231,7 +231,7 @@ export interface ElectricBill {
  * UPI payment parameters as defined in schema section 7.2.4
  */
 export interface UPIPaymentParams {
-  pa: string; // UPI ID (e.g., "+918777529394@paytm")
+  pa: string; // UPI ID
   pn: string; // Payee name (e.g., "Rent Payment")
   am: number; // Amount
   cu: string; // Currency (e.g., "INR")

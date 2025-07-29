@@ -1,7 +1,8 @@
 import { Avatar } from '@mantine/core';
 import type { AvatarProps } from '@mantine/core';
+import { memo } from 'react';
 
-export const SharedAvatar = ({ ...props }: AvatarProps) => {
+export const SharedAvatar = memo<AvatarProps>(({ ...props }) => {
   return (
     <Avatar
       key={props.name}
@@ -14,4 +15,4 @@ export const SharedAvatar = ({ ...props }: AvatarProps) => {
       {...props}
     />
   );
-};
+});

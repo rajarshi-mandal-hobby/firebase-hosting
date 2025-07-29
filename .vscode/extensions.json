@@ -1,9 +1,3 @@
 {
-  "recommendations": [
-    "vunguyentuan.vscode-postcss",
-    "vunguyentuan.vscode-css-variables",
-    "ms-vscode.vscode-typescript-next",
-    "esbenp.prettier-vscode",
-    "bradlc.vscode-tailwindcss"
-  ]
+  "recommendations": ["dbaeumer.vscode-eslint"]
 }
