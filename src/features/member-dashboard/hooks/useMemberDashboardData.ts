@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAppContext } from '../../../contexts/AppContext';
 import type { Member, RentHistory } from '../../../shared/types/firestore-types';
 import type { MemberDashboardErrorState, MemberDashboardLoadingState } from '../../../contexts/hooks';
@@ -47,49 +47,57 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
   const [memberLoaded, setMemberLoaded] = useState(false);
   const [friendsLoaded, setFriendsLoaded] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
 
   // Track when friends data is available or load on demand
-  const loadFriendsData = useCallback(async () => {
-    console.log('Loading friends data...');
-    // Move guard checks inside function to avoid dependencies on changing state
-    if (memberDashboard.otherMembers.length > 0 && !friendsLoaded) {
-      setFriendsLoaded(true);
-      return;
-    }
+  const loadFriendsData = useCallback(
+    async (forceLoad = false) => {
+      console.log('Loading friends data...', forceLoad ? '(forced)' : '');
 
-    // If no friends data available and not currently loading, fetch it
-    if (memberDashboard.otherMembers.length === 0 && !loading.otherMembers && !friendsLoaded) {
-      try {
-        await memberDashboardOps.getOtherActiveMembers();
-        setFriendsLoaded(true);
-      } catch (err) {
-        console.error('Failed to load friends data:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load friends data';
-        setLocalError(errorMessage);
+      // Check for existing errors before attempting to load (skip if forced)
+      if (!forceLoad && errors.otherMembers) {
+        console.log(`Existing error found: ${errors.otherMembers}`);
+        return;
       }
-    }
-  }, [memberDashboardOps, memberDashboard.otherMembers.length, loading.otherMembers, friendsLoaded]);
+
+      // Move guard checks inside function to avoid dependencies on changing state
+      if (memberDashboard.otherMembers.length > 0 && !friendsLoaded) {
+        console.log('Friends data already loaded.', friendsLoaded);
+        setFriendsLoaded(true);
+        return;
+      }
+
+      // If no friends data available and not currently loading, fetch it
+      if (memberDashboard.otherMembers.length === 0 && !loading.otherMembers && !friendsLoaded) {
+        await memberDashboardOps
+          .getOtherActiveMembers()
+          .then(() => {
+            console.log('Friends data loaded successfully.');
+            setFriendsLoaded(true);
+          })
+          .catch((error) => {
+            console.error('Failed to load friends data:', error);
+            setFriendsLoaded(false);
+          });
+      }
+    },
+    [memberDashboardOps, memberDashboard.otherMembers.length, loading.otherMembers, friendsLoaded, errors.otherMembers]
+  );
 
   // Track when history data is available or load initial data
   const loadHistory = useCallback(async () => {
     // Move guard checks inside function to avoid dependencies on changing state
     if (memberDashboardOps.dashboardData.rentHistory.length > 0 && !historyLoaded) {
       setHistoryLoaded(true);
-      setLocalError(null);
       return;
     }
 
     // If no history data available and not currently loading, fetch initial batch
     if (memberDashboard.rentHistory.length === 0 && !loading.history && !historyLoaded) {
       try {
-        setLocalError(null);
         await memberDashboardOps.getMemberRentHistory(12);
         setHistoryLoaded(true);
       } catch (err) {
         console.error('Failed to load history data:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load rent history';
-        setLocalError(errorMessage);
       }
     }
   }, [memberDashboardOps, memberDashboard.rentHistory.length, loading.history, historyLoaded]);
@@ -102,12 +110,9 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
     }
 
     try {
-      setLocalError(null);
       await memberDashboardOps.getMemberRentHistory(12, memberDashboard.nextHistoryCursor);
     } catch (err) {
       console.error('Failed to load more history:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load more rent history';
-      setLocalError(errorMessage);
     }
   }, [memberDashboardOps, loading.history, memberDashboard.hasMoreHistory, memberDashboard.nextHistoryCursor]);
 
@@ -131,7 +136,6 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
     setMemberLoaded(false);
     setFriendsLoaded(false);
     setHistoryLoaded(false);
-    setLocalError(null);
 
     // Force refresh member dashboard data with current function reference
     try {
@@ -139,8 +143,6 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
       setMemberLoaded(true);
     } catch (err) {
       console.error('Failed to refresh member data:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh data';
-      setLocalError(errorMessage);
     }
   }, [memberDashboardOps]);
 
@@ -148,20 +150,24 @@ export const useMemberDashboardData = (): UseMemberDashboardData => {
 
   // Retry functions that clear errors and reload
   const retryFriendsData = useCallback(async () => {
+    console.log('Retry button clicked - clearing error and retrying...');
+
+    // Clear the error state first
     memberDashboardOps.clearError('otherMembers');
-    setFriendsLoaded(false); // Reset cache to force reload
-    console.log('retryFriendsData has been called');
-    await loadFriendsData();
+
+    // Reset cache to force reload
+    setFriendsLoaded(false);
+
+    // Retry loading friends data with force flag
+    await loadFriendsData(true);
   }, [loadFriendsData, memberDashboardOps]);
 
   const retryHistory = useCallback(async () => {
-    setLocalError(null);
     setHistoryLoaded(false); // Reset cache to force reload
     await loadHistory();
   }, [loadHistory]);
 
   const retryDashboard = useCallback(async () => {
-    setLocalError(null);
     setMemberLoaded(false); // Reset cache to force reload
     await memberDashboardOps.getMemberDashboard();
     setMemberLoaded(true);

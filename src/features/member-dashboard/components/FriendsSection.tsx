@@ -1,8 +1,9 @@
 import { Stack, Title, Group, Loader, Text, rem, Space } from '@mantine/core';
 import { SharedAvatar, IconPhone, IconBed, AlertRetry } from '../../../shared/components';
 import { useMemberDashboardData } from '../hooks/useMemberDashboardData';
+import { LoadingBox } from '../../../shared/components/LoadingBox';
 
-export function FriendsSection() {
+export default function FriendsSection() {
   const { otherMembers, loading, errors, actions } = useMemberDashboardData();
 
   if (errors.otherMembers) {
@@ -18,14 +19,10 @@ export function FriendsSection() {
 
   return (
     <Stack gap='lg'>
+      <LoadingBox loadingText='Loading friends...' />
       <Title order={4}>Active Friends</Title>
       {loading.otherMembers ? (
-        <Group justify='center'>
-          <Loader size='sm' />
-          <Text size='sm' c='dimmed'>
-            Loading friends...
-          </Text>
-        </Group>
+        <LoadingBox loadingText='Loading friends...' />
       ) : (
         otherMembers.map((member, i) => (
           <Group key={member.id} mt={i === 0 ? 0 : 'xs'}>

@@ -1,6 +1,6 @@
 /**
  * Mock Data for Development and Testing
- * 
+ *
  * This file contains mock data that simulates Firestore collections.
  * Uses types from firestore-types.ts to ensure consistency.
  */
@@ -45,8 +45,8 @@ export const mockGlobalSettings: GlobalSettings = {
       'Special Room': 2400,
     },
     '3rd': {
-      'Bed': 1500,
-      'Room': 3000,
+      Bed: 1500,
+      Room: 3000,
     },
   },
   securityDeposit: 1600,
@@ -183,9 +183,7 @@ export const mockMembers: MemberWithRentHistory[] = [
         electricity: 340,
         wifi: 67,
         previousOutstanding: 0,
-        expenses: [
-          { amount: 150, description: 'Room deep cleaning' },
-        ],
+        expenses: [{ amount: 150, description: 'Room deep cleaning' }],
         totalCharges: 3757,
         amountPaid: 3757,
         currentOutstanding: 0,
@@ -272,9 +270,7 @@ export const mockMembers: MemberWithRentHistory[] = [
         electricity: 320,
         wifi: 67,
         previousOutstanding: 0,
-        expenses: [
-          { amount: 200, description: 'Special room maintenance' },
-        ],
+        expenses: [{ amount: 200, description: 'Special room maintenance' }],
         totalCharges: 2987,
         amountPaid: 2987,
         currentOutstanding: 0,
@@ -338,9 +334,7 @@ export const mockMembers: MemberWithRentHistory[] = [
         electricity: 310,
         wifi: 67,
         previousOutstanding: 0,
-        expenses: [
-          { amount: 100, description: 'Room cleaning' },
-        ],
+        expenses: [{ amount: 100, description: 'Room cleaning' }],
         totalCharges: 3477,
         amountPaid: 3477,
         currentOutstanding: 0,
@@ -401,13 +395,12 @@ export const mockElectricBills: ElectricBill[] = [
   },
 ];
 
-// Extract rent history from members for separate collection seeding
-export const mockRentHistory: RentHistory[] = mockMembers.flatMap(member => 
-  member.rentHistory.map((history: RentHistory) => ({
-    ...history,
-    id: `${member.id}-${history.id}` // Prefix with member ID for unique document IDs
-  }))
-);
+// Extract rent history from members for subcollection seeding
+// Note: This should be used to seed subcollections under each member document
+export const mockRentHistoryByMember: Record<string, RentHistory[]> = mockMembers.reduce((acc, member) => {
+  acc[member.id] = member.rentHistory;
+  return acc;
+}, {} as Record<string, RentHistory[]>);
 
 // In-memory data store for mock services
 let globalSettingsData: GlobalSettings = { ...mockGlobalSettings };
@@ -417,22 +410,38 @@ let electricBillsData: ElectricBill[] = [...mockElectricBills];
 
 // Export data stores for services to use
 export const dataStore = {
-  get globalSettings() { return globalSettingsData; },
-  set globalSettings(data: GlobalSettings) { globalSettingsData = data; },
-  
-  get adminConfig() { return adminConfigData; },
-  set adminConfig(data: AdminConfig) { adminConfigData = data; },
-  
-  get members() { return membersData; },
-  set members(data: MemberWithRentHistory[]) { membersData = data; },
-  
-  get electricBills() { return electricBillsData; },
-  set electricBills(data: ElectricBill[]) { electricBillsData = data; },
+  get globalSettings() {
+    return globalSettingsData;
+  },
+  set globalSettings(data: GlobalSettings) {
+    globalSettingsData = data;
+  },
+
+  get adminConfig() {
+    return adminConfigData;
+  },
+  set adminConfig(data: AdminConfig) {
+    adminConfigData = data;
+  },
+
+  get members() {
+    return membersData;
+  },
+  set members(data: MemberWithRentHistory[]) {
+    membersData = data;
+  },
+
+  get electricBills() {
+    return electricBillsData;
+  },
+  set electricBills(data: ElectricBill[]) {
+    electricBillsData = data;
+  },
 };
 
 // Helper functions for working with embedded rent history
 export const getMemberWithRentHistory = (memberId: string): MemberWithRentHistory | undefined => {
-  return membersData.find(member => member.id === memberId);
+  return membersData.find((member) => member.id === memberId);
 };
 
 export const getMemberRentHistory = (memberId: string) => {
@@ -447,15 +456,15 @@ export const getCurrentMonthRentHistory = (memberId: string) => {
 };
 
 export const getActiveMembersWithRentHistory = () => {
-  return membersData.filter(member => member.isActive);
+  return membersData.filter((member) => member.isActive);
 };
 
 export const getAllMembersWithOutstanding = () => {
-  return membersData.filter(member => member.outstandingBalance > 0);
+  return membersData.filter((member) => member.outstandingBalance > 0);
 };
 
 export const getMembersByFloor = (floor: Floor) => {
-  return membersData.filter(member => member.floor === floor);
+  return membersData.filter((member) => member.floor === floor);
 };
 
 // Mock Current User for Authentication
@@ -465,9 +474,4 @@ export const mockCurrentUser = {
 };
 
 // Export individual collections for convenience
-export {
-  globalSettingsData,
-  adminConfigData,
-  membersData,
-  electricBillsData,
-};
+export { globalSettingsData, adminConfigData, membersData, electricBillsData };

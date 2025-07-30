@@ -1,10 +1,13 @@
 import { SegmentedControl, Group, Text, ActionIcon, Stack, Alert, Loader } from '@mantine/core';
-import { useState, useCallback, Suspense } from 'react';
+import { useState, useCallback, Suspense, lazy } from 'react';
 import { mockCurrentUser } from '../../../data/mock/mockData';
 import { useMemberDashboardData } from '../hooks/useMemberDashboardData';
 import { SharedAvatar, AppContainer, IconLogout } from '../../../shared/components';
 import { MemberProfile } from '../components/MemberProfile';
-import { FriendsSection } from '../components/FriendsSection';
+
+import { LoadingBox } from '../../../shared/components/LoadingBox';
+
+const FriendsSection = lazy(() => import('../components/FriendsSection.tsx'));
 
 export function MemberDashboard() {
   const [activeTab, setActiveTab] = useState('me');
@@ -41,10 +44,7 @@ export function MemberDashboard() {
   if (!currentMember) {
     return (
       <AppContainer>
-        <Group justify='center'>
-          <Loader size='sm' />
-          <Text>Loading member data...</Text>
-        </Group>
+        <LoadingBox loadingText='Loading your Dashboard...' fullScreen />
       </AppContainer>
     );
   }

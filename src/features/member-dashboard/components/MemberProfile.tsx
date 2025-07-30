@@ -141,7 +141,8 @@ export function MemberProfile() {
                   isPaymentDisabled || !currentMonthHistory
                     ? undefined
                     : generateUPIUri(currentMonthHistory.currentOutstanding, currentMember.name, currentMonthHistory.id)
-                }>
+                }
+              >
                 <CurrencyFormatter value={currentMonthHistory?.currentOutstanding ?? 0} prefix='Pay ₹' />
               </Button>
             </Group>

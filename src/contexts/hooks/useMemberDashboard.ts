@@ -2,7 +2,7 @@
  * useMemberDashboard Hook
  */
 
-import { useState, useCallback, useMemo, use, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { getFunctions, httpsCallable, type HttpsCallableResult } from 'firebase/functions';
 import { RealtimeService } from '../services';
@@ -163,7 +163,7 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
       // If no specific error type, clear the general error (for BaseHookReturn compatibility)
       setErrors((prev) => ({ ...prev, dashboard: null }));
     }
-  }, []);
+  }, [setErrors]);
 
   // Clear all error states
   const clearAllErrors = useCallback(() => {
@@ -187,6 +187,8 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
     await getMemberDashboardFn()
       .then((result) => {
         const data = result.data as MemberProfileResult;
+
+        console.log('getMemberDashboard result:', data);
 
         if (!data.success) {
           throw new Error(data.message || 'Failed to fetch member dashboard');
@@ -325,7 +327,7 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
     } finally {
       setLoading((prev) => ({ ...prev, otherMembers: false }));
     }
-  }, [handleError, simulateError]);
+  }, [handleError, simulateError, setSimulateError]);
 
   // Update FCM token for push notifications
   const updateFCMToken = useCallback(
