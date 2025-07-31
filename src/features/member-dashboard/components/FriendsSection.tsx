@@ -1,15 +1,19 @@
-import { Stack, Title, Group, Loader, Text, rem, Space } from '@mantine/core';
+import { Stack, Title, Group, Text, rem, Space } from '@mantine/core';
 import { SharedAvatar, IconPhone, IconBed, AlertRetry } from '../../../shared/components';
-import { useMemberDashboardData } from '../hooks/useMemberDashboardData';
 import { LoadingBox } from '../../../shared/components/LoadingBox';
+import type { UseMemberDashboardReturn } from '../../../contexts/hooks';
 
-export default function FriendsSection() {
-  const { otherMembers, loading, errors, actions } = useMemberDashboardData();
+interface FriendsSectionProps {
+  memberDashboardOps: UseMemberDashboardReturn;
+}
+
+export default function FriendsSection({ memberDashboardOps }: FriendsSectionProps) {
+  const { dashboardData, loading, errors } = memberDashboardOps;
 
   if (errors.otherMembers) {
     return (
       <AlertRetry
-        handleRetry={actions.retryFriendsData}
+        handleRetry={memberDashboardOps.getOtherActiveMembers}
         alertMessage={`Failed to load your Friends' data`}
         errorMessage={errors.otherMembers}
         loading={loading.otherMembers}
@@ -19,12 +23,13 @@ export default function FriendsSection() {
 
   return (
     <Stack gap='lg'>
-      <LoadingBox loadingText='Loading friends...' />
       <Title order={4}>Active Friends</Title>
       {loading.otherMembers ? (
         <LoadingBox loadingText='Loading friends...' />
+      ) : dashboardData.otherMembers.length === 0 ? (
+        <Text c='dimmed'>No active friends found</Text>
       ) : (
-        otherMembers.map((member, i) => (
+        dashboardData.otherMembers.map((member, i) => (
           <Group key={member.id} mt={i === 0 ? 0 : 'xs'}>
             <SharedAvatar name={member.name} src={null} />
             <Stack gap={0}>

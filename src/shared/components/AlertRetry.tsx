@@ -1,4 +1,4 @@
-import { Stack, Text, Alert, Button } from '@mantine/core';
+import { Stack, Text, Alert, Button, type AlertProps } from '@mantine/core';
 import { memo } from 'react';
 
 interface AlertRetryProps {
@@ -11,7 +11,7 @@ interface AlertRetryProps {
 export const AlertRetry = memo<AlertRetryProps>((props) => {
   return (
     <Stack gap='lg'>
-      <Alert color='red' title='Oops! Something went wrong.' variant='white'>
+      <Alert color='red' title='Oops! Something went wrong.' variant='white' p={0}>
         <Text size='sm' mb='sm'>
           {props.alertMessage || 'An error occurred while processing your request.'}
         </Text>

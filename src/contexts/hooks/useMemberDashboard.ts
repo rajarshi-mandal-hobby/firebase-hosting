@@ -156,14 +156,17 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
   }, []);
 
   // Clear specific error state
-  const clearError = useCallback((errorType?: keyof MemberDashboardErrorState) => {
-    if (errorType) {
-      setErrors((prev) => ({ ...prev, [errorType]: null }));
-    } else {
-      // If no specific error type, clear the general error (for BaseHookReturn compatibility)
-      setErrors((prev) => ({ ...prev, dashboard: null }));
-    }
-  }, [setErrors]);
+  const clearError = useCallback(
+    (errorType?: keyof MemberDashboardErrorState) => {
+      if (errorType) {
+        setErrors((prev) => ({ ...prev, [errorType]: null }));
+      } else {
+        // If no specific error type, clear the general error (for BaseHookReturn compatibility)
+        setErrors((prev) => ({ ...prev, dashboard: null }));
+      }
+    },
+    [setErrors]
+  );
 
   // Clear all error states
   const clearAllErrors = useCallback(() => {
@@ -276,7 +279,7 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
     },
     [handleError]
   );
-  const [simulateError, setSimulateError] = useState(true); // Start with error simulation
+  const [simulateError, setSimulateError] = useState(false); // Start with error simulation
   // Get other active members for friends directory
   const getOtherActiveMembers = useCallback(async (): Promise<void> => {
     console.log('getOtherActiveMembers called');

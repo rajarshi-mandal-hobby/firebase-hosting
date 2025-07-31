@@ -7,89 +7,105 @@ import {
   IconQrCode,
   CurrencyFormatter,
   StatusBadge,
+  AlertRetry,
 } from '../../../shared/components';
-import { useCallback, useMemo, useState } from 'react';
-import { getStatusAlertConfig } from '../../../shared/utils';
-import { useMemberDashboardData } from '../hooks/useMemberDashboardData';
+import { formatMonthYear, getStatusAlertConfig } from '../../../shared/utils';
+import type { UseMemberDashboardReturn } from '../../../contexts/hooks';
 
-export function MemberProfile() {
-  // Get all data directly from the hook - no more prop drilling!
-  const { currentMember, currentMonthHistory, historyData, hasMoreHistory, loading, actions, upi } =
-    useMemberDashboardData();
+interface MemberProfileProps {
+  showHistoryState: boolean;
+  setShowHistoryState: (show: boolean) => void;
+  memberDashboardOps: UseMemberDashboardReturn;
+}
 
-  // Local state for showing history
-  const [showHistory, setShowHistory] = useState(false);
-
-  // Format month year helper function
-  const formatMonthYear = useCallback((id: string): string => {
-    const [year, month] = id.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-  }, []);
+export function MemberProfile({
+  showHistoryState: showHistory,
+  setShowHistoryState: setShowHistory,
+  memberDashboardOps,
+}: MemberProfileProps) {
+  const {
+    member: currentMember,
+    currentMonth: currentMonthHistory,
+    rentHistory: historyData,
+    hasMoreHistory,
+    upi,
+    nextHistoryCursor,
+  } = memberDashboardOps.dashboardData;
+  const { loading, errors } = memberDashboardOps;
 
   // History button configuration
-  const historyButtonConfig = useMemo(() => {
+  const historyButtonConfig = (() => {
     if (!showHistory) {
       return { text: 'Load History', disabled: false };
     }
     if (hasMoreHistory) {
       return { text: 'Load More', disabled: false };
     }
+    if (errors.history) {
+      return { text: 'Retry Loading History', disabled: false };
+    }
     return { text: 'All History Loaded', disabled: true };
-  }, [showHistory, hasMoreHistory]);
+  })();
 
   // Handle history button click
-  const handleHistoryButtonClick = useCallback(() => {
+  const handleHistoryButtonClick = () => {
     if (!showHistory) {
-      setShowHistory(true);
-      actions.loadHistory();
+      if (historyData.length === 0) {
+        memberDashboardOps.getMemberRentHistory(12);
+        setShowHistory(true);
+      }
     } else if (hasMoreHistory) {
-      actions.loadMoreHistory();
+      memberDashboardOps.getMemberRentHistory(12, nextHistoryCursor);
+    } else if (errors.history) {
+      memberDashboardOps.clearError('history');
+      memberDashboardOps.getMemberRentHistory(12);
     }
-  }, [showHistory, hasMoreHistory, actions]);
+  };
 
   // Simple UPI URI generation using admin's UPI data (Requirements: 4.1, 4.2, 4.5, 4.6)
-  const generateUPIUri = useCallback(
-    (amount: number, memberName: string, billingMonth: string): string => {
-      if (!upi?.vpa || !upi?.payeeName) {
-        return '#'; // Fallback if UPI data not available
-      }
+  const generateUPIUri = (amount: number, memberName: string, billingMonth: string): string => {
+    if (!upi?.upiVpa || !upi?.payeeName) {
+      return '#'; // Fallback if UPI data not available
+    }
 
-      const upiParams: UPIPaymentParams = {
-        pa: upi.vpa, // Admin's UPI VPA (where members send payment)
-        pn: upi.payeeName, // Admin's name (who receives payment)
-        am: amount,
-        cu: 'INR',
-        tn: `Rent ${billingMonth} - ${memberName}`, // Clear transaction note with billing month
-      };
+    const upiParams: UPIPaymentParams = {
+      pa: upi.upiVpa, // Admin's UPI VPA (where members send payment)
+      pn: upi.payeeName, // Admin's name (who receives payment)
+      am: amount,
+      cu: 'INR',
+      tn: `Rent ${billingMonth} - ${memberName}`, // Clear transaction note with billing month
+    };
 
-      // Generate clean UPI URI
-      const params = new URLSearchParams({
-        pa: upiParams.pa,
-        pn: upiParams.pn,
-        am: upiParams.am.toString(),
-        cu: upiParams.cu,
-        tn: upiParams.tn,
-      });
+    // Generate clean UPI URI
+    const params = new URLSearchParams({
+      pa: upiParams.pa,
+      pn: upiParams.pn,
+      am: upiParams.am.toString(),
+      cu: upiParams.cu,
+      tn: encodeURI(upiParams.tn),
+    });
 
-      return `upi://pay?${params.toString()}`;
-    },
-    [upi]
-  );
+    return `upi://pay?${params}`;
+  };
 
-  const isPaymentDisabled = useMemo(
-    () => currentMonthHistory?.status === 'Paid' || currentMonthHistory?.status === 'Overpaid',
-    [currentMonthHistory?.status]
-  );
+  const isPaymentDisabled = currentMonthHistory?.status === 'Paid' || currentMonthHistory?.status === 'Overpaid';
 
-  const alertConfig = useMemo(
-    () => (currentMonthHistory?.status ? getStatusAlertConfig(currentMonthHistory.status) : null),
-    [currentMonthHistory?.status]
-  );
+  const alertConfig = currentMonthHistory?.status ? getStatusAlertConfig(currentMonthHistory.status) : null;
 
   // Early return if member data is not loaded yet
   if (!currentMember) {
     return null; // Let parent component handle loading state
+  }
+
+  if (errors.dashboard) {
+    return (
+      <AlertRetry
+        alertMessage={'Error loading member data'}
+        errorMessage={errors.dashboard}
+        loading={loading.dashboard}
+        handleRetry={() => memberDashboardOps.getMemberDashboard()}
+      />
+    );
   }
 
   return (
@@ -183,7 +199,7 @@ export function MemberProfile() {
                 </Accordion.Item>
               ))}
             </Accordion>
-          ) : (
+          ) : historyData.length === 0 && loading.history ? null : (
             <Alert color='blue' variant='light'>
               <Text size='sm' ta='center'>
                 No rent history available yet. Your payment history will appear here once you have more than one month

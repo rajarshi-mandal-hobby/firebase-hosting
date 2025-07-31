@@ -1,33 +1,29 @@
-import { SegmentedControl, Group, Text, ActionIcon, Stack, Alert, Loader } from '@mantine/core';
-import { useState, useCallback, Suspense, lazy } from 'react';
+import { SegmentedControl, Group, Text, ActionIcon, Stack, Alert } from '@mantine/core';
+import { useState, Suspense, lazy, Profiler } from 'react';
 import { mockCurrentUser } from '../../../data/mock/mockData';
-import { useMemberDashboardData } from '../hooks/useMemberDashboardData';
 import { SharedAvatar, AppContainer, IconLogout } from '../../../shared/components';
 import { MemberProfile } from '../components/MemberProfile';
-
 import { LoadingBox } from '../../../shared/components/LoadingBox';
+import { useAppContext } from '../../../contexts/AppContext.tsx';
 
-const FriendsSection = lazy(() => import('../components/FriendsSection.tsx'));
+// Lazy load
+const FriendsSection = lazy(() => import('../components/FriendsSection'));
 
 export function MemberDashboard() {
   const [activeTab, setActiveTab] = useState('me');
+  const [showHistoryState, setShowHistoryState] = useState(false);
 
-  // Use the cached hook for data management
-  const { currentMember, errors, actions, cache } = useMemberDashboardData();
+  const { memberDashboardOps } = useAppContext();
+  const { dashboardData, errors, getOtherActiveMembers } = memberDashboardOps;
 
-  // Handle tab changes with proper data loading
-  const handleTabChange = useCallback(
-    (value: string) => {
-      setActiveTab(value);
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
 
-      // Load friends data only when Friends tab is accessed
-      if (value === 'friends') {
-        if (cache.friendsLoaded) return; // Already loaded
-        actions.loadFriendsData();
-      }
-    },
-    [actions, cache.friendsLoaded]
-  );
+    // Load friends data only when Friends tab is accessed
+    if (value === 'friends' && dashboardData.otherMembers.length === 0) {
+      getOtherActiveMembers();
+    }
+  };
 
   // Early return if there's an error
   if (errors.dashboard) {
@@ -41,7 +37,7 @@ export function MemberDashboard() {
   }
 
   // Early return if member data is not loaded yet
-  if (!currentMember) {
+  if (!dashboardData.member) {
     return (
       <AppContainer>
         <LoadingBox loadingText='Loading your Dashboard...' fullScreen />
@@ -55,10 +51,10 @@ export function MemberDashboard() {
         {/* Header with Member Info and Sign Out */}
         <Group justify='space-between'>
           <Group>
-            <SharedAvatar name={currentMember.name} src={null} size='md' />
+            <SharedAvatar name={dashboardData.member.name} src={null} size='md' />
             <Stack gap={0}>
               <Text size='md' fw={500}>
-                {currentMember.name}
+                {dashboardData.member.name}
               </Text>
               <Text size='xs' c='dimmed'>
                 {mockCurrentUser.email}
@@ -84,19 +80,17 @@ export function MemberDashboard() {
         />
 
         {/* Active Panel Content */}
-        {activeTab === 'me' && <MemberProfile />}
+        {activeTab === 'me' && (
+          <MemberProfile
+            showHistoryState={showHistoryState}
+            setShowHistoryState={setShowHistoryState}
+            memberDashboardOps={memberDashboardOps}
+          />
+        )}
 
         {activeTab === 'friends' && (
-          <Suspense
-            fallback={
-              <Group justify='center'>
-                <Loader size='sm' />
-                <Text size='sm' c='dimmed'>
-                  Loading friends section...
-                </Text>
-              </Group>
-            }>
-            <FriendsSection />
+          <Suspense fallback={<LoadingBox loadingText='Loading friends...' />}>
+            <FriendsSection memberDashboardOps={memberDashboardOps} />
           </Suspense>
         )}
       </Stack>

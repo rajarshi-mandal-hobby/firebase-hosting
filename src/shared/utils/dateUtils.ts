@@ -9,11 +9,13 @@ import type { Timestamp } from 'firebase/firestore';
  */
 export const formatDate = (timestamp: Timestamp | null | undefined): string => {
   try {
-    return timestamp?.toDate?.()?.toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }) || 'N/A';
+    return (
+      timestamp?.toDate?.()?.toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }) || 'N/A'
+    );
   } catch {
     return 'N/A';
   }
@@ -40,13 +42,15 @@ export const formatMonthYear = (id: string): string => {
  */
 export const formatDateTime = (timestamp: Timestamp | null | undefined): string => {
   try {
-    return timestamp?.toDate?.()?.toLocaleString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }) || 'N/A';
+    return (
+      timestamp?.toDate?.()?.toLocaleString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }) || 'N/A'
+    );
   } catch {
     return 'N/A';
   }
@@ -67,12 +71,11 @@ export const getCurrentBillingMonth = (): string => {
  */
 export const isCurrentMonth = (timestamp: Timestamp | null | undefined): boolean => {
   if (!timestamp) return false;
-  
+
   try {
     const date = timestamp.toDate();
     const now = new Date();
-    return date.getFullYear() === now.getFullYear() && 
-           date.getMonth() === now.getMonth();
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
   } catch {
     return false;
   }
@@ -83,7 +86,7 @@ export const isCurrentMonth = (timestamp: Timestamp | null | undefined): boolean
  */
 export const getRelativeTime = (timestamp: Timestamp | null | undefined): string => {
   if (!timestamp) return 'N/A';
-  
+
   try {
     const date = timestamp.toDate();
     const now = new Date();
@@ -91,7 +94,7 @@ export const getRelativeTime = (timestamp: Timestamp | null | undefined): string
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    
+
     if (diffDays > 0) {
       return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
     } else if (diffHours > 0) {

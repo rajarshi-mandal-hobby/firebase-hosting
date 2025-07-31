@@ -1,4 +1,5 @@
 import { List, Text } from '@mantine/core';
+import { memo } from 'react';
 import { formatDate } from '../utils';
 import { CurrencyFormatter } from './CurrencyFormatter';
 import {
@@ -19,7 +20,7 @@ interface MemberDetailsListProps {
   isAdmin?: boolean;
 }
 
-export const MemberDetailsList: React.FC<MemberDetailsListProps> = ({ member, isAdmin = false }) => {
+export const MemberDetailsList = memo<MemberDetailsListProps>(({ member, isAdmin = false }) => {
   const formatTimestamp = (timestamp: Timestamp | undefined) => {
     if (!timestamp) return 'Not set';
     try {
@@ -87,4 +88,4 @@ export const MemberDetailsList: React.FC<MemberDetailsListProps> = ({ member, is
       )}
     </List>
   );
-};
+});
