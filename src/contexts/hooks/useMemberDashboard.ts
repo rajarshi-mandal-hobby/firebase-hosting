@@ -412,58 +412,33 @@ export function useMemberDashboard(): UseMemberDashboardReturn {
   }, [loading]);
 
   // Memoize return object to prevent unnecessary re-renders
-  return useMemo(
-    () => ({
-      // Data
-      dashboardData,
+  return {
+    // Data
+    dashboardData,
 
-      // Operations - these are already memoized with useCallback
-      getMemberDashboard,
-      getMemberRentHistory,
-      getOtherActiveMembers,
-      updateFCMToken,
+    // Operations - these are already memoized with useCallback
+    getMemberDashboard,
+    getMemberRentHistory,
+    getOtherActiveMembers,
+    updateFCMToken,
 
-      // Real-time Setup
-      setupMemberDashboardListeners,
+    // Real-time Setup
+    setupMemberDashboardListeners,
 
-      // Loading States
-      loading,
+    // Loading States
+    loading,
 
-      // Error States
-      errors,
+    // Error States
+    errors,
 
-      // BaseHookReturn compatibility
-      isLoading: generalLoading,
-      error: generalError,
+    // BaseHookReturn compatibility
+    isLoading: generalLoading,
+    error: generalError,
 
-      // Utilities
-      clearError,
-      clearAllErrors,
-    }),
-    [
-      // Data dependencies
-      dashboardData,
-
-      // Operation dependencies (these should be stable due to useCallback)
-      getMemberDashboard,
-      getMemberRentHistory,
-      getOtherActiveMembers,
-      updateFCMToken,
-      setupMemberDashboardListeners,
-
-      // State dependencies
-      loading,
-      errors,
-
-      // Computed dependencies
-      generalLoading,
-      generalError,
-
-      // Utility dependencies
-      clearError,
-      clearAllErrors,
-    ]
-  );
+    // Utilities
+    clearError,
+    clearAllErrors,
+  };
 }
 
 // Set displayName for debugging

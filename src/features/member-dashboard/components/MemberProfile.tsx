@@ -10,12 +10,12 @@ import {
   AlertRetry,
 } from '../../../shared/components';
 import { formatMonthYear, getStatusAlertConfig } from '../../../shared/utils';
-import type { UseMemberDashboardReturn } from '../../../contexts/hooks';
+import type { EnhancedMemberDashboardData } from '../../../contexts/hooks/MemberDashboardContext';
 
 interface MemberProfileProps {
   showHistoryState: boolean;
   setShowHistoryState: (show: boolean) => void;
-  memberDashboardOps: UseMemberDashboardReturn;
+  memberDashboardOps: EnhancedMemberDashboardData;
 }
 
 export function MemberProfile({
@@ -50,10 +50,9 @@ export function MemberProfile({
   // Handle history button click
   const handleHistoryButtonClick = () => {
     if (!showHistory) {
-      if (historyData.length === 0) {
-        memberDashboardOps.getMemberRentHistory(12);
-        setShowHistory(true);
-      }
+      // Load history and show it
+      memberDashboardOps.getMemberRentHistory(12);
+      setShowHistory(true);
     } else if (hasMoreHistory) {
       memberDashboardOps.getMemberRentHistory(12, nextHistoryCursor);
     } else if (errors.history) {
@@ -157,8 +156,7 @@ export function MemberProfile({
                   isPaymentDisabled || !currentMonthHistory
                     ? undefined
                     : generateUPIUri(currentMonthHistory.currentOutstanding, currentMember.name, currentMonthHistory.id)
-                }
-              >
+                }>
                 <CurrencyFormatter value={currentMonthHistory?.currentOutstanding ?? 0} prefix='Pay ₹' />
               </Button>
             </Group>

@@ -1,4 +1,4 @@
-import { Stack, Text, Alert, Button, type AlertProps } from '@mantine/core';
+import { Stack, Text, Alert, Button } from '@mantine/core';
 import { memo } from 'react';
 
 interface AlertRetryProps {

@@ -21,16 +21,51 @@ export type {
 export { useAdminOperations } from './useAdminOperations';
 export type { UseAdminOperationsReturn } from './useAdminOperations';
 
-export { useMemberDashboard } from './useMemberDashboard';
+export { useMemberDashboard } from './useMemberDashboard.simple';
 export type {
   UseMemberDashboardReturn,
   MemberDashboardState,
   MemberDashboardLoadingState,
   MemberDashboardErrorState,
-} from './useMemberDashboard';
+} from './useMemberDashboard.simple';
+
+// Enhanced Member Dashboard Context
+export {
+  MemberDashboardProvider,
+  useMemberDashboardData,
+  useMemberDashboardActions,
+  useMemberDashboardContext,
+  PerformanceMonitor,
+  PerformanceDashboard,
+} from './MemberDashboardContext';
+export type {
+  MemberDashboardProviderProps,
+  EnhancedMemberDashboardData,
+  MemberDashboardActions,
+  StabilizationOptions,
+  UserType,
+  DataScope,
+} from './MemberDashboardContext';
 
 export { usePaymentSettings } from './usePaymentSettings';
 export type { UsePaymentSettingsReturn, PaymentSettings } from './usePaymentSettings';
 
 export { useAuth } from './useAuth';
 export type { UseAuthReturn, AuthResult } from './useAuth';
+
+// Admin Dashboard Context
+export {
+  AdminDashboardProvider,
+  useAdminDashboardData,
+  useAdminDashboardActions,
+  useAdminDashboardContext,
+  AdminPerformanceMonitor,
+  AdminPerformanceDashboard,
+} from './AdminDashboardContext';
+export type {
+  AdminDashboardProviderProps,
+  EnhancedAdminDashboardData,
+  AdminDashboardActions,
+  AdminDashboardState,
+  AdminTab,
+} from './AdminDashboardContext';

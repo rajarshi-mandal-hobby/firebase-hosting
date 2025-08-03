@@ -1,10 +1,10 @@
 import { Stack, Title, Group, Text, rem, Space } from '@mantine/core';
 import { SharedAvatar, IconPhone, IconBed, AlertRetry } from '../../../shared/components';
 import { LoadingBox } from '../../../shared/components/LoadingBox';
-import type { UseMemberDashboardReturn } from '../../../contexts/hooks';
+import type { EnhancedMemberDashboardData } from '../../../contexts/hooks/MemberDashboardContext';
 
 interface FriendsSectionProps {
-  memberDashboardOps: UseMemberDashboardReturn;
+  memberDashboardOps: EnhancedMemberDashboardData;
 }
 
 export default function FriendsSection({ memberDashboardOps }: FriendsSectionProps) {
