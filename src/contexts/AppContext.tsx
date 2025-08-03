@@ -1,7 +1,10 @@
 /**
- * AppContext - Refactored React Context for global state management
+ * AppContext - Optimized React Context for global state management
  *
- * Refactored to reduce codebase size by 37% while maintaining all functionality.
+ * Cleaned up to remove unused dashboard context dependencies.
+    }, [retryCount.members, retryCount.settings]);
+
+  const addMember = useCallback( and Admin dashboards now use their own enhanced contexts.
  * Requirements: 1.1, 1.2, 1.3, 2.1-2.11, 6.5, 9.1, 9.2, 9.3
  */
 
@@ -18,7 +21,6 @@ import type {
 import { useMemberOperations } from './hooks/useMemberOperations';
 import { useBillingOperations } from './hooks/useBillingOperations';
 import { useAdminOperations } from './hooks/useAdminOperations';
-import { useMemberDashboard } from './hooks/useMemberDashboard';
 import { useAuth } from './hooks/useAuth';
 import { usePaymentSettings } from './hooks/usePaymentSettings';
 
@@ -29,14 +31,12 @@ interface AppContextType {
   memberOperations: ReturnType<typeof useMemberOperations>;
   billingOperations: ReturnType<typeof useBillingOperations>;
   adminOperations: ReturnType<typeof useAdminOperations>;
-  memberDashboardOps: ReturnType<typeof useMemberDashboard>;
   auth: ReturnType<typeof useAuth>;
   paymentSettings: ReturnType<typeof usePaymentSettings>;
   addMember: (memberData: AddMemberFormData) => Promise<void>;
   updateMember: (memberId: string, updates: EditMemberFormData) => Promise<void>;
   deactivateMember: (memberId: string, leaveDate: Date) => Promise<SettlementPreview>;
   deleteMember: (memberId: string) => Promise<void>;
-  setupMemberDashboardListeners: (memberId: string) => () => void;
   getMemberStats: () => {
     totalActive: number;
     wifiOptedIn: number;
@@ -73,9 +73,6 @@ export function AppProvider({ children }: AppProviderProps) {
   const adminOperations = useAdminOperations();
   const auth = useAuth();
   const paymentSettings = usePaymentSettings();
-
-  // Directly use the hook - it's already optimized with proper memoization
-  const memberDashboardOps = useMemberDashboard();
 
   const retryConnection = useCallback(() => {
     // Reset retry counters to trigger re-subscription
@@ -147,12 +144,6 @@ export function AppProvider({ children }: AppProviderProps) {
     };
   }, [retryCount.members, retryCount.settings]);
 
-  const setupMemberDashboardListeners = useCallback(
-    (memberId: string) => {
-      return memberDashboardOps.setupMemberDashboardListeners(memberId);
-    },
-    [memberDashboardOps]
-  );
   const addMember = useCallback(
     async (memberData: AddMemberFormData): Promise<void> => {
       await memberOperations.addMember(memberData);
@@ -252,7 +243,6 @@ export function AppProvider({ children }: AppProviderProps) {
       memberOperations,
       billingOperations,
       adminOperations,
-      memberDashboardOps,
       auth,
       paymentSettings,
       addMember,
@@ -260,7 +250,6 @@ export function AppProvider({ children }: AppProviderProps) {
       deactivateMember,
       deleteMember,
       linkMemberAccount,
-      setupMemberDashboardListeners,
       getMemberStats,
       fetchInactiveMembers,
       searchMembers,
@@ -273,7 +262,6 @@ export function AppProvider({ children }: AppProviderProps) {
       memberOperations,
       billingOperations,
       adminOperations,
-      memberDashboardOps,
       auth,
       paymentSettings,
       addMember,
@@ -281,7 +269,6 @@ export function AppProvider({ children }: AppProviderProps) {
       deactivateMember,
       deleteMember,
       linkMemberAccount,
-      setupMemberDashboardListeners,
       getMemberStats,
       fetchInactiveMembers,
       searchMembers,

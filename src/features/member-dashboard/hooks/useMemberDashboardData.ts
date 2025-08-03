@@ -1,3 +1,13 @@
+/**
+ * ❌ DEPRECATED: useMemberDashboardData Hook
+ * 
+ * This file has been replaced by:
+ * - MemberDashboardContext.tsx (for enhanced context usage with performance monitoring)
+ * - useMemberDashboard.simple.ts (for individual hook usage)
+ * 
+ * All content commented out - can be deleted after migration is complete.
+ */
+
 // import { useState, useCallback, useMemo, useEffect } from 'react';
 // import { useAppContext } from '../../../contexts/AppContext';
 // import type { Member, RentHistory } from '../../../shared/types/firestore-types';
