@@ -1,39 +1,19 @@
 /**
  * Shared Types for Firebase Functions
- * 
+ *
  * This file contains type definitions used by Cloud Functions.
  * These should mirror the types from the frontend for consistency.
  */
 
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp } from 'firebase-admin/firestore';
 
 // Basic types
-export type Floor = "2nd" | "3rd";
-export type BedType = "Bed" | "Room" | "Special Room";
-export type AdminRole = "primary" | "secondary";
-export type PaymentStatus = "Due" | "Paid" | "Partially Paid" | "Partial" | "Overpaid";
+export type Floor = '2nd' | '3rd';
+export type BedType = 'Bed' | 'Room' | 'Special Room';
+export type AdminRole = 'primary' | 'secondary';
+export type PaymentStatus = 'Due' | 'Paid' | 'Partially Paid' | 'Partial' | 'Overpaid';
 
-// Configuration types
-export interface GlobalSettings {
-  floors: Floor[];
-  bedTypes: {
-    [K in Floor]: {
-      [bedType: string]: number;
-    };
-  };
-  securityDeposit: number;
-  wifiMonthlyCharge: number;
-  upiPhoneNumber: string;
-  activememberCounts: {
-    total: number;
-    byFloor: {
-      [K in Floor]: number;
-    };
-    wifiOptedIn: number;
-  };
-  currentBillingMonth?: Timestamp;
-  nextBillingMonth?: Timestamp;
-}
+
 
 export interface Admin {
   email: string;

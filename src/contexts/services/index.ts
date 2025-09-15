@@ -6,7 +6,6 @@
  */
 
 // Individual service classes
-export { ConfigService } from '../../data/services/configService';
 export { MembersService } from '../../data/services/membersService';
 export { BillingService } from '../../data/services/billingService';
 
@@ -14,7 +13,7 @@ export { BillingService } from '../../data/services/billingService';
 export { AuthService, RealtimeService, MemberDashboardService, UtilityService } from '../../data/firestoreService';
 
 // Service utilities and error handling
-export { ServiceError } from '../../data/utils/serviceUtils';
+export { ServiceErrorDepricated as ServiceError } from '../../data/utils/serviceUtils';
 
 // Utility functions for direct import
 export {

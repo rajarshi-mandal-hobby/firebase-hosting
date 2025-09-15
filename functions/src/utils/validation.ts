@@ -7,6 +7,26 @@
 
 import { https } from 'firebase-functions/v2';
 import { CloudFunctionResponse } from '../types/shared';
+import { z } from 'zod';
+
+export type ZodFieldErrors = Record<string, string>;
+
+export function zodFieldErrorsAll<T extends string>(
+  result: z.ZodSafeParseError<any>,
+  keyMap: Record<string, T>
+): Record<T, string> {
+  const flattened = z.flattenError(result.error);
+  const fieldErrors: Record<T, string> = {} as Record<T, string>;
+
+  for (const [zodKey, messages] of Object.entries(flattened.fieldErrors)) {
+    const formKey = keyMap[zodKey];
+    if (formKey) {
+      fieldErrors[formKey] = String(messages);
+    }
+  }
+
+  return fieldErrors;
+}
 
 /**
  * Custom error class for function-specific errors

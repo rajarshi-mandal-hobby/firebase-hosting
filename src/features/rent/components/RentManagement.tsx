@@ -1,15 +1,12 @@
 import { Accordion, Button, Group, Stack, Text, Title } from '@mantine/core';
 import { useState } from 'react';
 import { CurrencyFormatter, SharedAvatar, StatusBadge, RentDetailsList } from '../../../shared/components';
-import type { UseRentManagementData } from '../hooks/useRentManagementData';
+
 import { GenerateBillsModal, RecordPaymentModal, AddExpenseModal } from './modals';
+import { useRentManagementData } from '../hooks';
 
-interface RentManagementProps {
-  rentData: UseRentManagementData;
-}
-
-export function RentManagement({ rentData }: RentManagementProps) {
-  const { membersWithBills, totalOutstanding, error, actions, cache } = rentData;
+export function RentManagement() {
+  const { membersWithBills, totalOutstanding, error, actions, cache } = useRentManagementData();
   const [generateBillsModal, setGenerateBillsModal] = useState(false);
   const [recordPaymentModal, setRecordPaymentModal] = useState(false);
   const [addExpenseModal, setAddExpenseModal] = useState(false);

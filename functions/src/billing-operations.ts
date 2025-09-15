@@ -15,9 +15,9 @@ import {
   RentHistory,
   CloudFunctionResponse,
   PaymentStatus,
-  GlobalSettings,
   Expense,
 } from './types/shared';
+import { GlobalSettings } from './schemas';
 
 const db = getFirestore();
 

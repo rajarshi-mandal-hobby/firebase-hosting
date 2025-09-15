@@ -8,4 +8,4 @@ export { RentDetailsList } from './RentDetailsList';
 export * from './icons';
 export { MemberDetailsList } from './MemberDetailsList';
 export { StatusIndicator } from './StatusIndicator';
-export { AlertRetry } from './AlertRetry';
+export { RetryBox as AlertRetry } from './RetryBox';

@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import type { Member, Floor, RentHistory } from '../../shared/types/firestore-types';
-import { ServiceError, validatePhoneNumber, validateAmount, generateMemberId } from '../utils/serviceUtils';
+import { ServiceErrorDepricated, validatePhoneNumber, validateAmount, generateMemberId } from '../utils/serviceUtils';
 
 export class MembersService {
   /**
@@ -61,7 +61,7 @@ export class MembersService {
       return members;
     } catch (error) {
       console.error('Error fetching members:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to fetch members');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to fetch members');
     }
   }
 
@@ -83,7 +83,7 @@ export class MembersService {
       } as Member;
     } catch (error) {
       console.error('Error fetching member:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to fetch member');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to fetch member');
     }
   }
 
@@ -111,7 +111,7 @@ export class MembersService {
       return rentHistory;
     } catch (error) {
       console.error('Error fetching member rent history:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to fetch member rent history');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to fetch member rent history');
     }
   }
 
@@ -130,7 +130,7 @@ export class MembersService {
       );
     } catch (error) {
       console.error('Error searching members:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to search members');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to search members');
     }
   }
 
@@ -151,26 +151,26 @@ export class MembersService {
     try {
       // Validation
       if (!validatePhoneNumber(memberData.phone)) {
-        throw new ServiceError('validation/invalid-phone', 'Invalid phone number format');
+        throw new ServiceErrorDepricated('validation/invalid-phone', 'Invalid phone number format');
       }
 
       if (!validateAmount(memberData.rentAmount)) {
-        throw new ServiceError('validation/invalid-amount', 'Invalid rent amount');
+        throw new ServiceErrorDepricated('validation/invalid-amount', 'Invalid rent amount');
       }
 
       if (!validateAmount(memberData.securityDeposit)) {
-        throw new ServiceError('validation/invalid-amount', 'Invalid security deposit');
+        throw new ServiceErrorDepricated('validation/invalid-amount', 'Invalid security deposit');
       }
 
       if (!validateAmount(memberData.advanceDeposit)) {
-        throw new ServiceError('validation/invalid-amount', 'Invalid advance deposit');
+        throw new ServiceErrorDepricated('validation/invalid-amount', 'Invalid advance deposit');
       }
 
       // Check for duplicate phone number
       const existingMembers = await this.getMembers();
       const existingMember = existingMembers.find((m) => m.phone === memberData.phone);
       if (existingMember) {
-        throw new ServiceError('business/duplicate-phone', 'Member with this phone number already exists');
+        throw new ServiceErrorDepricated('business/duplicate-phone', 'Member with this phone number already exists');
       }
 
       // Generate member ID
@@ -208,11 +208,11 @@ export class MembersService {
 
       return { id: memberId, ...newMember } as Member;
     } catch (error) {
-      if (error instanceof ServiceError) {
+      if (error instanceof ServiceErrorDepricated) {
         throw error;
       }
       console.error('Error adding member:', error);
-      throw new ServiceError('firestore/write-error', 'Failed to add member');
+      throw new ServiceErrorDepricated('firestore/write-error', 'Failed to add member');
     }
   }
 
@@ -223,21 +223,21 @@ export class MembersService {
     try {
       // Validation for specific fields
       if (updates.phone && !validatePhoneNumber(updates.phone)) {
-        throw new ServiceError('validation/invalid-phone', 'Invalid phone number format');
+        throw new ServiceErrorDepricated('validation/invalid-phone', 'Invalid phone number format');
       }
 
       if (updates.currentRent && !validateAmount(updates.currentRent)) {
-        throw new ServiceError('validation/invalid-amount', 'Invalid rent amount');
+        throw new ServiceErrorDepricated('validation/invalid-amount', 'Invalid rent amount');
       }
 
       if (updates.securityDeposit && !validateAmount(updates.securityDeposit)) {
-        throw new ServiceError('validation/invalid-amount', 'Invalid security deposit');
+        throw new ServiceErrorDepricated('validation/invalid-amount', 'Invalid security deposit');
       }
 
       // Check if member exists
       const member = await this.getMember(memberId);
       if (!member) {
-        throw new ServiceError('business/member-not-found', 'Member not found');
+        throw new ServiceErrorDepricated('business/member-not-found', 'Member not found');
       }
 
       // Check for duplicate phone if phone is being updated
@@ -245,7 +245,7 @@ export class MembersService {
         const existingMembers = await this.getMembers();
         const existingMember = existingMembers.find((m) => m.phone === updates.phone && m.id !== memberId);
         if (existingMember) {
-          throw new ServiceError('business/duplicate-phone', 'Member with this phone number already exists');
+          throw new ServiceErrorDepricated('business/duplicate-phone', 'Member with this phone number already exists');
         }
       }
 
@@ -260,11 +260,11 @@ export class MembersService {
       const updatedMember = await this.getMember(memberId);
       return updatedMember!;
     } catch (error) {
-      if (error instanceof ServiceError) {
+      if (error instanceof ServiceErrorDepricated) {
         throw error;
       }
       console.error('Error updating member:', error);
-      throw new ServiceError('firestore/write-error', 'Failed to update member');
+      throw new ServiceErrorDepricated('firestore/write-error', 'Failed to update member');
     }
   }
 
@@ -282,11 +282,11 @@ export class MembersService {
     try {
       const member = await this.getMember(memberId);
       if (!member) {
-        throw new ServiceError('business/member-not-found', 'Member not found');
+        throw new ServiceErrorDepricated('business/member-not-found', 'Member not found');
       }
 
       if (!member.isActive) {
-        throw new ServiceError('business/member-not-active', 'Member is already inactive');
+        throw new ServiceErrorDepricated('business/member-not-active', 'Member is already inactive');
       }
 
       // Simple settlement calculation (real logic would be more complex)
@@ -308,11 +308,11 @@ export class MembersService {
         settlementDetails,
       };
     } catch (error) {
-      if (error instanceof ServiceError) {
+      if (error instanceof ServiceErrorDepricated) {
         throw error;
       }
       console.error('Error deactivating member:', error);
-      throw new ServiceError('firestore/write-error', 'Failed to deactivate member');
+      throw new ServiceErrorDepricated('firestore/write-error', 'Failed to deactivate member');
     }
   }
 
@@ -323,22 +323,25 @@ export class MembersService {
     try {
       const member = await this.getMember(memberId);
       if (!member) {
-        throw new ServiceError('business/member-not-found', 'Member not found');
+        throw new ServiceErrorDepricated('business/member-not-found', 'Member not found');
       }
 
       if (member.isActive) {
-        throw new ServiceError('business/member-still-active', 'Cannot delete active member. Deactivate first.');
+        throw new ServiceErrorDepricated(
+          'business/member-still-active',
+          'Cannot delete active member. Deactivate first.'
+        );
       }
 
       // Delete member document (this will also delete subcollections when using Firebase Functions)
       const memberRef = doc(db, 'members', memberId);
       await deleteDoc(memberRef);
     } catch (error) {
-      if (error instanceof ServiceError) {
+      if (error instanceof ServiceErrorDepricated) {
         throw error;
       }
       console.error('Error deleting member:', error);
-      throw new ServiceError('firestore/write-error', 'Failed to delete member');
+      throw new ServiceErrorDepricated('firestore/write-error', 'Failed to delete member');
     }
   }
 
@@ -375,7 +378,7 @@ export class MembersService {
       };
     } catch (error) {
       console.error('Error getting member stats:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to get member statistics');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to get member statistics');
     }
   }
 
@@ -407,7 +410,7 @@ export class MembersService {
       } as Member;
     } catch (error) {
       console.error('Error fetching member by Firebase UID:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to fetch member by Firebase UID');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to fetch member by Firebase UID');
     }
   }
 
@@ -436,7 +439,7 @@ export class MembersService {
       } as RentHistory;
     } catch (error) {
       console.error('Error fetching member current month:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to fetch current month data');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to fetch current month data');
     }
   }
 
@@ -482,7 +485,7 @@ export class MembersService {
       return otherMembers;
     } catch (error) {
       console.error('Error fetching other active members:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to fetch other active members');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to fetch other active members');
     }
   }
 
@@ -497,7 +500,7 @@ export class MembersService {
       });
     } catch (error) {
       console.error('Error updating FCM token:', error);
-      throw new ServiceError('firestore/write-error', 'Failed to update FCM token');
+      throw new ServiceErrorDepricated('firestore/write-error', 'Failed to update FCM token');
     }
   }
 
@@ -510,7 +513,10 @@ export class MembersService {
       // Check if Firebase UID is already linked to another member
       const existingMember = await this.getMemberByFirebaseUid(firebaseUid);
       if (existingMember && existingMember.id !== memberId) {
-        throw new ServiceError('business/uid-already-linked', 'Firebase UID is already linked to another member');
+        throw new ServiceErrorDepricated(
+          'business/uid-already-linked',
+          'Firebase UID is already linked to another member'
+        );
       }
 
       // Update member with Firebase UID
@@ -522,16 +528,16 @@ export class MembersService {
       // Return updated member
       const updatedMember = await this.getMember(memberId);
       if (!updatedMember) {
-        throw new ServiceError('business/member-not-found', 'Member not found after update');
+        throw new ServiceErrorDepricated('business/member-not-found', 'Member not found after update');
       }
 
       return updatedMember;
     } catch (error) {
-      if (error instanceof ServiceError) {
+      if (error instanceof ServiceErrorDepricated) {
         throw error;
       }
       console.error('Error linking member to Firebase UID:', error);
-      throw new ServiceError('firestore/write-error', 'Failed to link member account');
+      throw new ServiceErrorDepricated('firestore/write-error', 'Failed to link member account');
     }
   }
 
@@ -547,7 +553,7 @@ export class MembersService {
       // Get member by Firebase UID
       const member = await this.getMemberByFirebaseUid(firebaseUid);
       if (!member) {
-        throw new ServiceError('business/member-not-found', 'No active member found for this account');
+        throw new ServiceErrorDepricated('business/member-not-found', 'No active member found for this account');
       }
 
       // Get current month data
@@ -558,11 +564,11 @@ export class MembersService {
         currentMonth,
       };
     } catch (error) {
-      if (error instanceof ServiceError) {
+      if (error instanceof ServiceErrorDepricated) {
         throw error;
       }
       console.error('Error fetching member dashboard data:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to fetch member dashboard data');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to fetch member dashboard data');
     }
   }
 }

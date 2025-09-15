@@ -1,18 +1,22 @@
-import { Group, Loader, Text } from '@mantine/core';
+import { Box, Button, Flex, Group, Loader, Text } from '@mantine/core';
 import { memo } from 'react';
+import { CssLoader } from '../custom-loader/CssLoader';
 
 interface LoadingBoxProps {
-  loadingText: string;
-  fullScreen?: boolean;
+  size?: string & {};
+  loadingText?: string;
+  minHeight?: number; // min height if full screen
 }
 
-export const LoadingBox = memo<LoadingBoxProps>(({ loadingText, fullScreen = false }: LoadingBoxProps) => {
+export const LoadingBox = memo<LoadingBoxProps>(({ loadingText, minHeight, size }) => {
+  console.log('Rendering LoadingBox');
   return (
-    <Group justify='center' h={fullScreen ? '100vh' : ''}>
-      <Loader size='sm' />
-      <Text size='sm' c='dimmed'>
-        {loadingText}
-      </Text>
-    </Group>
+
+      <Group justify='center' mih={minHeight || '100%'} align='center' flex={1}>
+        <Loader size={'sm'} />
+        <Text size={size || 'sm'} c='dimmed'>
+          {loadingText || 'Loading...'}
+        </Text>
+      </Group>
   );
 });

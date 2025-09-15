@@ -12,15 +12,15 @@ import { doc, collection, onSnapshot, query, where, orderBy, limit } from 'fireb
 import { db } from '../../firebase';
 
 // Import all service modules
-import { ConfigService } from './services/configService';
+
 import { MembersService } from './services/membersService';
 import { BillingService } from './services/billingService';
 
 // Import types
-import type { GlobalSettings, AdminConfig, Admin, Member, RentHistory } from '../shared/types/firestore-types';
+import type { GlobalSettingsType as GlobalSettings, AdminConfig, Admin, Member, RentHistory } from '../shared/types/firestore-types';
 
 // Export the service error class
-export { ServiceError } from './utils/serviceUtils';
+export { ServiceErrorDepricated as ServiceError } from './utils/serviceUtils';
 
 // Import utilities
 import {
@@ -47,7 +47,7 @@ export class AuthService {
   }> {
     // Mock implementation
     if (!idToken || idToken === 'invalid-token') {
-      return Promise.reject(new ServiceError('auth/invalid-token', 'Invalid authentication token'));
+      return Promise.reject(new ServiceErrorDepricated('auth/invalid-token', 'Invalid authentication token'));
     }
 
     // For testing, return mock data
@@ -72,7 +72,7 @@ export class AuthService {
     // Mock implementation
     const member = await MembersService.searchMembers(phoneNumber, true);
     if (member.length === 0) {
-      throw new ServiceError('business/member-not-found', 'No member found with this phone number');
+      throw new ServiceErrorDepricated('business/member-not-found', 'No member found with this phone number');
     }
 
     return member[0];
@@ -520,7 +520,9 @@ export class MemberDashboardService {
     }
 
     // If we reach here, all retries failed
-    throw lastError || new ServiceError('service/retry-failed', 'Failed to fetch data after multiple attempts');
+    throw (
+      lastError || new ServiceErrorDepricated('service/retry-failed', 'Failed to fetch data after multiple attempts')
+    );
   }
 
   /**
@@ -543,7 +545,7 @@ export class MemberDashboardService {
       };
     } catch (error) {
       console.error('Error fetching member rent history with pagination:', error);
-      throw new ServiceError('firestore/read-error', 'Failed to fetch rent history');
+      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to fetch rent history');
     }
   }
 
@@ -561,17 +563,17 @@ export class MemberDashboardService {
     try {
       // Validate updates
       if (updates.phone && !validatePhoneNumber(updates.phone)) {
-        throw new ServiceError('validation/invalid-phone', 'Invalid phone number format');
+        throw new ServiceErrorDepricated('validation/invalid-phone', 'Invalid phone number format');
       }
 
       // Update member
       return await MembersService.updateMember(memberId, updates);
     } catch (error) {
-      if (error instanceof ServiceError) {
+      if (error instanceof ServiceErrorDepricated) {
         throw error;
       }
       console.error('Error updating member profile:', error);
-      throw new ServiceError('firestore/write-error', 'Failed to update member profile');
+      throw new ServiceErrorDepricated('firestore/write-error', 'Failed to update member profile');
     }
   }
 
@@ -651,14 +653,14 @@ export class UtilityService {
  */
 export const FirestoreService = {
   // Configuration operations
-  Config: {
-    getGlobalSettings: ConfigService.getGlobalSettings.bind(ConfigService),
-    updateGlobalSettings: ConfigService.updateGlobalSettings.bind(ConfigService),
-    getAdminConfig: ConfigService.getAdminConfig.bind(ConfigService),
-    addAdmin: ConfigService.addAdmin.bind(ConfigService),
-    removeAdmin: ConfigService.removeAdmin.bind(ConfigService),
-    updateAdminRole: ConfigService.updateAdminRole.bind(ConfigService),
-  },
+//   Config: {
+//     getGlobalSettings: ConfigService.getGlobalSettings.bind(ConfigService),
+//     updateGlobalSettings: ConfigService.saveGlobalSettings.bind(ConfigService),
+//     getAdminConfig: ConfigService.getAdminConfig.bind(ConfigService),
+//     addAdmin: ConfigService.addAdmin.bind(ConfigService),
+//     removeAdmin: ConfigService.removeAdmin.bind(ConfigService),
+//     updateAdminRole: ConfigService.updateAdminRole.bind(ConfigService),
+//   },
 
   // Member operations
   Members: {
@@ -736,5 +738,5 @@ export const FirestoreService = {
 export default FirestoreService;
 
 // Re-export service error for external use
-import { ServiceError } from './utils/serviceUtils';
-export { ServiceError as FirestoreServiceError };
+import { ServiceErrorDepricated } from './utils/serviceUtils';
+export { ServiceErrorDepricated as FirestoreServiceError };

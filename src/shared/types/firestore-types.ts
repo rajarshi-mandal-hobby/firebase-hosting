@@ -68,11 +68,17 @@ type MakeNullable<T, K extends keyof T> = Omit<T, K> & {
  * Global application settings stored in Firestore
  * Collection: config / Document: globalSettings
  */
-export interface GlobalSettings {
+export interface GlobalSettingsType {
   floors: Floor[];
   bedTypes: {
-    [K in Floor]: {
-      [bedType: string]: number;
+    '2nd': {
+      Bed: number;
+      Room: number;
+      Special: number;
+    };
+    '3rd': {
+      Bed: number;
+      Room: number;
     };
   };
   securityDeposit: number;
@@ -88,6 +94,33 @@ export interface GlobalSettings {
   currentBillingMonth?: Timestamp;
   nextBillingMonth?: Timestamp;
 }
+
+// export interface GlobalSettings {
+//   floors: Floor[];
+//   bedTypes: {
+//     '2nd': {
+//       Bed: number;
+//       Room: number;
+//       Special: number;
+//     };
+//     '3rd': {
+//       Bed: number;
+//       Room: number;
+//     };
+//   };
+//   securityDeposit: number;
+//   wifiMonthlyCharge: number;
+//   upiVpa: string;
+//   activememberCounts: {
+//     total: number;
+//     byFloor: {
+//       [K in Floor]: number;
+//     };
+//     wifiOptedIn: number;
+//   };
+//   currentBillingMonth?: Timestamp;
+//   nextBillingMonth?: Timestamp;
+// }
 
 /**
  * Admin user configuration
@@ -414,18 +447,18 @@ export interface AuthError extends AppError {
 /**
  * Validation error types
  */
-export interface ValidationError extends AppError {
-  code:
-    | 'validation/required-field'
-    | 'validation/invalid-format'
-    | 'validation/out-of-range'
-    | 'validation/duplicate-value'
-    | 'validation/invalid-floor'
-    | 'validation/invalid-bed-type'
-    | 'validation/invalid-phone'
-    | 'validation/invalid-amount';
-  field?: string;
-}
+// export interface ValidationError extends AppError {
+//   code:
+//     | 'validation/required-field'
+//     | 'validation/invalid-format'
+//     | 'validation/out-of-range'
+//     | 'validation/duplicate-value'
+//     | 'validation/invalid-floor'
+//     | 'validation/invalid-bed-type'
+//     | 'validation/invalid-phone'
+//     | 'validation/invalid-amount';
+//   field?: string;
+// }
 
 /**
  * Business logic error types
@@ -445,7 +478,7 @@ export interface BusinessError extends AppError {
 /**
  * Union type for all application errors
  */
-export type ApplicationError = FirestoreError | AuthError | ValidationError | BusinessError;
+export type ApplicationError = FirestoreError | AuthError | BusinessError;
 
 /**
  * Error result wrapper for operations that can fail

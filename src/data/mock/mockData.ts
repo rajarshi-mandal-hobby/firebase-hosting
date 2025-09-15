@@ -7,7 +7,6 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import type {
-  GlobalSettings,
   AdminConfig,
   Admin,
   RentHistory,
@@ -16,6 +15,7 @@ import type {
   BedType,
   MemberWithRentHistory,
 } from '../../shared/types/firestore-types';
+import type { GlobalSettings } from '../shemas/GlobalSettings';
 
 // Helper to create mock Firestore Timestamps
 export const createMockTimestamp = (date?: string | Date): Timestamp => {
@@ -37,12 +37,11 @@ export const createMockTimestamp = (date?: string | Date): Timestamp => {
 
 // Mock Global Settings
 export const mockGlobalSettings: GlobalSettings = {
-  floors: ['2nd', '3rd'] as Floor[],
-  bedTypes: {
+  bedRents: {
     '2nd': {
-      'Bed': 1600,
-      'Room': 3200,
-      'Special Room': 2400,
+      Bed: 1600,
+      Room: 3200,
+      Special: 2400,
     },
     '3rd': {
       Bed: 1500,
@@ -52,7 +51,7 @@ export const mockGlobalSettings: GlobalSettings = {
   securityDeposit: 1600,
   wifiMonthlyCharge: 400,
   upiVpa: '+918777529394',
-  activememberCounts: {
+  activeMemberCounts: {
     total: 4, // Only 4 active members now (member-5 is deactivated)
     byFloor: {
       '2nd': 3, // member-1, member-2, member-4
@@ -250,7 +249,7 @@ export const mockMembers: MemberWithRentHistory[] = [
     firebaseUid: 'firebase-uid-4',
     fcmToken: undefined,
     floor: '2nd' as Floor,
-    bedType: 'Special Room' as BedType,
+    bedType: 'Special' as BedType,
     moveInDate: createMockTimestamp('2024-04-01'),
     securityDeposit: 1600,
     rentAtJoining: 2400,

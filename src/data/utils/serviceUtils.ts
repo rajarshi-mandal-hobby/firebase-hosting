@@ -1,47 +1,29 @@
 /**
  * Service Utilities
- * 
+ *
  * Common utilities and helpers for service operations.
  * Includes error handling, validation, and simulation helpers.
  */
 
-import type {
-  ApplicationError,
-  FirestoreError,
-  AuthError,
-  ValidationError,
-  BusinessError,
-} from '../../shared/types/firestore-types';
+import { type FirestoreErrorCode } from 'firebase/firestore';
+import type { ApplicationError, AuthError, ValidationError, BusinessError } from '../../shared/types/firestore-types';
+// Removed 'firebase-functions/logger' (Node-only) to avoid async_hooks bundling error in browser.
 
 // Custom error class for service operations
-export class ServiceError extends Error {
-  public code: string;
-  public details?: unknown;
-  
-  constructor(
-    code: string,
-    message: string,
-    details?: unknown
-  ) {
+export class ServiceErrorDepricated extends Error {
+  constructor(readonly message: string, readonly code?: FirestoreErrorCode | string, readonly details?: unknown) {
     super(message);
-    this.name = 'ServiceError';
-    this.code = code;
-    this.details = details;
   }
 }
 
 // Network simulation helpers
-export const simulateNetworkDelay = (minMs = 200, maxMs = 800): Promise<void> => {
-  const delay = Math.random() * (maxMs - minMs) + minMs;
-  return new Promise(resolve => setTimeout(resolve, delay));
+export const simulateNetworkDelay = (delay = 3000) => {
+  return new Promise((resolve) => setTimeout(resolve, delay));
 };
 
 export const simulateRandomError = (errorRate = 0.05): void => {
   if (Math.random() < errorRate) {
-    throw new ServiceError(
-      'network-error',
-      'Simulated network error - please retry'
-    );
+    throw new Error('Simulated network error - please retry');
   }
 };
 
@@ -68,7 +50,7 @@ export const validatePhoneNumber = (phone: string): boolean => {
 export const validateBillingMonth = (month: string): boolean => {
   const monthRegex = /^\d{4}-\d{2}$/;
   if (!monthRegex.test(month)) return false;
-  
+
   const [year, monthNum] = month.split('-').map(Number);
   return year >= 2020 && year <= 2030 && monthNum >= 1 && monthNum <= 12;
 };
@@ -99,24 +81,7 @@ export const formatCurrency = (amount: number): string => {
   return `₹${amount.toLocaleString('en-IN')}`;
 };
 
-// Error creation helpers
-export const createFirestoreError = (
-  code: FirestoreError['code'],
-  message: string,
-  details?: unknown
-): FirestoreError => ({
-  code,
-  message,
-  details,
-  timestamp: new Date(),
-  firestoreCode: code.split('/')[1],
-});
-
-export const createAuthError = (
-  code: AuthError['code'],
-  message: string,
-  details?: unknown
-): AuthError => ({
+export const createAuthError = (code: AuthError['code'], message: string, details?: unknown): AuthError => ({
   code,
   message,
   details,
@@ -174,19 +139,16 @@ export interface PaginatedResult<T> {
   nextOffset?: number;
 }
 
-export const paginateArray = <T>(
-  array: T[],
-  options: PaginationOptions = {}
-): PaginatedResult<T> => {
+export const paginateArray = <T>(array: T[], options: PaginationOptions = {}): PaginatedResult<T> => {
   const { limit = 10, offset = 0, sortBy, sortOrder = 'desc' } = options;
-  
+
   let sortedArray = [...array];
-  
+
   if (sortBy) {
     sortedArray = sortedArray.sort((a, b) => {
       const aVal = (a as Record<string, unknown>)[sortBy];
       const bVal = (b as Record<string, unknown>)[sortBy];
-      
+
       if (sortOrder === 'asc') {
         return String(aVal) > String(bVal) ? 1 : -1;
       } else {
@@ -194,11 +156,11 @@ export const paginateArray = <T>(
       }
     });
   }
-  
+
   const startIndex = offset;
   const endIndex = startIndex + limit;
   const items = sortedArray.slice(startIndex, endIndex);
-  
+
   return {
     items,
     total: array.length,
@@ -215,9 +177,9 @@ export const searchInFields = <T extends Record<string, unknown>>(
 ): T[] => {
   const searchTerm = query.toLowerCase().trim();
   if (!searchTerm) return items;
-  
-  return items.filter(item =>
-    fields.some(field => {
+
+  return items.filter((item) =>
+    fields.some((field) => {
       const value = item[field];
       return value && value.toString().toLowerCase().includes(searchTerm);
     })
@@ -225,12 +187,11 @@ export const searchInFields = <T extends Record<string, unknown>>(
 };
 
 // Statistics helpers
- 
+
 export const calculateSum = <T>(items: T[], getValue: (item: T) => number): number => {
   return items.reduce((sum, item) => sum + getValue(item), 0);
 };
 
- 
 export const calculateAverage = <T>(items: T[], getValue: (item: T) => number): number => {
   if (items.length === 0) return 0;
   return calculateSum(items, getValue) / items.length;
@@ -238,7 +199,7 @@ export const calculateAverage = <T>(items: T[], getValue: (item: T) => number): 
 
 export const groupBy = <T, K extends string | number | symbol>(
   items: T[],
-   
+
   getKey: (item: T) => K
 ): Record<K, T[]> => {
   return items.reduce((groups, item) => {
@@ -256,7 +217,7 @@ export const deepClone = <T>(obj: T): T => {
   if (obj === null || typeof obj !== 'object') return obj;
   if (obj instanceof Date) return new Date(obj.getTime()) as unknown as T;
   if (Array.isArray(obj)) return obj.map(deepClone) as unknown as T;
-  
+
   const cloned = {} as T;
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -267,27 +228,23 @@ export const deepClone = <T>(obj: T): T => {
 };
 
 // Retry mechanism for operations
-export const withRetry = async <T>(
-  operation: () => Promise<T>,
-  maxRetries = 3,
-  delay = 1000
-): Promise<T> => {
+export const withRetry = async <T>(operation: () => Promise<T>, maxRetries = 3, delay = 1000): Promise<T> => {
   let lastError: Error;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
     } catch (error) {
       lastError = error as Error;
-      
+
       if (attempt === maxRetries) {
         throw lastError;
       }
-      
+
       // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, delay * attempt));
+      await new Promise((resolve) => setTimeout(resolve, delay * attempt));
     }
   }
-  
+
   throw lastError!;
 };

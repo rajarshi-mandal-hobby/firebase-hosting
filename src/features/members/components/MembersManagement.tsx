@@ -24,7 +24,7 @@ import { useAppContext } from '../../../contexts/AppContext';
 import { getMemberCounts } from '../../../shared/utils/memberUtils';
 import type { Member } from '../../../shared/types/firestore-types';
 
-export function MembersManagement() {
+export default function MembersManagement() {
   const { data: adminData } = useAdminDashboardContext();
   const { searchMembers, filterMembers, fetchInactiveMembers } = useAppContext();
 

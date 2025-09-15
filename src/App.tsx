@@ -5,10 +5,12 @@ import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { theme } from './theme';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
-import { AdminDashboard } from './pages/AdminDashboard';
+// import { AdminDashboard } from './pages/AdminDashboard';
 import { MemberDashboard } from './features/member-dashboard';
 import { SignIn } from './pages/SignIn';
-import { AppProvider } from './contexts/AppContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { AdminDashboard } from './features/admin/pages/AdminDashboard';
+import { AppContainer } from './shared/components';
 
 const router = createBrowserRouter([
   {
@@ -32,10 +34,12 @@ const router = createBrowserRouter([
 function App() {
   return (
     <MantineProvider theme={theme}>
-      <AppProvider>
+      <AuthProvider>
         <Notifications position='bottom-center' />
-        <RouterProvider router={router} />
-      </AppProvider>
+        <AppContainer>
+          <RouterProvider router={router} />
+        </AppContainer>
+      </AuthProvider>
     </MantineProvider>
   );
 }

@@ -6,10 +6,13 @@
  */
 
 import { initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 import { setGlobalOptions } from "firebase-functions/v2/options";
 
 // Initialize Firebase Admin
-initializeApp();
+const app = initializeApp();
+
+export const db = getFirestore(app);
 
 // Set global options for all functions
 setGlobalOptions({

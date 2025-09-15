@@ -4,10 +4,16 @@ import {
   Button,
   createTheme,
   DEFAULT_THEME,
+  Loader,
   ModalOverlay,
+  Notification,
+  NumberInput,
   SegmentedControl,
+  Select,
+  TextInput,
 } from '@mantine/core';
 import classes from './features/member-dashboard/containers/MemberDashboard.module.css';
+import { CssLoader } from './shared/custom-loader/CssLoader';
 
 export const theme = createTheme({
   fontFamily: `Work Sans, ${DEFAULT_THEME.fontFamily}`,
@@ -29,16 +35,21 @@ export const theme = createTheme({
         blur: 2,
       },
     }),
-    NumberInput: {
+    NumberInput: NumberInput.extend({
       defaultProps: {
         radius: 'md',
       },
-    },
-    Select: {
+    }),
+    TextInput: TextInput.extend({
       defaultProps: {
         radius: 'md',
       },
-    },
+    }),
+    Select: Select.extend({
+      defaultProps: {
+        radius: 'md',
+      },
+    }),
     SegmentedControl: SegmentedControl.extend({
       defaultProps: {
         radius: 'xl',
@@ -50,11 +61,11 @@ export const theme = createTheme({
         },
       },
     }),
-    Notification: {
+    Notification: Notification.extend({
       defaultProps: {
         radius: 'lg',
       },
-    },
+    }),
     ActionIcon: ActionIcon.extend({
       defaultProps: {
         variant: 'outline',
@@ -72,6 +83,12 @@ export const theme = createTheme({
           control: classes.accordionControl,
           chevron: classes.accordionChevron,
         },
+      },
+    }),
+    Loader: Loader.extend({
+      defaultProps: {
+        loaders: { ...Loader.defaultLoaders, custom: CssLoader },
+        type: 'custom',
       },
     }),
   },
