@@ -1,14 +1,11 @@
-import { NumberFormatter } from '@mantine/core';
-import { memo, type ComponentProps } from 'react';
+import { NumberFormatter, type NumberFormatterProps } from '@mantine/core';
+import { memo } from 'react';
 
-interface CurrencyFormatterProps
-  extends Omit<ComponentProps<typeof NumberFormatter>, 'value' | 'prefix' | 'thousandSeparator'> {
+interface MyCurrencyFormatterProps extends Omit<NumberFormatterProps, 'prefix'> {
   value?: number;
-  prefix?: string;
-  thousandSeparator?: boolean;
 }
 
 // Component-based currency display for NumberFormatter features
-export const CurrencyFormatter = memo<CurrencyFormatterProps>(({ value, prefix, thousandSeparator, ...props }) => (
-  <NumberFormatter prefix={prefix || '₹'} value={value} thousandSeparator={thousandSeparator} {...props} />
+export const CurrencyFormatter = memo<MyCurrencyFormatterProps>(({ value, ...props }) => (
+  <NumberFormatter prefix={'₹'} value={value} {...props} />
 ));

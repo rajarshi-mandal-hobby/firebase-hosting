@@ -3,20 +3,20 @@ import { memo } from 'react';
 import { CssLoader } from '../custom-loader/CssLoader';
 
 interface LoadingBoxProps {
-  size?: string & {};
+  boxSize?: string & {};
+  loaderSize?: string & {};
   loadingText?: string;
   minHeight?: number; // min height if full screen
 }
 
-export const LoadingBox = memo<LoadingBoxProps>(({ loadingText, minHeight, size }) => {
+export const LoadingBox = memo<LoadingBoxProps>(({ loadingText, minHeight, boxSize, loaderSize }) => {
   console.log('Rendering LoadingBox');
   return (
-
-      <Group justify='center' mih={minHeight || '100%'} align='center' flex={1}>
-        <Loader size={'sm'} />
-        <Text size={size || 'sm'} c='dimmed'>
-          {loadingText || 'Loading...'}
-        </Text>
-      </Group>
+    <Group mih={minHeight || 300} align='center' justify='center'>
+      <Loader size={loaderSize || 'md'} />
+      <Text size={boxSize || 'sm'} c='dimmed'>
+        {loadingText || 'Loading...'}
+      </Text>
+    </Group>
   );
 });

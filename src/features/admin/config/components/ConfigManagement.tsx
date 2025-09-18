@@ -2,7 +2,7 @@ import { Button, Divider, Group, Loader, SimpleGrid, Stack, TextInput, Title } f
 import { memo, useRef } from 'react';
 import { useConfig } from '../hooks/useConfig';
 import { useForm } from '@mantine/form';
-import { SettingsNumberInput } from './SettingsNumberInput';
+import { NumberInputWithCurrency } from '../../../../shared/components/NumberInputWithCurrency';
 import { RetryBox } from '../../../../shared/components/RetryBox';
 import type { SaveResult } from '../../../../data/shemas/formResults';
 import { formValidator, zInteger, zStringTrimmed } from '../../../../utils/validators';
@@ -132,23 +132,23 @@ const ConfigForm = ({
       <Stack gap='md'>
         <Title order={4}>2nd Floor</Title>
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing='md'>
-          <SettingsNumberInput
+          <NumberInputWithCurrency
             label='Bed Rent'
             disabled={loading}
-            key={form.key('bedTypes.2nd.Bed')}
-            {...form.getInputProps('bedTypes.2nd.Bed')}
+            key={form.key('bedRents.2nd.Bed')}
+            {...form.getInputProps('bedRents.2nd.Bed')}
           />
-          <SettingsNumberInput
+          <NumberInputWithCurrency
             label='Room Rent'
             disabled={loading}
-            key={form.key('bedTypes.2nd.Room')}
-            {...form.getInputProps('bedTypes.2nd.Room')}
+            key={form.key('bedRents.2nd.Room')}
+            {...form.getInputProps('bedRents.2nd.Room')}
           />
-          <SettingsNumberInput
+          <NumberInputWithCurrency
             label='Special Rent'
             disabled={loading}
-            key={form.key('bedTypes.2nd.Special')}
-            {...form.getInputProps('bedTypes.2nd.Special')}
+            key={form.key('bedRents.2nd.Special')}
+            {...form.getInputProps('bedRents.2nd.Special')}
           />
         </SimpleGrid>
 
@@ -158,17 +158,17 @@ const ConfigForm = ({
           3rd Floor
         </Title>
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing='md'>
-          <SettingsNumberInput
+          <NumberInputWithCurrency
             label='Bed Rent'
             disabled={loading}
-            key={form.key('bedTypes.3rd.Bed')}
-            {...form.getInputProps('bedTypes.3rd.Bed')}
+            key={form.key('bedRents.3rd.Bed')}
+            {...form.getInputProps('bedRents.3rd.Bed')}
           />
-          <SettingsNumberInput
+          <NumberInputWithCurrency
             label='Room Rent'
             disabled={loading}
-            key={form.key('bedTypes.3rd.Room')}
-            {...form.getInputProps('bedTypes.3rd.Room')}
+            key={form.key('bedRents.3rd.Room')}
+            {...form.getInputProps('bedRents.3rd.Room')}
           />
         </SimpleGrid>
 
@@ -178,13 +178,13 @@ const ConfigForm = ({
           General Settings
         </Title>
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing='md'>
-          <SettingsNumberInput
+          <NumberInputWithCurrency
             label='Security Deposit'
             disabled={loading}
             key={form.key('securityDeposit')}
             {...form.getInputProps('securityDeposit')}
           />
-          <SettingsNumberInput
+          <NumberInputWithCurrency
             label='WiFi Monthly Charge'
             disabled={loading}
             key={form.key('wifiMonthlyCharge')}

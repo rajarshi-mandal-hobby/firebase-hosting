@@ -86,9 +86,10 @@ export const seedFirestoreEmulator = async () => {
     console.log('👥 Adding members...');
     mockMembers.forEach((member) => {
       const memberRef = doc(db, 'members', member.id);
-      // Remove rentHistory from member data since it goes in subcollection
+      // Remove rentHistory from member data
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { rentHistory, ...memberData } = member;
+      // Do NOT embed currentRent; just store member fields
       const cleanedMember = convertTimestampsInObject(memberData);
       batch.set(memberRef, cleanedMember);
     });
@@ -103,11 +104,10 @@ export const seedFirestoreEmulator = async () => {
 
     for (const [memberId, rentHistoryRecords] of Object.entries(mockRentHistoryByMember)) {
       const memberDocRef = doc(db, 'members', memberId);
-
+      // Write all rent records to the subcollection (do not skip any)
       for (const rentRecord of rentHistoryRecords) {
         const rentHistoryRef = doc(memberDocRef, 'rentHistory', rentRecord.id);
         const cleanedRentRecord = convertTimestampsInObject(rentRecord);
-
         await setDoc(rentHistoryRef, cleanedRentRecord);
         console.log(`  ✓ Added rent history for ${memberId} - ${rentRecord.id}`);
         totalRentHistoryRecords++;

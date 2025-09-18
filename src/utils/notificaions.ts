@@ -1,7 +1,6 @@
 import { notifications } from '@mantine/notifications';
-import { fa } from 'zod/locales';
 
-const autoClose = 5000; // 5 seconds
+const autoClose = 3000; // 3 seconds
 
 export const notify = {
   success: (message: string) => {

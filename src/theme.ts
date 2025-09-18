@@ -6,6 +6,7 @@ import {
   DEFAULT_THEME,
   Loader,
   ModalOverlay,
+  MultiSelect,
   Notification,
   NumberInput,
   SegmentedControl,
@@ -46,6 +47,11 @@ export const theme = createTheme({
       },
     }),
     Select: Select.extend({
+      defaultProps: {
+        radius: 'md',
+      },
+    }),
+    MultiSelect: MultiSelect.extend({
       defaultProps: {
         radius: 'md',
       },

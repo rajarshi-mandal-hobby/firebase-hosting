@@ -62,14 +62,12 @@ export const RentDetailsList = memo<RentDetailsListProps>(({ data, showStatus = 
       </List.Item>
 
       {data.expenses.length > 0 && (
-        <>
-          <List.Item icon={<IconUniversalCurrency size={16} />}>
-            Expenses: <CurrencyFormatter value={expensesTotal} />
-          </List.Item>
-          <List withPadding size='sm' listStyleType='disc' mt='xs'>
+        <List.Item icon={<IconUniversalCurrency size={16} />}>
+          Expenses: <CurrencyFormatter value={expensesTotal} />
+          <List listStyleType='disc' mt='xs' spacing='xs' size='sm'>
             {expenseItems}
           </List>
-        </>
+        </List.Item>
       )}
 
       <List.Item icon={<IconMoneyBag size={16} />} fw={500}>
@@ -84,7 +82,7 @@ export const RentDetailsList = memo<RentDetailsListProps>(({ data, showStatus = 
         Outstanding: <CurrencyFormatter value={data.currentOutstanding} />
       </List.Item>
 
-      {data.note && <List.Item icon={<IconNotes size={16} />}>Note: {data.note}</List.Item>}
+      {data.outstandingNote && <List.Item icon={<IconNotes size={16} />}>Note: {data.outstandingNote}</List.Item>}
 
       {statusInfo && (
         <List.Item

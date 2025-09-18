@@ -13,21 +13,21 @@ import type { Member, RentHistory, PaymentStatus, SettlementPreview } from '../t
  */
 export const validateMemberName = (name: string): { isValid: boolean; error?: string } => {
   const trimmedName = name.trim();
-  
+
   if (!trimmedName) {
     return { isValid: false, error: 'Name is required' };
   }
-  
+
   const nameParts = trimmedName.split(/\s+/);
   if (nameParts.length < 2) {
     return { isValid: false, error: 'Please enter full name (minimum 2 words)' };
   }
-  
+
   // Check for valid characters (letters, spaces, common punctuation)
   if (!/^[a-zA-Z\s\.\-']+$/.test(trimmedName)) {
     return { isValid: false, error: 'Name can only contain letters, spaces, dots, hyphens, and apostrophes' };
   }
-  
+
   return { isValid: true };
 };
 
@@ -36,20 +36,20 @@ export const validateMemberName = (name: string): { isValid: boolean; error?: st
  */
 export const validatePhoneNumber = (phone: string): { isValid: boolean; error?: string } => {
   const cleanPhone = phone.replace(/\D/g, ''); // Remove non-digits
-  
+
   if (!cleanPhone) {
     return { isValid: false, error: 'Phone number is required' };
   }
-  
+
   if (cleanPhone.length !== 10) {
     return { isValid: false, error: 'Phone number must be exactly 10 digits' };
   }
-  
+
   // Check if starts with valid Indian mobile prefixes (6, 7, 8, 9)
   if (!/^[6-9]/.test(cleanPhone)) {
     return { isValid: false, error: 'Phone number must start with 6, 7, 8, or 9' };
   }
-  
+
   return { isValid: true };
 };
 
@@ -66,9 +66,7 @@ export const formatPhoneNumber = (phone: string): string => {
  */
 export const isPhoneNumberUnique = (phone: string, members: Member[], excludeMemberId?: string): boolean => {
   const formattedPhone = formatPhoneNumber(phone);
-  return !members.some(member => 
-    member.id !== excludeMemberId && member.phone === formattedPhone
-  );
+  return !members.some((member) => member.id !== excludeMemberId && member.phone === formattedPhone);
 };
 
 /**
@@ -76,33 +74,31 @@ export const isPhoneNumberUnique = (phone: string, members: Member[], excludeMem
  */
 export const isMemberNameUnique = (name: string, members: Member[], excludeMemberId?: string): boolean => {
   const normalizedName = name.trim().toLowerCase();
-  return !members.some(member => 
-    member.id !== excludeMemberId && member.name.toLowerCase() === normalizedName
-  );
+  return !members.some((member) => member.id !== excludeMemberId && member.name.toLowerCase() === normalizedName);
 };
 
 /**
  * Validate member uniqueness
  */
 export const validateMemberUniqueness = (
-  name: string, 
-  phone: string, 
-  members: Member[], 
+  name: string,
+  phone: string,
+  members: Member[],
   excludeMemberId?: string
 ): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
-  
+
   if (!isPhoneNumberUnique(phone, members, excludeMemberId)) {
     errors.push('Phone number is already registered with another member');
   }
-  
+
   if (!isMemberNameUnique(name, members, excludeMemberId)) {
     errors.push('Member name already exists');
   }
-  
+
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 };
 
@@ -124,12 +120,9 @@ export const calculateTotalDeposit = (
 /**
  * Calculate settlement preview for member deactivation
  */
-export const calculateSettlementPreview = (
-  member: Member,
-  leaveDate: Date
-): SettlementPreview => {
+export const calculateSettlementPreview = (member: Member, leaveDate: Date): SettlementPreview => {
   const refundAmount = member.totalAgreedDeposit - member.outstandingBalance;
-  
+
   let status: 'Refund Due' | 'Payment Due' | 'Settled';
   if (refundAmount > 0) {
     status = 'Refund Due';
@@ -138,24 +131,21 @@ export const calculateSettlementPreview = (
   } else {
     status = 'Settled';
   }
-  
+
   return {
     memberName: member.name,
     totalAgreedDeposit: member.totalAgreedDeposit,
     outstandingBalance: member.outstandingBalance,
     refundAmount,
     status,
-    leaveDate: leaveDate.toISOString()
+    leaveDate: leaveDate.toISOString(),
   };
 };
 
 /**
  * Calculate outstanding balance after payment
  */
-export const calculateOutstandingAfterPayment = (
-  currentOutstanding: number,
-  paymentAmount: number
-): number => {
+export const calculateOutstandingAfterPayment = (currentOutstanding: number, paymentAmount: number): number => {
   return Math.max(0, currentOutstanding - paymentAmount);
 };
 
@@ -169,22 +159,19 @@ export const calculateAdvanceDeposit = (rentAtJoining: number): number => {
 /**
  * Validate payment amount
  */
-export const validatePaymentAmount = (
-  amount: number,
-  maxAmount?: number
-): { isValid: boolean; error?: string } => {
+export const validatePaymentAmount = (amount: number, maxAmount?: number): { isValid: boolean; error?: string } => {
   if (amount < 0) {
     return { isValid: false, error: 'Payment amount cannot be negative' };
   }
-  
+
   if (amount === 0) {
     return { isValid: false, error: 'Payment amount must be greater than zero' };
   }
-  
+
   if (maxAmount && amount > maxAmount) {
     return { isValid: false, error: `Payment amount cannot exceed ₹${maxAmount.toLocaleString()}` };
   }
-  
+
   return { isValid: true };
 };
 
@@ -217,8 +204,9 @@ export const getPaymentStatus = (
  * Calculate total outstanding for a list of members
  */
 export const calculateTotalOutstanding = (members: Member[]): number => {
+    
   return members
-    .filter(member => member.isActive && member.outstandingBalance > 0)
+    .filter((member) => member.isActive && member.currentRent.status === 'Partial')
     .reduce((total, member) => total + member.outstandingBalance, 0);
 };
 
@@ -226,14 +214,14 @@ export const calculateTotalOutstanding = (members: Member[]): number => {
  * Filter members by floor
  */
 export const getMembersByFloor = (members: Member[], floor: string): Member[] => {
-  return members.filter(member => member.isActive && member.floor === floor);
+  return members.filter((member) => member.isActive && member.floor === floor);
 };
 
 /**
  * Get members who have opted for WiFi
  */
 export const getWifiOptedMembers = (members: Member[]): Member[] => {
-  return members.filter(member => member.isActive && member.optedForWifi);
+  return members.filter((member) => member.isActive && member.optedForWifi);
 };
 
 /**
@@ -252,13 +240,13 @@ export const getActiveMembersWithLatestBills = (
   memberRentHistories: Record<string, RentHistory[]> = {}
 ): (Member & { latestBill?: RentHistory })[] => {
   return members
-    .filter(member => member.isActive)
-    .map(member => {
+    .filter((member) => member.isActive)
+    .map((member) => {
       const rentHistory = memberRentHistories[member.id] || [];
       const latestBill = rentHistory[0]; // Assuming sorted by date desc
       return {
         ...member,
-        latestBill
+        latestBill,
       };
     });
 };
@@ -267,9 +255,9 @@ export const getActiveMembersWithLatestBills = (
  * Calculate member statistics
  */
 export const calculateMemberStats = (members: Member[]) => {
-  const activeMembers = members.filter(m => m.isActive);
-  const inactiveMembers = members.filter(m => !m.isActive);
-  
+  const activeMembers = members.filter((m) => m.isActive);
+  const inactiveMembers = members.filter((m) => !m.isActive);
+
   const byFloor = activeMembers.reduce((acc, member) => {
     acc[member.floor] = (acc[member.floor] || 0) + 1;
     return acc;
@@ -299,9 +287,8 @@ export const sortMembersByName = (members: Member[]): Member[] => {
  */
 export const searchMembers = (members: Member[], searchTerm: string): Member[] => {
   const searchLower = searchTerm.toLowerCase();
-  return members.filter(member =>
-    member.name.toLowerCase().includes(searchLower) ||
-    member.phone.includes(searchTerm)
+  return members.filter(
+    (member) => member.name.toLowerCase().includes(searchLower) || member.phone.includes(searchTerm)
   );
 };
 
@@ -309,7 +296,7 @@ export const searchMembers = (members: Member[], searchTerm: string): Member[] =
  * Get member by ID
  */
 export const getMemberById = (members: Member[], memberId: string): Member | undefined => {
-  return members.find(member => member.id === memberId);
+  return members.find((member) => member.id === memberId);
 };
 
 /**
@@ -323,7 +310,7 @@ export const formatCurrency = (amount: number): string => {
  * Get members with outstanding balances
  */
 export const getMembersWithOutstanding = (members: Member[]): Member[] => {
-  return members.filter(member => member.isActive && member.outstandingBalance > 0);
+  return members.filter((member) => member.isActive && member.outstandingBalance > 0);
 };
 
 /**
@@ -341,7 +328,7 @@ export const getAllMembers = (): Promise<Member[]> => {
 export const getMemberCounts = (members: Member[]) => {
   return {
     total: members.length,
-    active: members.filter(m => m.isActive).length,
+    active: members.filter((m) => m.isActive).length,
     wifiOptedIn: getWifiOptedMembers(members).length,
   };
 };
@@ -354,5 +341,3 @@ export const getMemberWithLatestBill = (): Promise<Member | null> => {
   console.warn('getMemberWithLatestBill is deprecated - use DataProvider instead');
   return Promise.resolve(null);
 };
-
-

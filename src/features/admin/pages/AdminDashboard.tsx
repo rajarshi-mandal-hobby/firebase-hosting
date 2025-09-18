@@ -10,7 +10,7 @@ export const AdminDashboard = () => {
   const adminName = user?.name || 'Admin';
 
   return (
-     <Stack gap='lg' flex={1} display='flex'>
+     <Stack gap='lg'>
         {/* Header with Admin Info and Sign Out */}
         <Group justify='space-between'>
           <Group>

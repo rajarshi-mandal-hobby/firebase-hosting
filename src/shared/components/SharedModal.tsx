@@ -1,7 +1,7 @@
 import { Modal, Group, Button, LoadingOverlay } from '@mantine/core';
 import type { ModalProps, ButtonProps } from '@mantine/core';
 // import { IconX } from '@tabler/icons-react';
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 
 interface SharedModalProps extends Omit<ModalProps, 'children'> {
   /** Modal content */
@@ -34,7 +34,7 @@ interface SharedModalProps extends Omit<ModalProps, 'children'> {
  * - Blurred backdrop for focus
  * - Theme-based styling through defaultProps
  */
-export function SharedModal({
+export const SharedModal = ({
   children,
   loading = false,
   primaryActionText = 'Save',
@@ -45,17 +45,16 @@ export function SharedModal({
   onSecondaryAction,
   showActions = true,
   ...modalProps
-}: SharedModalProps) {
+}: SharedModalProps) => {
   return (
     <Modal
       {...modalProps}
       closeButtonProps={{
-        // children: <IconX size={16} />,
         'aria-label': 'Close modal',
         ...modalProps.closeButtonProps,
       }}
       centered>
-      <LoadingOverlay visible={loading} zIndex={1000} overlayProps={{ radius: 'sm', blur: 2 }} />
+      <LoadingOverlay visible={loading} overlayProps={{ radius: 'sm', blur: 2 }} />
 
       {children}
 
@@ -78,4 +77,4 @@ export function SharedModal({
       )}
     </Modal>
   );
-}
+};

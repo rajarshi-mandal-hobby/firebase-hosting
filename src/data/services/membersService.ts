@@ -17,54 +17,80 @@ import {
   orderBy,
   limit,
   Timestamp,
+  QuerySnapshot,
+  getDocsFromCache,
+  getDocsFromServer,
+  type DocumentData,
 } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import type { Member, Floor, RentHistory } from '../../shared/types/firestore-types';
-import { ServiceErrorDepricated, validatePhoneNumber, validateAmount, generateMemberId } from '../utils/serviceUtils';
+import type { Member, RentHistory } from '../../shared/types/firestore-types';
+import {
+  ServiceErrorDepricated,
+  validatePhoneNumber,
+  validateAmount,
+  generateMemberId,
+  simulateNetworkDelay,
+} from '../utils/serviceUtils';
+import type { Floor } from '../shemas/GlobalSettings';
 
-export class MembersService {
-  /**
-   * Fetch all members with optional filtering using Firestore
-   */
-  static async getMembers(filters?: { isActive?: boolean; floor?: Floor; optedForWifi?: boolean }): Promise<Member[]> {
+export const getMembers = async ({
+  refresh = false,
+  ...filters
+}: {
+  isActive?: boolean;
+  floor?: Floor;
+  optedForWifi?: boolean;
+  refresh?: boolean;
+}): Promise<Member[]> => {
+  const membersQuery = collection(db, 'members').withConverter<Member>({
+    toFirestore: (members: Member) => members,
+    fromFirestore: (snapshot) => {
+      const data = snapshot.data() as Member;
+      return data;
+    },
+  });
+
+  await simulateNetworkDelay(1000);
+  // Apply filters
+  const constraints = [];
+  if (filters?.isActive !== undefined) {
+    constraints.push(where('isActive', '==', filters.isActive));
+  }
+  if (filters?.floor) {
+    constraints.push(where('floor', '==', filters.floor));
+  }
+  if (filters?.optedForWifi !== undefined) {
+    constraints.push(where('optedForWifi', '==', filters.optedForWifi));
+  }
+
+  // Create filtered query
+  const q =
+    constraints.length > 0
+      ? query(membersQuery, ...constraints, orderBy('name'))
+      : query(membersQuery, orderBy('name'));
+
+  let snapshot: QuerySnapshot<Member, DocumentData>;
+
+  if (refresh) {
+    snapshot = await getDocsFromServer(q);
+  } else {
     try {
-      const membersQuery = collection(db, 'members');
-
-      // Apply filters
-      const constraints = [];
-      if (filters?.isActive !== undefined) {
-        constraints.push(where('isActive', '==', filters.isActive));
-      }
-      if (filters?.floor) {
-        constraints.push(where('floor', '==', filters.floor));
-      }
-      if (filters?.optedForWifi !== undefined) {
-        constraints.push(where('optedForWifi', '==', filters.optedForWifi));
-      }
-
-      // Create filtered query
-      const q =
-        constraints.length > 0
-          ? query(membersQuery, ...constraints, orderBy('name'))
-          : query(membersQuery, orderBy('name'));
-
-      const snapshot = await getDocs(q);
-      const members: Member[] = [];
-
-      snapshot.forEach((doc) => {
-        members.push({
-          id: doc.id,
-          ...doc.data(),
-        } as Member);
-      });
-
-      return members;
-    } catch (error) {
-      console.error('Error fetching members:', error);
-      throw new ServiceErrorDepricated('firestore/read-error', 'Failed to fetch members');
+      snapshot = await getDocsFromCache(q);
+    } catch {
+      snapshot = await getDocs(q);
     }
   }
 
+  if (snapshot.empty) {
+    throw new Error('No members found');
+  }
+
+  console.log('Members fetched:', snapshot.metadata.fromCache ? 'from cache' : 'from server');
+
+  return snapshot.docs.map((doc) => doc.data());
+};
+
+export class MembersService {
   /**
    * Get a single member by ID from Firestore
    */

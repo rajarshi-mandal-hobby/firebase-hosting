@@ -11,11 +11,9 @@ import type {
   Admin,
   RentHistory,
   ElectricBill,
-  Floor,
-  BedType,
   MemberWithRentHistory,
 } from '../../shared/types/firestore-types';
-import type { GlobalSettings } from '../shemas/GlobalSettings';
+import type { BedType, Floor, GlobalSettings } from '../shemas/GlobalSettings';
 
 // Helper to create mock Firestore Timestamps
 export const createMockTimestamp = (date?: string | Date): Timestamp => {
@@ -61,7 +59,7 @@ export const mockGlobalSettings: GlobalSettings = {
   },
   currentBillingMonth: createMockTimestamp('2025-07-01'),
   nextBillingMonth: createMockTimestamp('2025-08-01'),
-};
+} satisfies GlobalSettings;
 
 // Mock Admin Configuration
 export const mockAdminConfig: AdminConfig = {
@@ -100,28 +98,26 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 1600,
     advanceDeposit: 1600,
     currentRent: 1600,
+    currentMonthRent: {
+      id: '2025-07',
+      generatedAt: createMockTimestamp('2025-07-01'),
+      rent: 1600,
+      electricity: 300,
+      wifi: 67,
+      previousOutstanding: 0,
+      expenses: [],
+      totalCharges: 1967,
+      amountPaid: 0,
+      currentOutstanding: 1967,
+      outstandingNote: '',
+      status: 'Due',
+    },
     totalAgreedDeposit: 4800,
-    outstandingBalance: 0,
-    outstandingNote: '',
     isActive: true,
     optedForWifi: true,
     leaveDate: undefined,
     ttlExpiry: undefined,
     rentHistory: [
-      {
-        id: '2025-07',
-        generatedAt: createMockTimestamp('2025-07-01'),
-        rent: 1600,
-        electricity: 300,
-        wifi: 67,
-        previousOutstanding: 0,
-        expenses: [],
-        totalCharges: 1967,
-        amountPaid: 0,
-        currentOutstanding: 1967,
-        note: '',
-        status: 'Due',
-      },
       {
         id: '2025-06',
         generatedAt: createMockTimestamp('2025-06-01'),
@@ -136,7 +132,7 @@ export const mockMembers: MemberWithRentHistory[] = [
         totalCharges: 2047,
         amountPaid: 2047,
         currentOutstanding: 0,
-        note: '',
+        outstandingNote: '',
         status: 'Paid',
       },
     ],
@@ -154,27 +150,26 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 3200,
     advanceDeposit: 3200,
     currentRent: 3200,
+    currentMonthRent: {
+      id: '2025-07',
+      generatedAt: createMockTimestamp('2025-07-01'),
+      rent: 3200,
+      electricity: 360,
+      wifi: 67,
+      previousOutstanding: 0,
+      expenses: [],
+      totalCharges: 3627,
+      amountPaid: 3627,
+      currentOutstanding: 0,
+      outstandingNote: '',
+      status: 'Paid',
+    },
     totalAgreedDeposit: 8000,
-    outstandingBalance: 0,
     isActive: true,
     optedForWifi: true,
     leaveDate: undefined,
     ttlExpiry: undefined,
     rentHistory: [
-      {
-        id: '2025-07',
-        generatedAt: createMockTimestamp('2025-07-01'),
-        rent: 3200,
-        electricity: 360,
-        wifi: 67,
-        previousOutstanding: 0,
-        expenses: [],
-        totalCharges: 3627,
-        amountPaid: 3627,
-        currentOutstanding: 0,
-        note: '',
-        status: 'Paid',
-      },
       {
         id: '2025-06',
         generatedAt: createMockTimestamp('2025-06-01'),
@@ -186,7 +181,7 @@ export const mockMembers: MemberWithRentHistory[] = [
         totalCharges: 3757,
         amountPaid: 3757,
         currentOutstanding: 0,
-        note: '',
+        outstandingNote: '',
         status: 'Paid',
       },
     ],
@@ -204,28 +199,26 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 1500,
     advanceDeposit: 1500,
     currentRent: 1500,
+    currentMonthRent: {
+      id: '2025-07',
+      generatedAt: createMockTimestamp('2025-07-01'),
+      rent: 1500,
+      electricity: 280,
+      wifi: 0, // Not opted for wifi
+      previousOutstanding: 1500,
+      expenses: [],
+      totalCharges: 3280,
+      amountPaid: 1780,
+      currentOutstanding: 1500,
+      outstandingNote: 'Partial payment received',
+      status: 'Partial',
+    },
     totalAgreedDeposit: 4600,
-    outstandingBalance: 1500,
-    outstandingNote: 'Partial payment pending',
     isActive: true,
     optedForWifi: false,
     leaveDate: undefined,
     ttlExpiry: undefined,
     rentHistory: [
-      {
-        id: '2025-07',
-        generatedAt: createMockTimestamp('2025-07-01'),
-        rent: 1500,
-        electricity: 280,
-        wifi: 0, // Not opted for wifi
-        previousOutstanding: 1500,
-        expenses: [],
-        totalCharges: 3280,
-        amountPaid: 1780,
-        currentOutstanding: 1500,
-        note: 'Partial payment received',
-        status: 'Partial',
-      },
       {
         id: '2025-06',
         generatedAt: createMockTimestamp('2025-06-01'),
@@ -237,7 +230,7 @@ export const mockMembers: MemberWithRentHistory[] = [
         totalCharges: 1800,
         amountPaid: 300,
         currentOutstanding: 1500,
-        note: 'Partial payment only',
+        outstandingNote: 'Partial payment only',
         status: 'Partial',
       },
     ],
@@ -255,27 +248,27 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 2400,
     advanceDeposit: 2400,
     currentRent: 2400,
+    currentMonthRent: {
+      id: '2025-07',
+      generatedAt: createMockTimestamp('2025-07-01'),
+      rent: 2400,
+      electricity: 320,
+      wifi: 67,
+      previousOutstanding: 0,
+      expenses: [{ amount: 200, description: 'Special room maintenance' }],
+      totalCharges: 2987,
+      amountPaid: 2987,
+      currentOutstanding: 0,
+      outstandingNote: '',
+      status: 'Paid',
+    },
     totalAgreedDeposit: 6400,
-    outstandingBalance: 0,
+
     isActive: true,
     optedForWifi: true,
     leaveDate: undefined,
     ttlExpiry: undefined,
     rentHistory: [
-      {
-        id: '2025-07',
-        generatedAt: createMockTimestamp('2025-07-01'),
-        rent: 2400,
-        electricity: 320,
-        wifi: 67,
-        previousOutstanding: 0,
-        expenses: [{ amount: 200, description: 'Special room maintenance' }],
-        totalCharges: 2987,
-        amountPaid: 2987,
-        currentOutstanding: 0,
-        note: '',
-        status: 'Paid',
-      },
       {
         id: '2025-06',
         generatedAt: createMockTimestamp('2025-06-01'),
@@ -287,7 +280,7 @@ export const mockMembers: MemberWithRentHistory[] = [
         totalCharges: 2777,
         amountPaid: 2777,
         currentOutstanding: 0,
-        note: '',
+        outstandingNote: '',
         status: 'Paid',
       },
     ],
@@ -305,27 +298,27 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 3000,
     advanceDeposit: 3000,
     currentRent: 3000,
+    currentMonthRent: {
+      id: '2025-06',
+      generatedAt: createMockTimestamp('2025-06-01'),
+      rent: 3000,
+      electricity: 320,
+      wifi: 67,
+      previousOutstanding: 0,
+      expenses: [],
+      totalCharges: 3387,
+      amountPaid: 3387,
+      currentOutstanding: 0,
+      outstandingNote: 'Final month payment before leaving',
+      status: 'Paid',
+    },
     totalAgreedDeposit: 7600,
-    outstandingBalance: 0,
+
     isActive: false, // Deactivated
     optedForWifi: true,
     leaveDate: createMockTimestamp('2025-06-30'), // Left at end of June
     ttlExpiry: createMockTimestamp('2025-12-30'),
     rentHistory: [
-      {
-        id: '2025-06',
-        generatedAt: createMockTimestamp('2025-06-01'),
-        rent: 3000,
-        electricity: 320,
-        wifi: 67,
-        previousOutstanding: 0,
-        expenses: [],
-        totalCharges: 3387,
-        amountPaid: 3387,
-        currentOutstanding: 0,
-        note: 'Final month payment before leaving',
-        status: 'Paid',
-      },
       {
         id: '2025-05',
         generatedAt: createMockTimestamp('2025-05-01'),
@@ -337,7 +330,7 @@ export const mockMembers: MemberWithRentHistory[] = [
         totalCharges: 3477,
         amountPaid: 3477,
         currentOutstanding: 0,
-        note: '',
+        outstandingNote: '',
         status: 'Paid',
       },
     ],
@@ -459,7 +452,9 @@ export const getActiveMembersWithRentHistory = () => {
 };
 
 export const getAllMembersWithOutstanding = () => {
-  return membersData.filter((member) => member.outstandingBalance > 0);
+  return membersData.filter(
+    (member) => member.currentMonthRent?.currentOutstanding && member.currentMonthRent.currentOutstanding > 0
+  );
 };
 
 export const getMembersByFloor = (floor: Floor) => {

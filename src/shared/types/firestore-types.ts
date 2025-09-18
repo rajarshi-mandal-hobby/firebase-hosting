@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
+import type { Floor, BedType } from '../../data/shemas/GlobalSettings';
 
 // ======================================
 // CONSTANTS AND ENUMS
@@ -7,20 +8,20 @@ import type { Timestamp } from 'firebase/firestore';
 /**
  * Available floors as defined in the schema
  */
-export const FLOORS = ['2nd', '3rd'] as const;
-export type Floor = (typeof FLOORS)[number];
+// export const FLOORS = ['2nd', '3rd'] as const;
+// export type Floor = (typeof FLOORS)[number];
 
-/**
- * Available bed types per floor
- */
-export const BED_TYPES = {
-  '2nd': ['Bed', 'Room', 'Special Room'],
-  '3rd': ['Bed', 'Room'],
-} as const;
+// /**
+//  * Available bed types per floor
+//  */
+// export const BED_TYPES = {
+//   '2nd': ['Bed', 'Room', 'Special Room'],
+//   '3rd': ['Bed', 'Room'],
+// } as const;
 
-export type BedTypeFor2nd = (typeof BED_TYPES)['2nd'][number];
-export type BedTypeFor3rd = (typeof BED_TYPES)['3rd'][number];
-export type BedType = BedTypeFor2nd | BedTypeFor3rd;
+// export type BedTypeFor2nd = (typeof BED_TYPES)['2nd'][number];
+// export type BedTypeFor3rd = (typeof BED_TYPES)['3rd'][number];
+// export type BedType = BedTypeFor2nd | BedTypeFor3rd;
 
 /**
  * Admin roles as defined in schema
@@ -161,9 +162,8 @@ export interface Member {
   rentAtJoining: number;
   advanceDeposit: number;
   currentRent: number;
+  currentMonthRent: RentHistory; // Optional embedded current month rent
   totalAgreedDeposit: number;
-  outstandingBalance: number;
-  outstandingNote?: string;
   isActive: boolean;
   optedForWifi: boolean;
   leaveDate?: Timestamp;
@@ -181,7 +181,7 @@ export interface Expense {
 /**
  * Payment status for rent history
  */
-export type PaymentStatus = 'Due' | 'Paid' | 'Partially Paid' | 'Partial' | 'Overpaid';
+export type PaymentStatus = 'Due' | 'Paid' | 'Partial' | 'Overpaid';
 
 /**
  * General status type that extends payment status for broader use
@@ -204,22 +204,8 @@ export interface RentHistory {
   totalCharges: number;
   amountPaid: number;
   currentOutstanding: number;
-  note?: string;
+  outstandingNote?: string;
   status: PaymentStatus;
-}
-
-// ======================================
-// MOCK DATA AND EXTENDED TYPES
-// ======================================
-
-/**
- * Extended member type for mock data with nullable optional fields and embedded rent history.
- * This type is used in mock data where some fields may be null/undefined and rent history
- * is embedded directly in the member object instead of being a separate subcollection.
- */
-export interface MockMemberData
-  extends MakeNullable<Member, 'firebaseUid' | 'fcmToken' | 'outstandingNote' | 'leaveDate' | 'ttlExpiry'> {
-  rentHistory?: RentHistory[] | null;
 }
 
 /**

@@ -1,23 +1,22 @@
 import { type SnapshotOptions, type Timestamp, QueryDocumentSnapshot } from 'firebase/firestore';
 
 export type Floor = '2nd' | '3rd';
-
 export type BedType = 'Bed' | 'Room' | 'Special';
 
-type SecondFloor = {
-  readonly Bed: number;
-  readonly Room: number;
-  readonly Special: number;
-};
+// Only allow 'Bed', 'Room', 'Special' as keys, but 'Special' is only for '2nd'
+type SecondFloor = Readonly<Pick<Record<BedType, number>, 'Bed' | 'Room' | 'Special'>>;
+type ThirdFloor = Readonly<Pick<Record<BedType, number>, 'Bed' | 'Room'>>;
 
-interface ThirdFloor {
-  readonly Bed: number;
-  readonly Room: number;
-}
+export type BedRents = Readonly<{
+  [F in Floor]: F extends '2nd' ? SecondFloor : ThirdFloor;
+}>;
 
-type BedRents = {
-  readonly [F in Floor]: F extends '2nd' ? SecondFloor : ThirdFloor;
-};
+export type GlobalSettingsFormValues = Readonly<{
+  bedRents: BedRents;
+  securityDeposit: number;
+  wifiMonthlyCharge: number;
+  upiVpa: string;
+}>;
 
 export class GlobalSettings {
   constructor(
@@ -58,8 +57,3 @@ export class GlobalSettings {
     );
   }
 }
-
-export type GlobalSettingsFormValues = Omit<
-  GlobalSettings,
-  'activeMemberCounts' | 'currentBillingMonth' | 'nextBillingMonth'
->;

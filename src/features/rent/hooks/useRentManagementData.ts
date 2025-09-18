@@ -1,109 +1,67 @@
-import { useState, useEffect, useCallback } from 'react';
-import { MembersService } from '../../../contexts/services';
-import { calculateTotalOutstanding } from '../../../shared/utils/memberUtils';
-import type { Member, RentHistory } from '../../../shared/types/firestore-types';
-
-export interface MemberWithBill {
-  member: Member;
-  latestHistory: RentHistory | null;
-}
-
-export interface UseRentManagementData {
-  membersWithBills: MemberWithBill[];
-  totalOutstanding: number;
-  loading: {
-    rent: boolean;
-  };
-  error: string | null;
-  actions: {
-    refetch: () => void;
-  };
-  cache: {
-    rentLoaded: boolean;
-  };
-}
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { Member } from '../../../shared/types/firestore-types';
+import { getMembers } from '../../../data/services/membersService';
 
 /**
  * Custom hook for rent management data using FirestoreService with real-time updates
  */
-export const useRentManagementData = (): UseRentManagementData => {
+export const useRentManagementData = () => {
   // State
-  const [membersWithBills, setMembersWithBills] = useState<MemberWithBill[]>([]);
-  const [totalOutstanding, setTotalOutstanding] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [rentLoaded, setRentLoaded] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [rentManagementError, setRentManagementError] = useState<unknown | null>(null);
 
-  // Load rent data
-  const loadRentData = useCallback(async () => {
-    if (rentLoaded) return;
+  const totalOutstandingRef = useRef(0);
+  const hasLoadedRef = useRef(false);
 
-    try {
-      setError(null);
-      setLoading(true);
+  const fetchMembersDb = (refresh = false) => {
+    getMembers({ refresh, isActive: true })
+      .then(async (members) => {
+        members.some((member) => {
+          if (member.currentMonthRent.status === 'Partial') {
+            totalOutstandingRef.current += member.currentMonthRent.currentOutstanding;
+            return true; // break iteration
+          }
+          return false; // continue iteration
+        });
+        setMembers(members);
+      })
+      .catch((error) => {
+        setRentManagementError(error);
+      })
+      .finally(() => {
+        setInitialLoading(false);
+      });
+  };
 
-      // Get active members from MembersService
-      const members = await MembersService.getMembers({ isActive: true });
+  const loadInitialData = useCallback(() => {
+    setInitialLoading(true);
+    setRentManagementError(null);
+    fetchMembersDb();
+  }, []);
 
-      // Get rent history for each member
-      const membersWithBillsData: MemberWithBill[] = [];
+  const handleRefresh = useCallback(() => {
+    setInitialLoading(true);
+    setRentManagementError(null);
+    fetchMembersDb(true);
+  }, []);
 
-      for (const member of members) {
-        try {
-          const rentHistory = await MembersService.getMemberRentHistory(member.id);
-          const latestHistory = rentHistory[0] || null; // Most recent history
-
-          membersWithBillsData.push({
-            member,
-            latestHistory,
-          });
-        } catch (err) {
-          console.warn(`Failed to load rent history for member ${member.id}:`, err);
-          membersWithBillsData.push({
-            member,
-            latestHistory: null,
-          });
-        }
-      }
-
-      // Calculate total outstanding
-      const totalOutstanding = calculateTotalOutstanding(members);
-
-      setMembersWithBills(membersWithBillsData);
-      setTotalOutstanding(totalOutstanding);
-      setRentLoaded(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load rent data');
-    } finally {
-      setLoading(false);
-    }
-  }, [rentLoaded]);
-
-  // Auto-load rent data on mount
   useEffect(() => {
-    void loadRentData();
-  }, [loadRentData]);
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+    loadInitialData();
+  }, [loadInitialData]);
 
   // Actions
   const actions = {
-    refetch: useCallback(() => {
-      setRentLoaded(false);
-      setMembersWithBills([]);
-      setTotalOutstanding(0);
-      setError(null);
-    }, []),
+    refetch: handleRefresh,
   };
 
   return {
-    membersWithBills,
-    totalOutstanding,
-    loading: {
-      rent: loading,
-    },
-    error,
+    members,
+    totalOutstanding: totalOutstandingRef.current,
+    loading: initialLoading,
+    error: rentManagementError,
     actions,
-    cache: {
-      rentLoaded,
-    },
   };
 };

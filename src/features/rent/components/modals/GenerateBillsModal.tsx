@@ -1,196 +1,178 @@
-import { useState, useEffect } from 'react';
-import {
-  Button,
-  Group,
-  NumberInput,
-  Stack,
-  Text,
-  TextInput,
-  Divider,
-  Combobox,
-  useCombobox,
-  Pill,
-  CheckIcon,
-  PillsInput,
-  Input,
-} from '@mantine/core';
+import { Button, Group, Stack, Text, TextInput, Divider, MultiSelect, NumberInput, Switch } from '@mantine/core';
 import { MonthPickerInput } from '@mantine/dates';
 import { SharedModal } from '../../../../shared/components/SharedModal';
-import { notifications } from '@mantine/notifications';
-import { FirestoreService } from '../../../../data/firestoreService';
-import type { GlobalSettings, Member } from '../../../../shared/types/firestore-types';
+import { GlobalSettings, type Floor } from '../../../../data/shemas/GlobalSettings';
+import { useGenerateBills } from './hooks/useGenerateBills';
+import { useForm } from '@mantine/form';
+import { RetryBox } from '../../../../shared/components/RetryBox';
+import type { ElectricBill, Member } from '../../../../shared/types/firestore-types';
+import { NumberInputWithCurrency } from '../../../../shared/components/NumberInputWithCurrency';
+import { notify } from '../../../../utils/notificaions';
+import { useRef } from 'react';
 
 interface GenerateBillsModalProps {
+  members: Member[];
   opened: boolean;
   onClose: () => void;
 }
 
-export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
-  const [activeMembers, setActiveMembers] = useState<{ value: string; label: string }[]>([]);
+type FormData = Omit<GlobalSettings, 'upiVpa' | 'securityDeposit' | 'bedRents'> & {
+  wifiMemberIds: string[] | null;
+  addExpenseMemberIds: string[] | null;
+  addExpenseAmount?: number | null;
+  addExpenseDescription?: string | null;
+  secondFloorElectricityBill?: number | null;
+  thirdFloorElectricityBill?: number | null;
+};
 
-  const [formData, setFormData] = useState({
-    billingMonth: new Date(),
-    secondFloorElectricity: 0,
-    thirdFloorElectricity: 0,
-    memberCountEditable: false,
-    secondFloorCount: 0, // Will be set from globalSettings
-    thirdFloorCount: 0, // Will be set from globalSettings
-    // Multi-select expense entry
-    expenseMemberIds: [] as string[],
-    expenseAmount: 0,
-    expenseDescription: '',
-    // Multi-select wifi charge entry
-    wifiMemberIds: [] as string[],
-    wifiAmount: 0, // Will be set from globalSettings
-  });
+export const GenerateBillsModal = ({ members, opened, onClose }: GenerateBillsModalProps) => {
+  const { settings, loading, error, refreshSettings, fetchElectricBill } = useGenerateBills();
 
-  // Load data when modal opens
-  useEffect(() => {
-    if (opened) {
-      Promise.all([
-        FirestoreService.Config.getGlobalSettings(),
-        FirestoreService.Members.getMembers({ isActive: true }),
-      ])
-        .then(([settings, members]) => {
-          setGlobalSettings(settings);
+  console.log('🎨 Rendering GenerateBillsModal');
 
-          const memberOptions = members.map((member: Member) => ({
-            value: member.id,
-            label: `${member.name} (${member.floor})`,
-          }));
-          setActiveMembers(memberOptions);
+  return error ? (
+    <RetryBox error={error as Error} handleRetry={refreshSettings} loading={loading} />
+  ) : (
+    <Content
+      members={members}
+      settings={settings}
+      loading={loading}
+      opened={opened}
+      onClose={onClose}
+      fetchElectricBill={fetchElectricBill}
+      key={settings?.securityDeposit}
+    />
+  );
+};
 
-          // Update form data with settings
-          setFormData((prev) => ({
-            ...prev,
-            secondFloorCount: settings.activememberCounts?.byFloor?.['2nd'] || 0,
-            thirdFloorCount: settings.activememberCounts?.byFloor?.['3rd'] || 0,
-            wifiAmount: settings.wifiMonthlyCharge,
-          }));
-        })
-        .catch(console.error);
+const Content = ({
+  members,
+  settings,
+  loading,
+  opened,
+  onClose,
+  fetchElectricBill,
+}: GenerateBillsModalProps & {
+  settings?: GlobalSettings;
+  loading: boolean;
+  fetchElectricBill: (month: string) => Promise<ElectricBill>;
+}) => {
+  const wifiMemberIds: string[] = [];
+  const activeMemberIdsByFloor = {
+    '2nd': [] as string[],
+    '3rd': [] as string[],
+  };
+  const activeMembers = members.reduce((acc: { value: string; label: string }[], member) => {
+    if (member.isActive) {
+      acc.push({ value: member.id, label: member.name });
+      if (member.optedForWifi) {
+        wifiMemberIds.push(member.id);
+      }
+      if (member.floor === '2nd') {
+        activeMemberIdsByFloor['2nd'].push(member.id);
+      } else {
+        activeMemberIdsByFloor['3rd'].push(member.id);
+      }
     }
-  }, [opened]);
+    return acc;
+  }, [] as { value: string; label: string }[]);
 
-  const expenseCombobox = useCombobox({
-    onDropdownClose: () => expenseCombobox.resetSelectedOption(),
-    onDropdownOpen: () => expenseCombobox.updateSelectedOptionIndex('active'),
+  const form = useForm<FormData>({
+    mode: 'uncontrolled',
+    initialValues: settings
+      ? {
+          currentBillingMonth: settings.currentBillingMonth,
+          nextBillingMonth: settings.nextBillingMonth,
+          activeMemberCounts: settings.activeMemberCounts,
+          wifiMonthlyCharge: settings.wifiMonthlyCharge,
+          wifiMemberIds,
+          addExpenseMemberIds: [],
+          addExpenseAmount: undefined,
+          addExpenseDescription: undefined,
+          secondFloorElectricityBill: undefined,
+          thirdFloorElectricityBill: undefined,
+        }
+      : ({} as FormData),
   });
 
-  const wifiCombobox = useCombobox({
-    onDropdownClose: () => wifiCombobox.resetSelectedOption(),
-    onDropdownOpen: () => wifiCombobox.updateSelectedOptionIndex('active'),
-  });
-
-  // Filter and limit options for MaxDisplayedItems pattern
-  const MAX_DISPLAYED_OPTIONS = 5;
-
-  const expenseOptions = activeMembers.slice(0, MAX_DISPLAYED_OPTIONS);
-  const wifiOptions = activeMembers.slice(0, MAX_DISPLAYED_OPTIONS);
-
-  useEffect(() => {
-    // Member counts are now initialized from DataProvider above
-    // This effect is no longer needed but kept for any future initialization
-  }, []);
-
-  // Helper functions for multi-select (following Mantine MaxDisplayedItems pattern)
-  const handleExpenseMemberSelect = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      expenseMemberIds: prev.expenseMemberIds.includes(value)
-        ? prev.expenseMemberIds.filter((id) => id !== value)
-        : [...prev.expenseMemberIds, value],
-    }));
-  };
-
-  const handleWifiMemberSelect = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      wifiMemberIds: prev.wifiMemberIds.includes(value)
-        ? prev.wifiMemberIds.filter((id) => id !== value)
-        : [...prev.wifiMemberIds, value],
-    }));
-  };
-
-  const removeExpenseMember = (memberId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      expenseMemberIds: prev.expenseMemberIds.filter((id) => id !== memberId),
-    }));
-  };
-
-  const removeWifiMember = (memberId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      wifiMemberIds: prev.wifiMemberIds.filter((id) => id !== memberId),
-    }));
-  };
-
-  const handleGenerateBills = async () => {
-    setLoading(true);
-    try {
-      // Call actual Firebase function
-      await FirestoreService.Billing.generateBulkBills({
-        billingMonth: formData.billingMonth.toISOString().slice(0, 7), // YYYY-MM format
-        floorElectricity: {
-          '2nd': formData.secondFloorElectricity,
-          '3rd': formData.thirdFloorElectricity,
-        },
-        floorMemberCounts: {
-          '2nd': formData.secondFloorCount,
-          '3rd': formData.thirdFloorCount,
-        },
-        bulkExpenses:
-          formData.expenseAmount > 0
-            ? [
-                {
-                  memberIds: formData.expenseMemberIds,
-                  amount: formData.expenseAmount,
-                  description: formData.expenseDescription,
-                },
-              ]
-            : [],
-        wifiCharges:
-          formData.wifiMemberIds.length > 0
-            ? {
-                memberIds: formData.wifiMemberIds,
-                amount: formData.wifiAmount,
-              }
-            : undefined,
-      });
-
-      notifications.show({
-        title: 'Success',
-        message: 'Bills generated successfully for all active members',
-        color: 'green',
-      });
-
-      onClose();
-      setFormData({
-        billingMonth: new Date(),
-        secondFloorElectricity: 0,
-        thirdFloorElectricity: 0,
-        memberCountEditable: false,
-        secondFloorCount: globalSettings?.activememberCounts?.byFloor?.['2nd'] ?? 0,
-        thirdFloorCount: globalSettings?.activememberCounts?.byFloor?.['3rd'] ?? 0,
-        expenseMemberIds: [],
-        expenseAmount: 0,
-        expenseDescription: '',
-        wifiMemberIds: [],
-        wifiAmount: globalSettings?.wifiMonthlyCharge ?? 0,
-      });
-    } catch (error) {
-      console.error('Error generating bills:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to generate bills. Please try again.',
-        color: 'red',
-      });
-    } finally {
-      setLoading(false);
+  const toggleFloorExpense = (floor: Floor, checked: boolean) => {
+    const current = new Set(form.values.addExpenseMemberIds || []);
+    const floorIds = activeMemberIdsByFloor[floor];
+    if (checked) {
+      floorIds.forEach((id) => current.add(id));
+    } else {
+      floorIds.forEach((id) => current.delete(id));
     }
+    form.setFieldValue('addExpenseMemberIds', Array.from(current));
+  };
+
+  const isFloorSelected = (floor: Floor) => {
+    const sel = form.values.addExpenseMemberIds || [];
+    const floorIds = activeMemberIdsByFloor[floor];
+    return floorIds.length > 0 && floorIds.every((id) => sel.includes(id));
+  };
+
+  // Refs to track state across month changes
+  const initialFormValues = useRef<FormData | null>(null); // Stores the initial form values
+
+  const handleGetElectricBill = (value: string | null) => {
+    if (!value || !settings) {
+      notify.error('Wrong date provided.');
+      return;
+    }
+
+    // Convert string to Date to get month info
+    const selectedDate = new Date(value);
+    const currentDate = settings.currentBillingMonth.toDate();
+
+    // Check if selected month is current month or previous month
+    const isCurrentMonth =
+      selectedDate.getMonth() === currentDate.getMonth() && selectedDate.getFullYear() === currentDate.getFullYear();
+
+    // Creating new bill for next month
+    if (!isCurrentMonth && initialFormValues.current) {
+      form.setValues(initialFormValues.current);
+      return;
+    }
+
+    // Updating the previous month's bill
+    initialFormValues.current = form.getValues();
+
+    fetchElectricBill(value)
+      .then((bill) => {
+        console.log(bill);
+
+        const newValues: Partial<FormData> = {
+          secondFloorElectricityBill: bill.floorCosts['2nd'].bill,
+          thirdFloorElectricityBill: bill.floorCosts['3rd'].bill,
+          activeMemberCounts: {
+            ...form.values.activeMemberCounts,
+            byFloor: {
+              ...form.values.activeMemberCounts.byFloor,
+              '2nd': bill.floorCosts['2nd'].totalMembers,
+              '3rd': bill.floorCosts['3rd'].totalMembers,
+            },
+          },
+          addExpenseAmount: bill.appliedBulkExpenses[0]?.amount || undefined,
+          addExpenseDescription: bill.appliedBulkExpenses[0]?.description || undefined,
+          addExpenseMemberIds: bill.appliedBulkExpenses[0]?.members || undefined,
+        };
+
+        form.setValues(newValues);
+      })
+      .catch((error) => {
+        const err = error as Error & { cause?: string };
+        if (err.cause === 'bill-not-found') {
+          console.log('No bill found for the selected month.');
+          // For previous months with no bill, reset to initial values
+          if (initialFormValues.current) {
+            form.setValues(initialFormValues.current);
+            form.resetDirty(initialFormValues.current);
+          }
+          return;
+        }
+        notify.error(err.message);
+      });
   };
 
   return (
@@ -199,262 +181,165 @@ export function GenerateBillsModal({ opened, onClose }: GenerateBillsModalProps)
       onClose={onClose}
       title='Generate Bills'
       loading={loading}
-      primaryActionText='Generate Bills'
-      onPrimaryAction={handleGenerateBills}
+      showActions={false}
       size='md'>
-      <Stack gap='md'>
-        <Text size='sm' c='dimmed'>
-          Generate monthly bills for all active members with electricity charges distributed by floor.
-        </Text>
-
-        <MonthPickerInput
-          label='Billing Month'
-          placeholder='Select billing month'
-          value={
-            formData.billingMonth && formData.billingMonth instanceof Date
-              ? formData.billingMonth.toISOString().slice(0, 7)
-              : null
-          }
-          onChange={(value: string | null) => {
-            if (value) {
-              // Convert string (YYYY-MM) to Date object
-              const [year, month] = value.split('-');
-              const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-              setFormData((prev) => ({ ...prev, billingMonth: date }));
-            } else {
-              setFormData((prev) => ({ ...prev, billingMonth: new Date() }));
-            }
-          }}
-          required
-        />
-
-        <Group grow>
-          <NumberInput
-            label='2nd Floor Electricity'
-            placeholder='Enter electricity bill amount'
-            value={formData.secondFloorElectricity}
-            onChange={(value) => setFormData((prev) => ({ ...prev, secondFloorElectricity: Number(value) || 0 }))}
-            prefix='₹'
-            min={0}
-            required
-          />
-          <NumberInput
-            label='3rd Floor Electricity'
-            placeholder='Enter electricity bill amount'
-            value={formData.thirdFloorElectricity}
-            onChange={(value) => setFormData((prev) => ({ ...prev, thirdFloorElectricity: Number(value) || 0 }))}
-            prefix='₹'
-            min={0}
-            required
-          />
-        </Group>
-
-        <Divider label='Member Counts' labelPosition='center' />
-
-        <Group grow>
-          <NumberInput
-            label='2nd Floor Member Count'
-            placeholder='Number of members'
-            value={formData.secondFloorCount}
-            onChange={(value) => setFormData((prev) => ({ ...prev, secondFloorCount: Number(value) || 0 }))}
-            min={0}
-            readOnly={!formData.memberCountEditable}
-          />
-          <NumberInput
-            label='3rd Floor Member Count'
-            placeholder='Number of members'
-            value={formData.thirdFloorCount}
-            onChange={(value) => setFormData((prev) => ({ ...prev, thirdFloorCount: Number(value) || 0 }))}
-            min={0}
-            readOnly={!formData.memberCountEditable}
-          />
-        </Group>
-
-        <Button
-          variant='light'
-          size='xs'
-          onClick={() => setFormData((prev) => ({ ...prev, memberCountEditable: !prev.memberCountEditable }))}>
-          {formData.memberCountEditable ? 'Use Auto Count' : 'Edit Member Count'}
-        </Button>
-
-        <Divider label='Additional Charges' labelPosition='center' />
-
-        {/* Single Expense Section - Always Visible */}
-        <Stack gap='sm'>
-          <Text fw={500} size='sm'>
-            Member Expense
-          </Text>
-
-          <Combobox store={expenseCombobox} onOptionSubmit={handleExpenseMemberSelect} withinPortal={false}>
-            <Combobox.DropdownTarget>
-              <PillsInput pointer onClick={() => expenseCombobox.toggleDropdown()}>
-                <Pill.Group>
-                  {formData.expenseMemberIds.length > 0 ? (
-                    <>
-                      {formData.expenseMemberIds
-                        .slice(
-                          0,
-                          MAX_DISPLAYED_OPTIONS === formData.expenseMemberIds.length
-                            ? MAX_DISPLAYED_OPTIONS
-                            : MAX_DISPLAYED_OPTIONS - 1
-                        )
-                        .map((memberId) => {
-                          const member = activeMembers.find((m) => m.value === memberId);
-                          return member ? (
-                            <Pill key={memberId} withRemoveButton onRemove={() => removeExpenseMember(memberId)}>
-                              {member.label}
-                            </Pill>
-                          ) : null;
-                        })}
-                      {formData.expenseMemberIds.length > MAX_DISPLAYED_OPTIONS && (
-                        <Pill>+{formData.expenseMemberIds.length - (MAX_DISPLAYED_OPTIONS - 1)} more</Pill>
-                      )}
-                    </>
-                  ) : (
-                    <Input.Placeholder>Search members for expense</Input.Placeholder>
-                  )}
-
-                  <Combobox.EventsTarget>
-                    <PillsInput.Field
-                      type='hidden'
-                      onBlur={() => expenseCombobox.closeDropdown()}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Backspace') {
-                          event.preventDefault();
-                          removeExpenseMember(formData.expenseMemberIds[formData.expenseMemberIds.length - 1]);
-                        }
-                      }}
-                    />
-                  </Combobox.EventsTarget>
-                </Pill.Group>
-              </PillsInput>
-            </Combobox.DropdownTarget>
-
-            <Combobox.Dropdown>
-              <Combobox.Options>
-                {expenseOptions.map((item) => (
-                  <Combobox.Option
-                    value={item.value}
-                    key={item.value}
-                    active={formData.expenseMemberIds.includes(item.value)}>
-                    <Group gap='sm'>
-                      {formData.expenseMemberIds.includes(item.value) ? <CheckIcon size={12} /> : null}
-                      <span>{item.label}</span>
-                    </Group>
-                  </Combobox.Option>
-                ))}
-                {activeMembers.length > MAX_DISPLAYED_OPTIONS && (
-                  <Text size='xs' c='dimmed' p='xs'>
-                    {activeMembers.length - MAX_DISPLAYED_OPTIONS} more options available...
-                  </Text>
-                )}
-              </Combobox.Options>
-            </Combobox.Dropdown>
-          </Combobox>
-
-          <Group grow>
-            <TextInput
-              label='Description'
-              placeholder='Enter expense description'
-              value={formData.expenseDescription}
-              onChange={(event) =>
-                setFormData((prev) => ({ ...prev, expenseDescription: event.currentTarget?.value ?? '' }))
-              }
-            />
-            <NumberInput
-              label='Amount'
-              placeholder='0'
-              value={formData.expenseAmount}
-              onChange={(value) => setFormData((prev) => ({ ...prev, expenseAmount: Number(value) || 0 }))}
-              prefix='₹'
-              min={0}
+      <form onSubmit={form.onSubmit(() => {})}>
+        <Stack gap='lg'>
+          <Group gap='xs' align='center'>
+            <Text size='sm' fw={500} flex={1}>
+              Billing Month:
+            </Text>
+            <MonthPickerInput
+              defaultValue={settings?.nextBillingMonth.toDate()}
+              minDate={settings?.currentBillingMonth.toDate()}
+              maxDate={settings?.nextBillingMonth.toDate()}
+              required
+              flex={2}
+              onChange={handleGetElectricBill}
             />
           </Group>
-        </Stack>
 
-        {/* Single WiFi Charge Section - Always Visible */}
-        <Stack gap='sm'>
-          <Text fw={500} size='sm'>
-            WiFi Charge
-          </Text>
+          <Group grow>
+            <NumberInputWithCurrency
+              label='2nd Floor'
+              description='Electricity bill'
+              placeholder='Electricity bill'
+              step={50}
+              min={100}
+              key={form.key('secondFloorElectricityBill')}
+              {...form.getInputProps('secondFloorElectricityBill')}
+            />
+            <NumberInputWithCurrency
+              label='3rd Floor'
+              description='Electricity bill'
+              placeholder='Electricity bill'
+              step={50}
+              min={100}
+              key={form.key('thirdFloorElectricityBill')}
+              {...form.getInputProps('thirdFloorElectricityBill')}
+            />
+          </Group>
 
-          <Combobox store={wifiCombobox} onOptionSubmit={handleWifiMemberSelect} withinPortal={false}>
-            <Combobox.DropdownTarget>
-              <PillsInput pointer onClick={() => wifiCombobox.toggleDropdown()}>
-                <Pill.Group>
-                  {formData.wifiMemberIds.length > 0 ? (
-                    <>
-                      {formData.wifiMemberIds
-                        .slice(
-                          0,
-                          MAX_DISPLAYED_OPTIONS === formData.wifiMemberIds.length
-                            ? MAX_DISPLAYED_OPTIONS
-                            : MAX_DISPLAYED_OPTIONS - 1
-                        )
-                        .map((memberId) => {
-                          const member = activeMembers.find((m) => m.value === memberId);
-                          return member ? (
-                            <Pill key={memberId} withRemoveButton onRemove={() => removeWifiMember(memberId)}>
-                              {member.label}
-                            </Pill>
-                          ) : null;
-                        })}
-                      {formData.wifiMemberIds.length > MAX_DISPLAYED_OPTIONS && (
-                        <Pill>+{formData.wifiMemberIds.length - (MAX_DISPLAYED_OPTIONS - 1)} more</Pill>
-                      )}
-                    </>
-                  ) : (
-                    <Input.Placeholder>Search members for wifi charge</Input.Placeholder>
-                  )}
+          <Divider label='Member Counts' labelPosition='left' mt='md' />
 
-                  <Combobox.EventsTarget>
-                    <PillsInput.Field
-                      type='hidden'
-                      onBlur={() => wifiCombobox.closeDropdown()}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Backspace') {
-                          event.preventDefault();
-                          removeWifiMember(formData.wifiMemberIds[formData.wifiMemberIds.length - 1]);
-                        }
-                      }}
-                    />
-                  </Combobox.EventsTarget>
-                </Pill.Group>
-              </PillsInput>
-            </Combobox.DropdownTarget>
+          <Group grow>
+            <NumberInput
+              required
+              label='2nd Floor'
+              placeholder='Number of members'
+              key={form.key('activeMemberCounts.byFloor.2nd')}
+              {...form.getInputProps('activeMemberCounts.byFloor.2nd')}
+            />
+            <NumberInput
+              required
+              label='3rd Floor'
+              placeholder='Number of members'
+              key={form.key('activeMemberCounts.byFloor.3rd')}
+              {...form.getInputProps('activeMemberCounts.byFloor.3rd')}
+            />
+          </Group>
 
-            <Combobox.Dropdown>
-              <Combobox.Options>
-                {wifiOptions.map((item) => (
-                  <Combobox.Option
-                    value={item.value}
-                    key={item.value}
-                    active={formData.wifiMemberIds.includes(item.value)}>
-                    <Group gap='sm'>
-                      {formData.wifiMemberIds.includes(item.value) ? <CheckIcon size={12} /> : null}
-                      <span>{item.label}</span>
-                    </Group>
-                  </Combobox.Option>
-                ))}
-                {activeMembers.length > MAX_DISPLAYED_OPTIONS && (
-                  <Text size='xs' c='dimmed' p='xs'>
-                    {activeMembers.length - MAX_DISPLAYED_OPTIONS} more options available...
-                  </Text>
-                )}
-              </Combobox.Options>
-            </Combobox.Dropdown>
-          </Combobox>
+          <Button variant='light' size='xs' onClick={() => form.resetField('activeMemberCounts.byFloor')}>
+            Reset
+          </Button>
 
-          <NumberInput
-            label='Amount'
-            placeholder='30'
-            value={formData.wifiAmount}
-            onChange={(value) => setFormData((prev) => ({ ...prev, wifiAmount: Number(value) || 0 }))}
-            prefix='₹'
-            min={0}
+          <Divider label='Additional Charges' labelPosition='left' mt='lg' />
+
+          {/* Single Expense Section - Always Visible */}
+          <Switch
+            label='Add Expense for 2nd Floor'
+            checked={isFloorSelected('2nd')}
+            onChange={(event) => toggleFloorExpense('2nd', event.currentTarget.checked)}
           />
+          <Switch
+            label='Add Expense for 3rd Floor'
+            checked={isFloorSelected('3rd')}
+            onChange={(event) => toggleFloorExpense('3rd', event.currentTarget.checked)}
+          />
+
+          <Group align='center' justify='center'>
+            <MultiSelect
+              label='Select Members'
+              data={activeMembers}
+              placeholder='Select members'
+              hidePickedOptions
+              maxDropdownHeight={200}
+              comboboxProps={{
+                transitionProps: { transition: 'scale', duration: 200 },
+                shadow: 'md',
+              }}
+              flex={2}
+              required={
+                form.getInputProps('addExpenseAmount').value ||
+                form.getInputProps('addExpenseDescription').value?.length ||
+                false
+              }
+              key={form.key('addExpenseMemberIds')}
+              {...form.getInputProps('addExpenseMemberIds')}
+            />
+            <NumberInputWithCurrency
+              label='Amount'
+              flex={1}
+              placeholder='100'
+              required={form.getInputProps('addExpenseMemberIds').value?.length || false}
+              key={form.key('addExpenseAmount')}
+              {...form.getInputProps('addExpenseAmount')}
+            />
+          </Group>
+          <TextInput
+            label='Description'
+            placeholder='Enter expense description'
+            required={form.getInputProps('addExpenseMemberIds').value?.length || false}
+            key={form.key('addExpenseDescription')}
+            {...form.getInputProps('addExpenseDescription')}
+          />
+
+          <Divider label='WiFi Charges' labelPosition='left' mt='md' />
+          {/* Single WiFi Charge Section - Always Visible */}
+          <Group>
+            <MultiSelect
+              label='WiFi Members'
+              defaultChecked={true}
+              data={activeMembers}
+              placeholder='Select members'
+              hidePickedOptions
+              maxDropdownHeight={200}
+              comboboxProps={{
+                transitionProps: { transition: 'scale', duration: 200 },
+                shadow: 'md',
+              }}
+              flex={2}
+              required={form.getInputProps('wifiMonthlyCharge').value > 0}
+              key={form.key('wifiMemberIds')}
+              {...form.getInputProps('wifiMemberIds')}
+            />
+
+            <NumberInputWithCurrency
+              label='Amount'
+              placeholder='600'
+              flex={1}
+              step={50}
+              required={form.getInputProps('wifiMemberIds').value?.length > 0}
+              key={form.key('wifiMonthlyCharge')}
+              {...form.getInputProps('wifiMonthlyCharge')}
+            />
+          </Group>
+
+          <Group justify='space-between' mt='md'>
+            <Button variant='transparent' onClick={onClose} disabled={loading} justify='flex-start'>
+              Cancel
+            </Button>
+            <Group>
+              <Button variant='outline' onClick={form.reset}>
+                Reset
+              </Button>
+              <Button type='submit' loading={loading} disabled={loading}>
+                Generate
+              </Button>
+            </Group>
+          </Group>
         </Stack>
-      </Stack>
+      </form>
     </SharedModal>
   );
-}
+};
