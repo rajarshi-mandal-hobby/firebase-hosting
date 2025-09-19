@@ -341,29 +341,6 @@ export const mockMembers: MemberWithRentHistory[] = [
 export const mockElectricBills: ElectricBill[] = [
   {
     id: '2025-07',
-    billingMonth: createMockTimestamp('2025-07-01'),
-    generatedAt: createMockTimestamp('2025-07-01'),
-    lastUpdated: createMockTimestamp('2025-07-01'),
-    floorCosts: {
-      '2nd': {
-        bill: 1200, // Updated for 3 active members on 2nd floor
-        totalMembers: 3,
-      },
-      '3rd': {
-        bill: 280, // Updated for 1 active member on 3rd floor
-        totalMembers: 1,
-      },
-    },
-    appliedBulkExpenses: [
-      {
-        members: ['member-1', 'member-2', 'member-4'], // Only WiFi users
-        amount: 300,
-        description: 'WiFi router maintenance',
-      },
-    ],
-  },
-  {
-    id: '2025-06',
     billingMonth: createMockTimestamp('2025-06-01'),
     generatedAt: createMockTimestamp('2025-06-01'),
     lastUpdated: createMockTimestamp('2025-06-01'),
@@ -377,13 +354,15 @@ export const mockElectricBills: ElectricBill[] = [
         totalMembers: 2,
       },
     },
-    appliedBulkExpenses: [
-      {
-        members: ['member-1', 'member-2', 'member-3', 'member-4', 'member-5'], // All members in June
-        amount: 1000,
-        description: 'Common area maintenance',
-      },
-    ],
+    expenses: {
+      members: ['member-1', 'member-2', 'member-3', 'member-4', 'member-5'], // All members in June
+      amount: 1000,
+      description: 'Common area maintenance',
+    },
+    wifiCharges: {
+      members: ['member-1', 'member-2', 'member-4', 'member-5'], // WiFi users in June
+      amount: 600,
+    },
   },
 ];
 

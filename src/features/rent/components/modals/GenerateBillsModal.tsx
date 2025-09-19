@@ -26,12 +26,12 @@ type FormData = Omit<GlobalSettings, 'upiVpa' | 'securityDeposit' | 'bedRents'> 
 };
 
 export const GenerateBillsModal = ({ members, opened, onClose }: GenerateBillsModalProps) => {
-  const { settings, loading, error, refreshSettings, fetchElectricBill } = useGenerateBills();
+  const { settings, loading, error, retrySettings, fetchElectricBill, retryElectricBill } = useGenerateBills();
 
   console.log('🎨 Rendering GenerateBillsModal');
 
   return error ? (
-    <RetryBox error={error as Error} handleRetry={refreshSettings} loading={loading} />
+    <RetryBox error={error as Error} handleRetry={retrySettings} loading={loading} />
   ) : (
     <Content
       members={members}
@@ -40,7 +40,8 @@ export const GenerateBillsModal = ({ members, opened, onClose }: GenerateBillsMo
       opened={opened}
       onClose={onClose}
       fetchElectricBill={fetchElectricBill}
-      key={settings?.securityDeposit}
+      retryElectricBill={retryElectricBill}
+      key={settings?.securityDeposit || loading.toString()}
     />
   );
 };
@@ -52,10 +53,12 @@ const Content = ({
   opened,
   onClose,
   fetchElectricBill,
+  retryElectricBill,
 }: GenerateBillsModalProps & {
   settings?: GlobalSettings;
   loading: boolean;
   fetchElectricBill: (month: string) => Promise<ElectricBill>;
+  retryElectricBill: (month: string) => Promise<ElectricBill>;
 }) => {
   const wifiMemberIds: string[] = [];
   const activeMemberIdsByFloor = {
@@ -64,7 +67,7 @@ const Content = ({
   };
   const activeMembers = members.reduce((acc: { value: string; label: string }[], member) => {
     if (member.isActive) {
-      acc.push({ value: member.id, label: member.name });
+      acc.push({ value: member.id, label: member.name || 'Unnamed' });
       if (member.optedForWifi) {
         wifiMemberIds.push(member.id);
       }
@@ -113,36 +116,42 @@ const Content = ({
   };
 
   // Refs to track state across month changes
-  const initialFormValues = useRef<FormData | null>(null); // Stores the initial form values
+  const currentFormValues = useRef<FormData | null>(null); // Stores the current form values
+  const initialFormValues = useRef<FormData>(form.getInitialValues()); // Stores the initial form values
+  const appliedBillMonthRef = useRef<string | null>(null); // Track which bill month is currently applied
 
   const handleGetElectricBill = (value: string | null) => {
     if (!value || !settings) {
-      notify.error('Wrong date provided.');
+      notify.error('Invalid month selected.');
       return;
     }
 
-    // Convert string to Date to get month info
-    const selectedDate = new Date(value);
-    const currentDate = settings.currentBillingMonth.toDate();
+    const monthKey = value.slice(0, 7); // YYYY-MM format
+    const currentMonthKey = settings.currentBillingMonth.toDate().toISOString().slice(0, 7);
 
-    // Check if selected month is current month or previous month
-    const isCurrentMonth =
-      selectedDate.getMonth() === currentDate.getMonth() && selectedDate.getFullYear() === currentDate.getFullYear();
-
-    // Creating new bill for next month
-    if (!isCurrentMonth && initialFormValues.current) {
-      form.setValues(initialFormValues.current);
+    // Skip if we're already showing data for this month
+    if (appliedBillMonthRef.current === monthKey) {
       return;
     }
 
-    // Updating the previous month's bill
-    initialFormValues.current = form.getValues();
+    const isCurrentMonth = monthKey === currentMonthKey;
 
-    fetchElectricBill(value)
+    // Handle month switching logic for next month
+    if (!isCurrentMonth && currentFormValues.current) {
+      console.log('Creating new bill for next month', currentFormValues.current, initialFormValues.current);
+      form.setValues(currentFormValues.current);
+      form.resetDirty(initialFormValues.current);
+      appliedBillMonthRef.current = monthKey;
+      return;
+    }
+
+    // Store current form values before fetching
+    currentFormValues.current = form.getValues();
+
+    fetchElectricBill(monthKey)
       .then((bill) => {
-        console.log(bill);
-
-        const newValues: Partial<FormData> = {
+        const newValues: FormData = {
+          ...form.values,
           secondFloorElectricityBill: bill.floorCosts['2nd'].bill,
           thirdFloorElectricityBill: bill.floorCosts['3rd'].bill,
           activeMemberCounts: {
@@ -153,25 +162,28 @@ const Content = ({
               '3rd': bill.floorCosts['3rd'].totalMembers,
             },
           },
-          addExpenseAmount: bill.appliedBulkExpenses[0]?.amount || undefined,
-          addExpenseDescription: bill.appliedBulkExpenses[0]?.description || undefined,
-          addExpenseMemberIds: bill.appliedBulkExpenses[0]?.members || undefined,
+          addExpenseAmount: bill.expenses.amount,
+          addExpenseDescription: bill.expenses.description,
+          addExpenseMemberIds: bill.expenses.members,
+          wifiMemberIds: bill.wifiCharges.members,
+          wifiMonthlyCharge: bill.wifiCharges.amount,
         };
 
         form.setValues(newValues);
+        form.resetDirty(newValues);
+        appliedBillMonthRef.current = monthKey;
       })
       .catch((error) => {
+        // Only handle bill-not-found case here, hook handles other errors
         const err = error as Error & { cause?: string };
         if (err.cause === 'bill-not-found') {
-          console.log('No bill found for the selected month.');
-          // For previous months with no bill, reset to initial values
-          if (initialFormValues.current) {
-            form.setValues(initialFormValues.current);
+          if (currentFormValues.current) {
+            form.setValues(currentFormValues.current);
             form.resetDirty(initialFormValues.current);
           }
-          return;
+          appliedBillMonthRef.current = null;
         }
-        notify.error(err.message);
+        // Other errors are handled by the hook's state management
       });
   };
 
@@ -239,10 +251,6 @@ const Content = ({
             />
           </Group>
 
-          <Button variant='light' size='xs' onClick={() => form.resetField('activeMemberCounts.byFloor')}>
-            Reset
-          </Button>
-
           <Divider label='Additional Charges' labelPosition='left' mt='lg' />
 
           {/* Single Expense Section - Always Visible */}
@@ -296,7 +304,7 @@ const Content = ({
 
           <Divider label='WiFi Charges' labelPosition='left' mt='md' />
           {/* Single WiFi Charge Section - Always Visible */}
-          <Group>
+          <Group align='center' justify='center'>
             <MultiSelect
               label='WiFi Members'
               defaultChecked={true}

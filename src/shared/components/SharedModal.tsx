@@ -53,6 +53,12 @@ export const SharedModal = ({
         'aria-label': 'Close modal',
         ...modalProps.closeButtonProps,
       }}
+      styles={{
+        header: { borderBottom: '1px solid var(--mantine-color-gray-2)', marginBottom: '1.5rem' },
+        title: { fontWeight: 700 },
+
+        ...modalProps.styles,
+      }}
       centered>
       <LoadingOverlay visible={loading} overlayProps={{ radius: 'sm', blur: 2 }} />
 

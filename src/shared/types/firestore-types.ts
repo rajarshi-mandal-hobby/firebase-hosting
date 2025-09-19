@@ -235,11 +235,15 @@ export interface ElectricBill {
       totalMembers: number;
     };
   };
-  appliedBulkExpenses: {
+  expenses: {
     members: string[];
     amount: number;
     description: string;
-  }[];
+  };
+  wifiCharges: {
+    members: string[];
+    amount: number;
+  };
 }
 
 // ======================================
