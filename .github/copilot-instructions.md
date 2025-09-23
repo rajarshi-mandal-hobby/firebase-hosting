@@ -8,6 +8,35 @@
 - Suggest improvements to the user only when they are clearly beneficial or is deviating from patterns.
 - Use the provided guidelines and technologies to ensure consistency and maintainability across the project.
 
+# Project Architecture Overview
+
+## Domain-Driven Structure
+
+This is a **Rent Management Application** for hostel/mess administration with feature-based organization:
+
+- `src/features/admin/` - Admin dashboard, member management, billing operations
+- `src/features/member-dashboard/` - Member-facing views and payment flows
+- `src/features/rent/` - Rent generation, payment tracking, electric bill management
+- `src/shared/` - Reusable components, types, utilities across features
+
+## Context-Centric State Management
+
+**AppContext** (`src/contexts/AppContext.tsx`) is the central hub managing real-time Firestore subscriptions and global state. Custom hooks in `src/contexts/hooks/` handle domain-specific operations:
+
+- `useMemberOperations` - CRUD operations for member management
+- `useBillingOperations` - Payment processing and bill generation
+- `useAdminOperations` - Admin configuration and role management
+- Hook-based pattern separates business logic from real-time state subscriptions
+
+## Firebase Integration Patterns
+
+**Current Phase**: Development with emulators (Phase 1). Firebase services are prepared but mock data is used.
+
+- **Emulator Setup**: `npm run emulators` starts full Firebase emulator suite
+- **Data Seeding**: `npm run emulators:seed` populates emulator with mock data
+- **Service Layer**: `src/data/services/` contains individual service modules (ConfigService, MembersService, BillingService)
+- **Cloud Functions**: `functions/src/` with TypeScript, organized by domain (config-operations, member-operations, billing-operations)
+
 # Technology Stack & Standards
 
 ## Frontend Stack
@@ -63,6 +92,45 @@
 - **Form Patterns**: Use controlled components with validation hooks
 - **Modal Patterns**: Consistent modal structure with SharedModal wrapper
 - **Loading States**: Implement proper loading and error states for all async operations
+
+## Critical Development Patterns
+
+### Modal Stack Pattern
+
+Complex modals use **Mantine's Modal.Stack** with multiple modals (see `GenerateBillsModal.tsx`):
+
+```tsx
+const stack = useModalsStack(['form', 'error', 'confirm']);
+// Form → Error (on failure) → Confirm (on success)
+```
+
+### Form State Management
+
+Forms handle month-based data caching with `useRef` Maps:
+
+```tsx
+const monthlyDataCache = useRef<Map<string, FormData>>(new Map());
+// Cache form data per billing month to preserve user input
+```
+
+### Firebase Emulator Workflow
+
+**Essential Commands** (Windows PowerShell):
+
+- `npm run emulators` - Start Firebase emulators (Firestore:8080, Auth:9099, Functions:5001)
+- `npm run emulators:seed` - Populate with mock data from `src/data/mock/`
+- `npm run emulators:kill` - Force kill emulator processes
+- View data at: `http://127.0.0.1:4000/firestore`
+
+### Service Import Patterns
+
+Use direct service imports (no aggregated objects):
+
+```tsx
+import { MembersService } from '../data/services/membersService';
+import { ConfigService } from '../data/services/configService';
+// NOT: import { FirestoreService } from '...'
+```
 
 ## Current Development Mode
 

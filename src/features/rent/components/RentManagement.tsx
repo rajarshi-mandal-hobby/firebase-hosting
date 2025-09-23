@@ -1,8 +1,17 @@
 import { Accordion, Button, Group, Skeleton, Stack, Text, Title } from '@mantine/core';
-import { Suspense, useState } from 'react';
-import { CurrencyFormatter, SharedAvatar, StatusBadge, RentDetailsList } from '../../../shared/components';
+import { Suspense, useState, lazy } from 'react';
+import {
+  CurrencyFormatter,
+  SharedAvatar,
+  StatusBadge,
+  RentDetailsList,
+} from '../../../shared/components';
 
-import { GenerateBillsModal, RecordPaymentModal, AddExpenseModal } from './modals';
+import { RecordPaymentModal, AddExpenseModal } from './modals';
+// Lazy load heavy modal stack to reduce initial bundle
+const GenerateBillsModal = lazy(() =>
+  import('./modals/GenerateBillsModal').then((m) => ({ default: m.GenerateBillsModal }))
+);
 import { useRentManagementData } from '../hooks';
 import { LoadingBox } from '../../../shared/components/LoadingBox';
 import { RetryBox } from '../../../shared/components/RetryBox';
@@ -85,7 +94,10 @@ export function RentManagement() {
                     variant='default'
                     size='xs'
                     onClick={() => {
-                      setSelectedMember({ name: member.name, outstandingBalance: member.currentMonthRent.currentOutstanding });
+                      setSelectedMember({
+                        name: member.name,
+                        outstandingBalance: member.currentMonthRent.currentOutstanding,
+                      });
                       openRecordPayment();
                     }}>
                     Record Payment
@@ -94,7 +106,10 @@ export function RentManagement() {
                     variant='default'
                     size='xs'
                     onClick={() => {
-                      setSelectedMember({ name: member.name, outstandingBalance: member.currentMonthRent.currentOutstanding });
+                      setSelectedMember({
+                        name: member.name,
+                        outstandingBalance: member.currentMonthRent.currentOutstanding,
+                      });
                       openAddExpense();
                     }}>
                     Add Expense
@@ -106,15 +121,9 @@ export function RentManagement() {
         })}
       </Accordion>
 
-      {generateBillsOpened && (
-        <Suspense fallback={<LoadingBox loadingText='Loading...' />}>
-          <GenerateBillsModal
-            members={members}
-            opened={generateBillsOpened}
-            onClose={closeGenerateBills}
-          />
-        </Suspense>
-      )}
+      <Suspense fallback={<LoadingBox loadingText='Loading bill tools...' />}>
+        <GenerateBillsModal members={members} opened={generateBillsOpened} onClose={closeGenerateBills} />
+      </Suspense>
 
       <RecordPaymentModal
         opened={recordPaymentModal}

@@ -25,11 +25,7 @@ export class GlobalSettings {
     readonly wifiMonthlyCharge: number,
     readonly upiVpa: string,
     readonly activeMemberCounts: {
-      readonly total: number;
-      readonly byFloor: {
-        readonly [F in Floor]: number;
-      };
-      readonly wifiOptedIn: number;
+      readonly [F in Floor]: number;
     },
     readonly currentBillingMonth: Timestamp,
     readonly nextBillingMonth: Timestamp

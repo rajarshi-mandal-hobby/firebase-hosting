@@ -5,7 +5,7 @@ import {
   createTheme,
   DEFAULT_THEME,
   Loader,
-  ModalOverlay,
+  Modal,
   MultiSelect,
   Notification,
   NumberInput,
@@ -31,11 +31,25 @@ export const theme = createTheme({
         fw: 500,
       },
     }),
-    ModalOverlay: ModalOverlay.extend({
+    // Modal
+    Modal: Modal.extend({
       defaultProps: {
-        blur: 2,
+        size: 'md',
+        centered: true,
+        overlayProps: {
+          opacity: 0.55,
+          blur: 3,
+        },
+        transitionProps: { transition: 'scale', timingFunction: 'ease-in-out' },
+        styles: {
+          title: {
+            fontWeight: 700,
+          },
+        },
+        fs: 'sm',
       },
     }),
+    // Inputs
     NumberInput: NumberInput.extend({
       defaultProps: {
         radius: 'md',

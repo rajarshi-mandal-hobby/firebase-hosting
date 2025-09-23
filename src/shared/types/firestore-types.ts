@@ -1,4 +1,4 @@
-import type { Timestamp } from 'firebase/firestore';
+import type { DocumentData, Timestamp } from 'firebase/firestore';
 import type { Floor, BedType } from '../../data/shemas/GlobalSettings';
 
 // ======================================
@@ -177,6 +177,29 @@ export interface Expense {
   amount: number;
   description: string;
 }
+
+export const toMember = (data: any): Member => {
+  return {
+    id: data.id,
+    name: data.name,
+    phone: data.phone,
+    firebaseUid: data.firebaseUid,
+    fcmToken: data.fcmToken,
+    floor: data.floor,
+    bedType: data.bedType,
+    moveInDate: data.moveInDate,
+    securityDeposit: data.securityDeposit,
+    rentAtJoining: data.rentAtJoining,
+    advanceDeposit: data.advanceDeposit,
+    currentRent: data.currentRent,
+    currentMonthRent: data.currentMonthRent,
+    totalAgreedDeposit: data.totalAgreedDeposit,
+    isActive: data.isActive,
+    optedForWifi: data.optedForWifi,
+    leaveDate: data.leaveDate,
+    ttlExpiry: data.ttlExpiry,
+  };
+};
 
 /**
  * Payment status for rent history

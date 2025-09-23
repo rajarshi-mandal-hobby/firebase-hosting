@@ -1,28 +1,25 @@
 import { z } from 'zod';
-import { ZodFourDigitPositiveNumber, ZodThreeToFourDigitsNumber, ZodUpiVpa } from './primitives';
+import { ZodFourDigitPositiveNumber, zThreeToFourDigitsNumber, zUpiVpa } from './primitives';
 import { Timestamp, DocumentData } from 'firebase-admin/firestore';
-import { Floor } from '../types/shared';
+import { Floor, BedType } from '../types/shared';
 
 // Configuration types
 // New: explicit per-floor bed counts to avoid indexing a type as a value
 
-type BedTypes = {
+export type BedRents = {
   [F in Floor]: F extends '2nd' ? BedCounts2nd : BedCounts3rd;
 };
 
-interface BedCounts2nd {
-  Bed: number;
-  Room: number;
-  Special: number;
+export type BedCounts2nd = {
+  [B in BedType]: number;
 }
-interface BedCounts3rd {
-  Bed: number;
-  Room: number;
+export type BedCounts3rd = {
+  [B in Exclude<BedType, 'Special'>]: number;
 }
 
 export interface GlobalSettings {
   // replaced invalid syntax with the explicit BedTypes mapping
-  bedTypes: BedTypes;
+  bedRents: BedRents;
   securityDeposit: number;
   wifiMonthlyCharge: number;
   upiVpa: string;
@@ -33,13 +30,13 @@ export interface GlobalSettings {
     };
     wifiOptedIn: number;
   };
-  currentBillingMonth?: Timestamp;
-  nextBillingMonth?: Timestamp;
+  currentBillingMonth: Timestamp;
+  nextBillingMonth: Timestamp;
 }
 
 export const toGlobalSettings = (data: DocumentData): GlobalSettings =>
   ({
-    bedTypes: {
+    bedRents: {
       '2nd': {
         Bed: data.bedTypes['2nd'].Bed,
         Room: data.bedTypes['2nd'].Room,
@@ -61,13 +58,18 @@ export const toGlobalSettings = (data: DocumentData): GlobalSettings =>
     securityDeposit: data.securityDeposit,
     wifiMonthlyCharge: data.wifiMonthlyCharge,
     upiVpa: data.upiVpa,
+    currentBillingMonth: data.currentBillingMonth,
+    nextBillingMonth: data.nextBillingMonth,
   } satisfies GlobalSettings);
 
-export type GlobalSettingsInput = Omit<GlobalSettings, 'activememberCounts' | 'currentBillingMonth' | 'nextBillingMonth'>;
+export type GlobalSettingsInput = Omit<
+  GlobalSettings,
+  'activememberCounts' | 'currentBillingMonth' | 'nextBillingMonth'
+>;
 
 // Strict schema for full objects (no .optional() on fields)
 export const GlobalSettingsInputSchema: z.ZodType<GlobalSettingsInput> = z.object({
-  bedTypes: z.object({
+  bedRents: z.object({
     '2nd': z.object({
       Bed: ZodFourDigitPositiveNumber,
       Room: ZodFourDigitPositiveNumber,
@@ -79,8 +81,8 @@ export const GlobalSettingsInputSchema: z.ZodType<GlobalSettingsInput> = z.objec
     }),
   }),
   securityDeposit: ZodFourDigitPositiveNumber,
-  wifiMonthlyCharge: ZodThreeToFourDigitsNumber,
-  upiVpa: ZodUpiVpa,
+  wifiMonthlyCharge: zThreeToFourDigitsNumber,
+  upiVpa: zUpiVpa,
 });
 
 export const zodGlobalSettingsInput = (requestData: any) => GlobalSettingsInputSchema.safeParse(requestData);

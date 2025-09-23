@@ -3,11 +3,18 @@ import { GlobalSettings } from '../../../../../data/shemas/GlobalSettings';
 import { getConfigDb } from '../../../../../data/services/configService';
 import { fetchElectricBillByMonth } from '../../../../../data/services/electricService';
 import type { ElectricBill } from '../../../../../shared/types/firestore-types';
+import { set } from 'zod';
 
-export const useGenerateBills = () => {
+type ErrorState = {
+  from: 'settings' | 'bill';
+  error: Error;
+  retryData?: { month?: string };
+} | null;
+
+export const useGenerateBills = (enabled: boolean = true) => {
   const [settings, setSettings] = useState<GlobalSettings | undefined>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [loading, setLoading] = useState(enabled);
+  const [error, setError] = useState<ErrorState>(null);
 
   const isSettingsLoadedRef = useRef(settings !== undefined);
 
@@ -23,7 +30,7 @@ export const useGenerateBills = () => {
         setSettings(settings);
       })
       .catch((error) => {
-        setError(error);
+        setError({ from: 'settings', error });
       })
       .finally(() => {
         setLoading(false);
@@ -47,14 +54,15 @@ export const useGenerateBills = () => {
       return fetchingRef.current[monthKey];
     }
 
+    console.log('Fetching electric bill for month:', monthKey);
     // Set loading state and clear errors
-    setLoading(true);
     setError(null);
+    setLoading(true);
+    
 
     // Create new fetch promise
     const fetchPromise = fetchElectricBillByMonth(monthKey, refresh)
       .then(async (bill) => {
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate delay
         // Cache the result
         billCacheRef.current[monthKey] = bill;
         // Clean up the fetching promise
@@ -64,12 +72,12 @@ export const useGenerateBills = () => {
         return bill;
       })
       .catch((error) => {
+        console.error('Error fetching electric bill:', error);
         // Clean up the fetching promise on error
         delete fetchingRef.current[monthKey];
-        // Set error state and clear loading
-        setError(error);
         setLoading(false);
-        throw error;
+        setError({ from: 'bill', error, retryData: { month: monthKey } }); // Set error state
+        throw error; // Ensure the error is propagated
       });
 
     // Store the promise to prevent duplicate requests
@@ -82,7 +90,6 @@ export const useGenerateBills = () => {
 
   // Retry function specifically for electric bills
   const retryElectricBill = useCallback(async (month: string) => {
-    setError(null);
     return getElectricBill(month, true); // Force refresh on retry
   }, []);
 
@@ -94,11 +101,19 @@ export const useGenerateBills = () => {
     setLoading(false);
   }, []);
 
+  const saveBills = useCallback(async (bills: ElectricBill[]): Promise<void> => {
+    // Placeholder for saving bills logic
+  }, []);
+
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     if (isSettingsLoadedRef.current) return;
     isSettingsLoadedRef.current = true;
     fetchSettings();
-  }, [fetchSettings]);
+  }, [fetchSettings, enabled]);
 
   return {
     settings,

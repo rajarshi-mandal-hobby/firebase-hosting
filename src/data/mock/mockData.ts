@@ -50,12 +50,8 @@ export const mockGlobalSettings: GlobalSettings = {
   wifiMonthlyCharge: 400,
   upiVpa: '+918777529394',
   activeMemberCounts: {
-    total: 4, // Only 4 active members now (member-5 is deactivated)
-    byFloor: {
-      '2nd': 3, // member-1, member-2, member-4
-      '3rd': 1, // member-3
-    },
-    wifiOptedIn: 3, // member-1, member-2, member-4 (member-3 opted out)
+    '2nd': 3, // member-1, member-2, member-4
+    '3rd': 1, // member-3
   },
   currentBillingMonth: createMockTimestamp('2025-07-01'),
   nextBillingMonth: createMockTimestamp('2025-08-01'),

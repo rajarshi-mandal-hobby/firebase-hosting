@@ -8,6 +8,8 @@
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../../firebase';
 import type { ElectricBill, RentHistory } from '../../shared/types/firestore-types';
+import type { SaveResult } from '../shemas/formResults';
+import { simulateNetworkDelay } from '../utils/serviceUtils';
 
 // Request interfaces matching backend
 interface GenerateBulkBillsRequest {
@@ -158,5 +160,25 @@ export class BillingService {
   static async getElectricBill(billingMonth: string): Promise<ElectricBill | null> {
     const currentBill = await this.getCurrentElectricBill();
     return currentBill?.id === billingMonth ? currentBill : null;
+  }
+}
+
+export async function saveBills(bills: ElectricBill[]): Promise<SaveResult> {
+  await simulateNetworkDelay(1000);
+
+  const fn = httpsCallable(functions, 'saveBills');
+  const res = await fn(bills);
+
+  const data = res.data as unknown as SaveResult;
+
+  if (data.success) {
+    return {
+      success: true,
+    };
+  } else {
+    return {
+      success: false,
+      errors: data.errors,
+    };
   }
 }

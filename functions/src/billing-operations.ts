@@ -5,8 +5,7 @@
  * billing, rent generation, and payment processing.
  */
 
-import { onCall } from 'firebase-functions/v2/https';
-import { getFirestore } from 'firebase-admin/firestore';
+import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { validateAuth, createSuccessResponse, handleFunctionError } from './utils/validation';
 import {
   ElectricBill,
@@ -16,10 +15,149 @@ import {
   CloudFunctionResponse,
   PaymentStatus,
   Expense,
+  toMember,
+  BedType,
 } from './types/shared';
-import { GlobalSettings } from './schemas';
+import { GlobalSettings, SaveResponse, toGlobalSettings } from './schemas';
+import { db } from '.';
+import z from 'zod';
+import { BillsSchemaType, validateBillsInput } from './schemas/bills';
+import { compareDates } from './utils/dateUtils';
+import { Query, Timestamp } from 'firebase-admin/firestore';
+import { ca } from 'zod/v4/locales';
+import { calculatePerHeadBill } from './utils/calculations';
 
-const db = getFirestore();
+exports.saveBills = onCall({ cors: false }, async (req): Promise<SaveResponse<BillsSchemaType>> => {
+  validateAuth(req);
+  // Parse and validate input
+  const result = validateBillsInput(req.data);
+
+  if (!result.success) {
+    return {
+      success: false,
+      errors: z.flattenError(result.error),
+    };
+  }
+
+  const validatedData = result.data;
+  const currentBillingMonth = validatedData.currentBillingMonth ? new Date(validatedData.currentBillingMonth) : null;
+  const nextBillingMonth = validatedData.nextBillingMonth ? new Date(validatedData.nextBillingMonth) : null;
+
+  if (!currentBillingMonth && !nextBillingMonth ) {
+    return {
+      success: false,
+      errors: { formErrors: ['Either currentBillingMonth or nextBillingMonth must be provided'],
+         fieldErrors: { currentBillingMonth: ['Either currentBillingMonth or nextBillingMonth must be provided'], nextBillingMonth: ['Either currentBillingMonth or nextBillingMonth must be provided'] } },
+    };
+  }
+
+    throw new HttpsError('invalid-argument', 'Either currentBillingMonth or nextBillingMonth must be provided');
+  }
+
+  const perMemberElecticity = {
+    '2nd':  calculatePerHeadBill(validatedData.secondFloorElectricityBill, validatedData.memberCountByFloor['2nd']),
+    '3rd': calculatePerHeadBill(validatedData.thirdFloorElectricityBill, validatedData.memberCountByFloor['3rd']),
+  };
+  
+  const wifiCharges = validatedData.wifiCharges ? 
+
+
+  // Add this helper function at the top of the file
+const getBedRent = (floor: '2nd' | '3rd', bedType: BedType, bedRents: GlobalSettings['bedRents']): number => {
+  if (floor === '2nd') {
+    return bedRents['2nd'][bedType];
+  } else {
+    // For 3rd floor, Special bed type is not allowed
+    if (bedType === 'Special') {
+      throw new HttpsError('invalid-argument', `Bed type 'Special' is not available on 3rd floor`);
+    }
+    return bedRents['3rd'][bedType as Exclude<BedType, 'Special'>];
+  }
+}
+
+  if (validatedData.wifiMonthlyCharge && !hasWifiMembers || !validatedData.wifiMonthlyCharge && hasWifiMembers) {
+    throw new HttpsError('invalid-argument', 'Both wifiMonthlyCharge and wifiMemberIds must be provided together, or neither.');
+  }
+
+  const perMemberWifi = hasWifiMembers && validatedData.wifiMonthlyCharge ? calculatePerHeadBill(validatedData.wifiMonthlyCharge, validatedData.wifiMemberIds!.length) : 0;
+
+  // Require at least one of currentBillingMonth or nextBillingMonth to be present
+  if (!currentBillingMonth && !nextBillingMonth) {
+    throw new HttpsError('invalid-argument', 'Either currentBillingMonth or nextBillingMonth must be provided');
+  }
+
+  type settingsToUpdate = Pick<GlobalSettings, 'currentBillingMonth' | 'nextBillingMonth'>;
+  const settingsDoc = db
+    .collection('config')
+    .doc('globalSettings')
+    .withConverter<GlobalSettings>({
+      toFirestore: (data) => data,
+      fromFirestore: (snap) => {
+        return toGlobalSettings(snap.data());
+      },
+    });
+
+  const membersCol = db.collection('members').where('isActive', '==', true);
+
+  await db.runTransaction(async (transaction) => {
+    const settingsSnap = await transaction.get(settingsDoc);
+    const membersSnap = await transaction.get(membersCol);
+
+    const settings = settingsSnap.exists ? settingsSnap.data() : undefined;
+    const memberDocs = membersSnap.empty ? [] : membersSnap.docs;
+
+    if (!settings || memberDocs.length === 0) {
+      throw new HttpsError('failed-precondition', 'Data not found');
+    }
+
+    // Add a new billing if next month data provided
+    if (nextBillingMonth) {
+      if (!compareDates(settings.nextBillingMonth.toDate(), nextBillingMonth)) {
+        throw new HttpsError('invalid-argument', 'nextBillingMonth must be after the current nextBillingMonth');
+      }
+
+      const currentBillingTimestamp = Timestamp.fromDate(nextBillingMonth);
+      // Move to the month after next
+      nextBillingMonth.setMonth(nextBillingMonth.getMonth() + 1, 1);
+      const nextBillingTimestamp = Timestamp.fromDate(nextBillingMonth);
+
+      transaction.update(settingsDoc, {
+        currentBillingMonth: currentBillingTimestamp,
+        nextBillingMonth: nextBillingTimestamp,
+      } satisfies settingsToUpdate);
+
+     memberDocs.forEach((memberDoc) => {
+        const member = toMember(memberDoc);
+        member.currentMonthRent = {
+          id: memberDoc.id,
+          generatedAt: currentBillingTimestamp,
+          rent: getBedRent(member.floor, member.bedType, settings.bedRents),
+          electricity: perMemberElecticity[member.floor],
+          wifi: perMemberWifi,
+          previousOutstanding: member.currentMonthRent.currentOutstanding,
+          expenses: [],
+          totalCharges: 0,
+          amountPaid: 0,
+          currentOutstanding: 0,
+          status: 'Due',
+        };
+        memberDoc.ref.update({
+          currentMonthRent: member.currentMonthRent,
+        });
+        // Create a rent history entry for the new billing month with zeroed fields
+        const rentHistoryRef = memberDoc.ref
+          .collection('rentHistory')
+          .doc(currentBillingTimestamp.toDate().toISOString().slice(0, 7)); // YYYY-MM
+
+        transaction.set(rentHistoryRef, member.currentMonthRent);
+      }
+    }
+  });
+
+  return {
+    success: true,
+  };
+});
 
 // Request interfaces for billing operations
 interface GenerateBulkBillsRequest {

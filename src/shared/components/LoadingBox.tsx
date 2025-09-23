@@ -1,6 +1,4 @@
-import { Box, Button, Flex, Group, Loader, Text } from '@mantine/core';
-import { memo } from 'react';
-import { CssLoader } from '../custom-loader/CssLoader';
+import { Group, Loader, Text } from '@mantine/core';
 
 interface LoadingBoxProps {
   boxSize?: string & {};
@@ -9,7 +7,7 @@ interface LoadingBoxProps {
   minHeight?: number; // min height if full screen
 }
 
-export const LoadingBox = memo<LoadingBoxProps>(({ loadingText, minHeight, boxSize, loaderSize }) => {
+export const LoadingBox = ({ loadingText, minHeight, boxSize, loaderSize }: LoadingBoxProps) => {
   console.log('Rendering LoadingBox');
   return (
     <Group mih={minHeight || 300} align='center' justify='center'>
@@ -19,4 +17,4 @@ export const LoadingBox = memo<LoadingBoxProps>(({ loadingText, minHeight, boxSi
       </Text>
     </Group>
   );
-});
+};

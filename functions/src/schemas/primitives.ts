@@ -10,10 +10,10 @@ export const ZodFourDigitPositiveNumber = zPositiveNumber.min(1600, { message: '
   message: 'Must be at most 4 digits',
 });
 
-export const ZodThreeToFourDigitsNumber = zPositiveNumber.min(100, { message: 'Must be at least 3 digits' }).max(9999, {
+export const zThreeToFourDigitsNumber = zPositiveNumber.min(100, { message: 'Must be at least 3 digits' }).max(9999, {
   message: 'Must be at most 4 digits',
 });
 
-export const ZodUpiVpa = zString.toLowerCase().refine((s) => /^[a-z0-9_-]{3,20}@[a-z0-9]{3,10}$/.test(s), {
+export const zUpiVpa = zString.toLowerCase().refine((s) => /^[a-z0-9_-]{3,20}@[a-z0-9]{3,10}$/.test(s), {
   message: 'Must be UPI VPA format (e.g. name@bank)',
 });

@@ -5,15 +5,13 @@
  * These should mirror the types from the frontend for consistency.
  */
 
-import { Timestamp } from 'firebase-admin/firestore';
+import { DocumentData, Timestamp } from 'firebase-admin/firestore';
 
 // Basic types
 export type Floor = '2nd' | '3rd';
-export type BedType = 'Bed' | 'Room' | 'Special Room';
+export type BedType = 'Bed' | 'Room' | 'Special';
 export type AdminRole = 'primary' | 'secondary';
-export type PaymentStatus = 'Due' | 'Paid' | 'Partially Paid' | 'Partial' | 'Overpaid';
-
-
+export type PaymentStatus = 'Due' | 'Paid' | 'Partial' | 'Overpaid';
 
 export interface Admin {
   email: string;
@@ -31,7 +29,7 @@ export interface AdminConfig {
 
 // Member types
 export interface Member {
-  id: string;
+  id: string; // Firestore document ID
   name: string;
   phone: string;
   firebaseUid?: string;
@@ -43,9 +41,8 @@ export interface Member {
   rentAtJoining: number;
   advanceDeposit: number;
   currentRent: number;
+  currentMonthRent: RentHistory; // Optional embedded current month rent
   totalAgreedDeposit: number;
-  outstandingBalance: number;
-  outstandingNote?: string;
   isActive: boolean;
   optedForWifi: boolean;
   leaveDate?: Timestamp;
@@ -56,6 +53,30 @@ export interface Expense {
   amount: number;
   description: string;
 }
+
+export const toMember = (snap: any): Member => {
+  const data = snap.data();
+  return {
+    id: data.id,
+    name: data.name,
+    phone: data.phone,
+    firebaseUid: data.firebaseUid,
+    fcmToken: data.fcmToken,
+    floor: data.floor,
+    bedType: data.bedType,
+    moveInDate: data.moveInDate,
+    securityDeposit: data.securityDeposit,
+    rentAtJoining: data.rentAtJoining,
+    advanceDeposit: data.advanceDeposit,
+    currentRent: data.currentRent,
+    currentMonthRent: data.currentMonthRent,
+    totalAgreedDeposit: data.totalAgreedDeposit,
+    isActive: data.isActive,
+    optedForWifi: data.optedForWifi,
+    leaveDate: data.leaveDate,
+    ttlExpiry: data.ttlExpiry,
+  };
+};
 
 export interface RentHistory {
   id: string;

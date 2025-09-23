@@ -46,7 +46,7 @@ export const saveGlobalSettings = async (updates: GlobalSettingsFormValues): Pro
   const res = await fn(updates);
 
   const data = res.data as unknown as SaveResult;
-  console.log('saveGlobalSettings response:', data);
+
   if (data.success) {
     return {
       success: true,
