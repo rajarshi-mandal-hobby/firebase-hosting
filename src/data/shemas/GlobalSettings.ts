@@ -4,19 +4,19 @@ export type Floor = '2nd' | '3rd';
 export type BedType = 'Bed' | 'Room' | 'Special';
 
 // Only allow 'Bed', 'Room', 'Special' as keys, but 'Special' is only for '2nd'
-type SecondFloor = Readonly<Pick<Record<BedType, number>, 'Bed' | 'Room' | 'Special'>>;
-type ThirdFloor = Readonly<Pick<Record<BedType, number>, 'Bed' | 'Room'>>;
+type SecondFloor = Pick<Record<BedType, number>, 'Bed' | 'Room' | 'Special'>;
+type ThirdFloor = Pick<Record<BedType, number>, 'Bed' | 'Room'>;
 
-export type BedRents = Readonly<{
+export type BedRents = {
   [F in Floor]: F extends '2nd' ? SecondFloor : ThirdFloor;
-}>;
+};
 
-export type GlobalSettingsFormValues = Readonly<{
+export type GlobalSettingsFormValues = {
   bedRents: BedRents;
   securityDeposit: number;
   wifiMonthlyCharge: number;
   upiVpa: string;
-}>;
+};
 
 export class GlobalSettings {
   constructor(
@@ -51,5 +51,14 @@ export class GlobalSettings {
       data.currentBillingMonth,
       data.nextBillingMonth
     );
+  }
+
+  static toFormValues(settings: GlobalSettings): GlobalSettingsFormValues {
+    return {
+      bedRents: settings.bedRents,
+      securityDeposit: Number(settings.securityDeposit),
+      wifiMonthlyCharge: Number(settings.wifiMonthlyCharge),
+      upiVpa: String(settings.upiVpa).trim(),
+    };
   }
 }

@@ -35,7 +35,10 @@ function App() {
   return (
     <MantineProvider theme={theme}>
       <AuthProvider>
-        <Notifications position='bottom-center' />
+        <Notifications
+          position='bottom-center'
+          containerWidth='max-content'
+        />
         <AppContainer>
           <RouterProvider router={router} />
         </AppContainer>

@@ -9,3 +9,4 @@ export * from './icons';
 export { MemberDetailsList } from './MemberDetailsList';
 export { StatusIndicator } from './StatusIndicator';
 export { RetryBox as AlertRetry } from './RetryBox';
+export { ErrorBoundary } from './ErrorBoundary';

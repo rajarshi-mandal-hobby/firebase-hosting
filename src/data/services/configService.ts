@@ -36,6 +36,66 @@ export const getConfigDb = async (refresh = false): Promise<GlobalSettings> => {
   return configCol.data();
 };
 
+const configDocRef = doc(db, 'config', 'globalSettings').withConverter(GlobalSettings);
+let fetchCount = 0; // For testing ErrorBoundary
+let cache: GlobalSettings | null = null;
+let currentFetchPromise: Promise<GlobalSettings> | null = null;
+
+export const fetchGlobalSettings = async (refresh = false) => {
+  if (refresh) {
+    cache = null;
+    currentFetchPromise = null;
+  }
+
+  // If data is in cache, return a resolved promise immediately
+  if (cache) {
+    return Promise.resolve(cache);
+  }
+
+  // If a fetch is in progress, return the existing promise
+  if (currentFetchPromise) {
+    return currentFetchPromise;
+  }
+
+  // Create a new promise and store it
+  const newPromise = (async () => {
+    await simulateNetworkDelay(500);
+    // Throw error first time only for testing ErrorBoundary
+    try {
+      let docSnapshot;
+      if (refresh) {
+        docSnapshot = await getDocFromServer(configDocRef);
+      } else {
+        try {
+          docSnapshot = await getDocFromCache(configDocRef);
+        } catch {
+          docSnapshot = await getDocFromServer(configDocRef);
+        }
+      }
+
+      if (fetchCount === 0) {
+        fetchCount += 1;
+        throw new Error('Simulated fetch error');
+      }
+
+      if (!docSnapshot.exists()) {
+        throw new Error('Global settings document missing');
+      }
+      console.log(
+        docSnapshot.metadata.fromCache ? 'Global settings loaded from cache' : 'Global settings loaded from server'
+      );
+      const data = docSnapshot.data();
+      cache = data; // Cache the data
+      return data;
+    } finally {
+      currentFetchPromise = null; // Clear the promise reference when done
+    }
+  })();
+
+  currentFetchPromise = newPromise;
+  return newPromise;
+};
+
 /**
  * Save global settings with proper error handling and validation
  */

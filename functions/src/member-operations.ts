@@ -717,7 +717,7 @@ export const deactivateMember = onCall(
       }
 
       // Calculate settlement: refundAmount = totalAgreedDeposit - outstandingBalance
-      const refundAmount = memberData.totalAgreedDeposit - memberData.outstandingBalance;
+      const refundAmount = memberData.totalAgreedDeposit - 0;
 
       let status: 'Refund Due' | 'Payment Due' | 'Settled';
       if (refundAmount > 0) {
@@ -731,7 +731,7 @@ export const deactivateMember = onCall(
       const settlement = {
         memberName: memberData.name,
         totalAgreedDeposit: memberData.totalAgreedDeposit,
-        outstandingBalance: memberData.outstandingBalance,
+        outstandingBalance: 0,
         refundAmount,
         status,
         leaveDate: requestData.leaveDate,

@@ -5,7 +5,7 @@
  * These should mirror the types from the frontend for consistency.
  */
 
-import { DocumentData, Timestamp } from 'firebase-admin/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 
 // Basic types
 export type Floor = '2nd' | '3rd';

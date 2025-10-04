@@ -21,3 +21,5 @@ export const RetryBox = memo<AlertRetryProps>(({ alertTitle, error, loading, han
     </Alert>
   );
 });
+
+RetryBox.displayName = 'RetryBox';

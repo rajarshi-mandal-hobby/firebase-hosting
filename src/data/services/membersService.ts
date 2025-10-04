@@ -31,64 +31,102 @@ import {
   generateMemberId,
   simulateNetworkDelay,
 } from '../utils/serviceUtils';
-import type { Floor } from '../shemas/GlobalSettings';
+import type { Floor, GlobalSettings } from '../shemas/GlobalSettings';
+import { int } from 'zod';
 
-export const getMembers = async ({
-  refresh = false,
-  ...filters
-}: {
+export interface MemberFilters {
+  refresh?: boolean;
   isActive?: boolean;
   floor?: Floor;
   optedForWifi?: boolean;
-  refresh?: boolean;
-}): Promise<Member[]> => {
-  const membersQuery = collection(db, 'members').withConverter<Member>({
-    toFirestore: (members: Member) => members,
-    fromFirestore: (snapshot) => {
-      const data = snapshot.data() as Member;
-      return data;
-    },
-  });
+}
 
-  await simulateNetworkDelay(1000);
-  // Apply filters
-  const constraints = [];
-  if (filters?.isActive !== undefined) {
-    constraints.push(where('isActive', '==', filters.isActive));
-  }
-  if (filters?.floor) {
-    constraints.push(where('floor', '==', filters.floor));
-  }
-  if (filters?.optedForWifi !== undefined) {
-    constraints.push(where('optedForWifi', '==', filters.optedForWifi));
-  }
+// ...existing imports...
 
-  // Create filtered query
-  const q =
-    constraints.length > 0
-      ? query(membersQuery, ...constraints, orderBy('name'))
-      : query(membersQuery, orderBy('name'));
+// Update cache to a map for filter-based caching
+const cache: Map<string, Member[]> = new Map();
+const currentFetchPromises: Map<string, Promise<Member[]>> = new Map();
 
-  let snapshot: QuerySnapshot<Member, DocumentData>;
+export const getMembers = async ({ refresh = false, ...filters }: MemberFilters): Promise<Member[]> => {
+  // Create a cache key based on filters (serialize to string for uniqueness)
+  const cacheKey = Object.keys(filters).length > 0 ? JSON.stringify(filters) : 'default';
 
   if (refresh) {
-    snapshot = await getDocsFromServer(q);
-  } else {
+    cache.delete(cacheKey);
+    currentFetchPromises.delete(cacheKey);
+  }
+
+  // If data is in cache, return a resolved promise immediately
+  if (cache.has(cacheKey)) {
+    return Promise.resolve(cache.get(cacheKey)!);
+  }
+
+  // If a fetch is in progress for these filters, return the existing promise
+  if (currentFetchPromises.has(cacheKey)) {
+    return currentFetchPromises.get(cacheKey)!;
+  }
+
+  // Create a new promise and store it
+  const newPromise = (async () => {
+    await simulateNetworkDelay(500); // Simulate network delay for UX (adjust as needed)
     try {
-      snapshot = await getDocsFromCache(q);
-    } catch {
-      snapshot = await getDocs(q);
+      const membersQuery = collection(db, 'members').withConverter<Member>({
+        toFirestore: (members: Member) => members,
+        fromFirestore: (snapshot) => {
+          const data = snapshot.data() as Member;
+          return data;
+        },
+      });
+
+      // Apply filters
+      const constraints = [];
+      if (filters?.isActive !== undefined) {
+        constraints.push(where('isActive', '==', filters.isActive));
+      }
+      if (filters?.floor) {
+        constraints.push(where('floor', '==', filters.floor));
+      }
+      if (filters?.optedForWifi !== undefined) {
+        constraints.push(where('optedForWifi', '==', filters.optedForWifi));
+      }
+
+      // Create filtered query
+      const q =
+        constraints.length > 0
+          ? query(membersQuery, ...constraints, orderBy('name'))
+          : query(membersQuery, orderBy('name'));
+
+      let snapshot: QuerySnapshot<Member, DocumentData>;
+
+      if (refresh) {
+        snapshot = await getDocsFromServer(q);
+      } else {
+        try {
+          snapshot = await getDocsFromCache(q);
+        } catch {
+          snapshot = await getDocs(q);
+        }
+      }
+
+      if (snapshot.empty) {
+        throw new Error('No members found');
+      }
+
+      console.log('Members fetched:', snapshot.metadata.fromCache ? 'from cache' : 'from server');
+
+      const data = snapshot.docs.map((doc) => doc.data());
+      cache.set(cacheKey, data); // Cache the data for these filters
+      return data;
+    } finally {
+      currentFetchPromises.delete(cacheKey); // Clear the promise reference when done
     }
-  }
+  })();
 
-  if (snapshot.empty) {
-    throw new Error('No members found');
-  }
-
-  console.log('Members fetched:', snapshot.metadata.fromCache ? 'from cache' : 'from server');
-
-  return snapshot.docs.map((doc) => doc.data());
+  currentFetchPromises.set(cacheKey, newPromise);
+  return newPromise;
 };
+
+// ...rest of the file remains unchanged...
 
 export class MembersService {
   /**

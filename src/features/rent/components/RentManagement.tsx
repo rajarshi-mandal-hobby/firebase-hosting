@@ -1,24 +1,16 @@
 import { Accordion, Button, Group, Skeleton, Stack, Text, Title } from '@mantine/core';
-import { Suspense, useState, lazy } from 'react';
-import {
-  CurrencyFormatter,
-  SharedAvatar,
-  StatusBadge,
-  RentDetailsList,
-} from '../../../shared/components';
+import { Suspense, useState, lazy, Children, type ReactElement, cloneElement, isValidElement, type SVGProps, type ReactNode } from 'react';
+import { CurrencyFormatter, SharedAvatar, StatusBadge, RentDetailsList } from '../../../shared/components';
 
-import { RecordPaymentModal, AddExpenseModal } from './modals';
-// Lazy load heavy modal stack to reduce initial bundle
-const GenerateBillsModal = lazy(() =>
-  import('./modals/GenerateBillsModal').then((m) => ({ default: m.GenerateBillsModal }))
-);
+import { RecordPaymentModal, AddExpenseModal, GenerateBillsModal } from './modals';
 import { useRentManagementData } from '../hooks';
 import { LoadingBox } from '../../../shared/components/LoadingBox';
 import { RetryBox } from '../../../shared/components/RetryBox';
 import { useDisclosure } from '@mantine/hooks';
+import React from 'react';
 
 export function RentManagement() {
-  const { loading, totalOutstanding, error, actions, members } = useRentManagementData();
+  const { members, isLoading, totalOutstanding, error, actions } = useRentManagementData();
   const [generateBillsOpened, { open: openGenerateBills, close: closeGenerateBills }] = useDisclosure(false);
   const [recordPaymentModal, { open: openRecordPayment, close: closeRecordPayment }] = useDisclosure(false);
   const [addExpenseModal, { open: openAddExpense, close: closeAddExpense }] = useDisclosure(false);
@@ -28,15 +20,15 @@ export function RentManagement() {
 
   // Early return if there's an error
   if (error) {
-    return <RetryBox error={error || 'Failed to load members'} handleRetry={actions.refetch} loading={loading} />;
+    return <RetryBox error={error || 'Failed to load members'} handleRetry={actions.handleRetry} loading={isLoading} />;
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Stack gap='lg'>
         <Group justify='space-between'>
           <Title order={5}>
-            <Skeleton visible={loading}>
+            <Skeleton visible={isLoading}>
               Total Outstanding:
               <CurrencyFormatter value={totalOutstanding} />
             </Skeleton>
@@ -56,7 +48,7 @@ export function RentManagement() {
       <Group justify='space-between'>
         <Title order={5}>
           Total Outstanding:
-          <Skeleton visible={loading}>
+          <Skeleton visible={isLoading}>
             <CurrencyFormatter value={totalOutstanding} />
           </Skeleton>
         </Title>
@@ -125,7 +117,7 @@ export function RentManagement() {
         <GenerateBillsModal members={members} opened={generateBillsOpened} onClose={closeGenerateBills} />
       </Suspense>
 
-      <RecordPaymentModal
+      {/* <RecordPaymentModal
         opened={recordPaymentModal}
         onClose={() => {
           closeRecordPayment();
@@ -133,16 +125,16 @@ export function RentManagement() {
         }}
         memberName={selectedMember?.name}
         outstandingAmount={selectedMember?.outstandingBalance}
-      />
+      /> */}
 
-      <AddExpenseModal
+      {/* <AddExpenseModal
         opened={addExpenseModal}
         onClose={() => {
           closeAddExpense();
           setSelectedMember(null);
         }}
         memberName={selectedMember?.name}
-      />
+      /> */}
     </Stack>
   );
 }

@@ -1,4 +1,3 @@
-import { HttpsError } from "firebase-functions/https";
 
 // Compare two billing months in "YYYY-MM" format
 // Returns true if nextBillingMonth is after currentBillingMonth

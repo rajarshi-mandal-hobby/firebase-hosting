@@ -1,12 +1,12 @@
 import { Box, SegmentedControl, Stack } from '@mantine/core';
-import { lazy, memo, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { LoadingBox } from '../../../../shared/components/LoadingBox';
 import { RentManagement } from '../../../rent';
 import { useTabNavigation } from '../hooks/useTabNavigation';
 import type { Tab } from '../hooks/useTabNavigation';
 
 const MembersManagement = lazy(() => import('../../../members/components/MembersManagement'));
-const ConfigManagement = lazy(() => import('../../config/components/ConfigManagement'));
+const ConfigManagement = lazy(() => import('../../config/'));
 
 // SegmentedControl expects an array of { label, value }
 const TAB_DATA: { label: string; value: Tab }[] = [
@@ -15,9 +15,11 @@ const TAB_DATA: { label: string; value: Tab }[] = [
   { label: 'Config', value: 'config' },
 ];
 
-export const TabNavigation = memo(() => {
+export const TabNavigation =() => {
   // Use custom hook to manage active tab state
   const { activeTab, visitedTab, handleTabChange } = useTabNavigation();
+
+  console.log('Rendering TabNavigation');
 
   return (
     <Stack>
@@ -29,7 +31,7 @@ export const TabNavigation = memo(() => {
 
       <Box hidden={activeTab !== 'members'} aria-hidden={activeTab !== 'members'}>
         {visitedTab.members && (
-          <Suspense fallback={<LoadingBox loadingText='Loading members...' />}>
+          <Suspense fallback={<LoadingBox loadingText='Loading members...' forComponent='MembersManagement' />}>
             <MembersManagement />
           </Suspense>
         )}
@@ -37,11 +39,11 @@ export const TabNavigation = memo(() => {
 
       <Box hidden={activeTab !== 'config'} aria-hidden={activeTab !== 'config'}>
         {visitedTab.config && (
-          <Suspense fallback={<LoadingBox loadingText='Loading configuration...' />}>
+          <Suspense fallback={<LoadingBox loadingText='Loading configuration...' forComponent='ConfigManagement' />}>
             <ConfigManagement />
           </Suspense>
         )}
       </Box>
     </Stack>
   );
-});
+};

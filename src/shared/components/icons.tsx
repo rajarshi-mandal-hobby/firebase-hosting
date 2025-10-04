@@ -1,5 +1,5 @@
 import { ThemeIcon, type ThemeIconProps, useMantineTheme, parseThemeColor } from '@mantine/core';
-import React from 'react';
+import React, { Children, isValidElement, memo, type ReactNode, type SVGProps } from 'react';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
   size?: number | string;
@@ -173,12 +173,6 @@ export const IconPayments = createIcon({
   displayName: 'Payments',
 });
 
-export const IconRupee = createIcon({
-  svgString:
-    '<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#1f1f1f"><path d="M536-155 297.84-398.25Q293-403 290.5-409.56q-2.5-6.57-2.5-13.57v-21q0-14.87 10.35-25.37Q308.7-480 324-480h96q50 0 89-35.5t43-84.5H300.23q-15.4 0-25.81-10.29Q264-620.58 264-635.79t10.3-25.71q10.29-10.5 25.52-10.5H538q-19-35-49.43-53.5Q458.15-744 420-744H299.62q-14.62 0-25.12-10.29-10.5-10.29-10.5-25.5t10.34-25.71q10.34-10.5 25.63-10.5h359.74q15.29 0 25.79 10.29t10.5 25.5q0 15.21-10.35 25.71T660-744h-84q13 17 23.5 33.5T615-672h45q15.3 0 25.65 10.29Q696-651.42 696-636.21t-10.35 25.71Q675.3-600 660-600h-36q-5 81-64 136.5T420-408h-31l199 203q17 17 7.39 39-9.6 22-33.39 22-8 0-14.5-3t-11.5-8Z"/></svg>',
-  displayName: 'Rupee',
-});
-
 export const IconWifi = createIcon({
   svgString:
     '<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#1f1f1f"><path d="M480-144q-40 0-68-28t-28-68q0-40 28-68t68-28q40 0 68 28t28 68q0 40-28 68t-68 28Zm0-432q77 0 145.5 24T751-486q16 12 17.5 32T756-420q-14 14-34 15t-37-10q-44-31-96-48t-109-17q-57 0-109 17t-96 48q-17 11-37 10t-34-15q-14-14-12.5-34t17.5-32q57-42 125.5-66T480-576Zm0-240q126 0 238 41.5T921-658q16 14 17.5 34T926-590q-15 15-36 14.5T852-590q-78-61-172-95.5T480-720q-106 0-200 34.5T108-590q-17 14-38 15t-36-14q-14-14-12.5-34.5T39-658q91-75 203-116.5T480-816Z"/></svg>',
@@ -321,12 +315,46 @@ export const IconFirebase = ({ size = 24 }: { size?: number }) => (
   </svg>
 );
 
-
-interface AddressBookIconProps extends React.ComponentPropsWithoutRef<'svg'> {
+// Define the custom props for your new component.
+interface CustomIconProps extends SVGProps<SVGSVGElement> {
   size?: number | string;
 }
 
-export function AddressBookIcon({ size, style, ...others }: AddressBookIconProps) {
+const createCustomSvg = (svg: React.ReactElement<CustomIconProps, 'svg'>, displayName: string) => {
+  // Extract the original path elements from the source SVG.
+  // We use Children.map to get a new array of the children.
+  const pathElements =
+    Children.map(svg.props.children, (child) => {
+      // Only return the path elements, as we are recreating the parent SVG.
+      if (isValidElement(child) && child.type === 'path') {
+        return child;
+      }
+      return null; // Exclude non-path children if any exist.
+    })?.filter(Boolean) || [];
+
+  // Return a new functional component that renders the customized SVG.
+  const CustomIcon = ({ size = '24', style, ...others }: CustomIconProps) => {
+    // Return the new SVG element with our custom props and the extracted paths.
+    return (
+      <svg
+        xmlns='http://www.w3.org/2000/svg'
+        height={size}
+        width={size}
+        // Retain original viewBox if no new viewBox is provided.
+        viewBox={svg.props.viewBox || '0 0 24 24'}
+        fill='currentColor' // Use currentColor to inherit the parent color.
+        style={{ width: size, height: size, ...style }}
+        {...others}>
+        {pathElements}
+      </svg>
+    );
+  };
+  // Add the displayName property to the CustomIcon component after its definition.
+  CustomIcon.displayName = displayName;
+  return CustomIcon;
+};
+
+export function AddressBookIcon({ size, style, ...others }: IconProps) {
   return (
     <svg
       xmlns='http://www.w3.org/2000/svg'
@@ -344,3 +372,25 @@ export function AddressBookIcon({ size, style, ...others }: AddressBookIconProps
     </svg>
   );
 }
+
+export function IconInfo({ size = '24px', style, ...others }: IconProps) {
+  return (
+    <svg
+      xmlns='http://www.w3.org/2000/svg'
+      height={size}
+      width={size}
+      viewBox='0 -960 960 960'
+      fill='currentColor'
+      style={{ ...style }}
+      {...others}>
+      <path d='M480-680q-33 0-56.5-23.5T400-760q0-33 23.5-56.5T480-840q33 0 56.5 23.5T560-760q0 33-23.5 56.5T480-680Zm-60 560v-480h120v480H420Z' />
+    </svg>
+  );
+}
+
+export const IconRupee = createCustomSvg(
+  <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
+    <path d='M549-120 280-400v-80h140q53 0 91.5-34.5T558-600H240v-80h306q-17-35-50.5-57.5T420-760H240v-80h480v80H590q14 17 25 37t17 43h88v80h-81q-8 85-70 142.5T420-400h-29l269 280H549Z' />
+  </svg>,
+  'IconRupee'
+);

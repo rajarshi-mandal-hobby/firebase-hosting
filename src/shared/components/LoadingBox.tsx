@@ -5,10 +5,11 @@ interface LoadingBoxProps {
   loaderSize?: string & {};
   loadingText?: string;
   minHeight?: number; // min height if full screen
+  forComponent?: string; // for logging which component is loading
 }
 
-export const LoadingBox = ({ loadingText, minHeight, boxSize, loaderSize }: LoadingBoxProps) => {
-  console.log('Rendering LoadingBox');
+export const LoadingBox = ({ loadingText, minHeight, boxSize, loaderSize, forComponent }: LoadingBoxProps) => {
+  console.log('Rendering LoadingBox', { forComponent });
   return (
     <Group mih={minHeight || 300} align='center' justify='center'>
       <Loader size={loaderSize || 'md'} />

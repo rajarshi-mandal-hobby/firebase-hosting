@@ -1,36 +1,15 @@
 # Instructions
 
-- You are the developer working on a Firebase React project along with the user.
-- Follow the user's instructions carefully and ask for clarification if needed.
+- Follow the user's instructions carefully and ALWAYS ask for clarifications.
 - Use the MCP Servers to assist yourself in development. Some are Memory, Sequential Thinking, Github and IDE built-in tools.
 - You should work along with the user to implement features, fix bugs, and maintain the codebase without introducing unnecessary complexity or deviating from established patterns unless explicitly instructed.
 - Always check for existing implementations before introducing new patterns or technologies.
-- Suggest improvements to the user only when they are clearly beneficial or is deviating from patterns.
+- Suggest improvements to the user only when they are clearly beneficial or is deviating from standard patterns.
 - Use the provided guidelines and technologies to ensure consistency and maintainability across the project.
-
-# Project Architecture Overview
-
-## Domain-Driven Structure
-
-This is a **Rent Management Application** for hostel/mess administration with feature-based organization:
-
-- `src/features/admin/` - Admin dashboard, member management, billing operations
-- `src/features/member-dashboard/` - Member-facing views and payment flows
-- `src/features/rent/` - Rent generation, payment tracking, electric bill management
-- `src/shared/` - Reusable components, types, utilities across features
-
-## Context-Centric State Management
-
-**AppContext** (`src/contexts/AppContext.tsx`) is the central hub managing real-time Firestore subscriptions and global state. Custom hooks in `src/contexts/hooks/` handle domain-specific operations:
-
-- `useMemberOperations` - CRUD operations for member management
-- `useBillingOperations` - Payment processing and bill generation
-- `useAdminOperations` - Admin configuration and role management
-- Hook-based pattern separates business logic from real-time state subscriptions
 
 ## Firebase Integration Patterns
 
-**Current Phase**: Development with emulators (Phase 1). Firebase services are prepared but mock data is used.
+**Current Phase**: Development with emulators (Phase 1). Firebase services are prepared and emulator data is used.
 
 - **Emulator Setup**: `npm run emulators` starts full Firebase emulator suite
 - **Data Seeding**: `npm run emulators:seed` populates emulator with mock data
@@ -66,52 +45,9 @@ This is a **Rent Management Application** for hostel/mess administration with fe
 
 ### React Best Practices
 
-- **Follow react-patterns.md** - Comprehensive React guidelines and hook selection
-- .kiro\steering\react-patterns.md
-
-### Mantine UI Standards
-
-- **Use Latest Version**: Always use the most recent Mantine version for latest features
-- **Official Documentation**: Reference https://mantine.dev/core/package/ for components
-- **Theming System**: Use MantineProvider and theme configuration https://mantine.dev/theming/mantine-provider/
-- **Component Consistency**: Leverage Mantine's built-in components over custom implementations
-- **Theme Customization**: Utilize Mantine's theming system for consistent design
-- **CSS Variables**: Use Mantine's CSS variable system for dynamic theming
-- **Component Props**: Use defaultProps for consistent component styling across the app
-- **Responsive Design**: Leverage Mantine's responsive utilities and breakpoints
-- **Form Handling**: Use Mantine's form components and validation patterns
-- **Accessibility**: Rely on Mantine's built-in accessibility features
-
-### Component Patterns
-
-- Use Mantine's defaultProps for consistent styling
-- Button radius: 'xl' for modern appearance
-- High-contrast design (black-on-white)
-- Bottom-center notifications
-- Progressive disclosure for complex features
-- **Form Patterns**: Use controlled components with validation hooks
-- **Modal Patterns**: Consistent modal structure with SharedModal wrapper
-- **Loading States**: Implement proper loading and error states for all async operations
+- Follow strict React 19 patterns (see `https://react.dev/learn/`)
 
 ## Critical Development Patterns
-
-### Modal Stack Pattern
-
-Complex modals use **Mantine's Modal.Stack** with multiple modals (see `GenerateBillsModal.tsx`):
-
-```tsx
-const stack = useModalsStack(['form', 'error', 'confirm']);
-// Form → Error (on failure) → Confirm (on success)
-```
-
-### Form State Management
-
-Forms handle month-based data caching with `useRef` Maps:
-
-```tsx
-const monthlyDataCache = useRef<Map<string, FormData>>(new Map());
-// Cache form data per billing month to preserve user input
-```
 
 ### Firebase Emulator Workflow
 
@@ -122,16 +58,6 @@ const monthlyDataCache = useRef<Map<string, FormData>>(new Map());
 - `npm run emulators:kill` - Force kill emulator processes
 - View data at: `http://127.0.0.1:4000/firestore`
 
-### Service Import Patterns
-
-Use direct service imports (no aggregated objects):
-
-```tsx
-import { MembersService } from '../data/services/membersService';
-import { ConfigService } from '../data/services/configService';
-// NOT: import { FirestoreService } from '...'
-```
-
 ## Current Development Mode
 
 - Local development with Vite server
@@ -139,7 +65,7 @@ import { ConfigService } from '../data/services/configService';
 
 ## Cross-Reference Guidelines
 
-- **React Patterns**: See `.kiro/steering/react-patterns.md` for comprehensive React best practices and hook selection
+- **React Patterns**: See https://react.dev/learn/ for comprehensive React best practices and hook selection
 
 ## Mantine Documentation References
 

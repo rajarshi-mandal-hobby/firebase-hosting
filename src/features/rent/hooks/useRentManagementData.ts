@@ -1,67 +1,73 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Member } from '../../../shared/types/firestore-types';
-import { getMembers } from '../../../data/services/membersService';
+import { getMembers, type MemberFilters } from '../../../data/services/membersService';
 
 /**
  * Custom hook for rent management data using FirestoreService with real-time updates
  */
 export const useRentManagementData = () => {
-  // State
+  const [refreshKey, setRefreshKey] = useState(0);
   const [members, setMembers] = useState<Member[]>([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [rentManagementError, setRentManagementError] = useState<unknown | null>(null);
+  const [isLoading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [filters, setFilters] = useState<MemberFilters>({ isActive: true });
 
+  const wifiMembersRef = useRef<Member[]>([]);
   const totalOutstandingRef = useRef(0);
   const hasLoadedRef = useRef(false);
 
-  const fetchMembersDb = (refresh = false) => {
-    getMembers({ refresh, isActive: true })
+  const fetchMembersDb = async ({ refresh = false, ...filters }: MemberFilters) => {
+    setError(null);
+    getMembers({ refresh, ...filters })
       .then(async (members) => {
-        members.some((member) => {
-          if (member.currentMonthRent.status === 'Partial') {
+        members.forEach((member) => {
+          if (member.isActive) {
             totalOutstandingRef.current += member.currentMonthRent.currentOutstanding;
-            return true; // break iteration
+            if (member.optedForWifi) {
+              wifiMembersRef.current.push(member);
+            }
           }
-          return false; // continue iteration
         });
         setMembers(members);
       })
       .catch((error) => {
-        setRentManagementError(error);
+        setError(error);
       })
       .finally(() => {
-        setInitialLoading(false);
+        setLoading(false);
       });
   };
-
-  const loadInitialData = useCallback(() => {
-    setInitialLoading(true);
-    setRentManagementError(null);
-    fetchMembersDb();
-  }, []);
-
-  const handleRefresh = useCallback(() => {
-    setInitialLoading(true);
-    setRentManagementError(null);
-    fetchMembersDb(true);
-  }, []);
 
   useEffect(() => {
     if (hasLoadedRef.current) return;
     hasLoadedRef.current = true;
-    loadInitialData();
-  }, [loadInitialData]);
+    fetchMembersDb(filters);
+  }, [refreshKey, filters]);
+
+  const handleRetry = () => {
+    hasLoadedRef.current = false;
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleRefresh = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    fetchMembersDb({ isActive: true });
+  }, []);
 
   // Actions
   const actions = {
-    refetch: handleRefresh,
+    handleRefresh,
+    handleRetry,
+    setFilters,
   };
 
   return {
     members,
+    wifiMembers: wifiMembersRef.current,
     totalOutstanding: totalOutstandingRef.current,
-    loading: initialLoading,
-    error: rentManagementError,
+    isLoading,
+    error,
     actions,
-  };
+  } as const;
 };

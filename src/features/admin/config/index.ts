@@ -1,1 +1,1 @@
-// Config Feature
+export { ConfigManagement as default } from './components/ConfigManagement';

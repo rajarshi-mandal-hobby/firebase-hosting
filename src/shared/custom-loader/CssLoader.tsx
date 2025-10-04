@@ -12,3 +12,5 @@ export const CssLoader: MantineLoaderComponent = forwardRef<HTMLSpanElement, Box
     return <Box component='span' className={cx(classes.loader, className)} {...props} ref={ref} />;
   }
 );
+
+CssLoader.displayName = 'CssLoader';

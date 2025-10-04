@@ -1,0 +1,8 @@
+.containerRoot {
+  width: max-content;
+}
+
+.notificationRoot {
+  width: max-content !important;
+  max-width: var(--notifications-container-width, calc(27.5rem * var(--mantine-scale))) !important;
+}
