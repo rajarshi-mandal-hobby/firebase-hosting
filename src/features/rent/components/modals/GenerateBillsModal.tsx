@@ -13,18 +13,23 @@ import {
   LoadingOverlay,
   Box,
   Textarea,
+  type ComboboxItem,
+  type OptionsFilter,
+  ScrollArea,
+  Input,
 } from '@mantine/core';
 import { type Floor } from '../../../../data/shemas/GlobalSettings';
 import { useGenerateBills, type GenerateBillsData } from './hooks/useGenerateBills';
 import { useForm } from '@mantine/form';
 import type { Member } from '../../../../shared/types/firestore-types';
 import { notify, notifyError } from '../../../../utils/notifications.tsx';
-import { useRef, useCallback, useMemo, useTransition, useState } from 'react';
+import { useRef, useCallback, useMemo, useTransition, useState, act } from 'react';
 import { MonthPickerInput } from '@mantine/dates';
 import { NumberInputWithCurrency } from '../../../../shared/components/NumberInputWithCurrency.tsx';
 import { GenerateBillModalSkeleton } from './GenerateBillModalSkeleton.tsx';
 import { fetchElectricBillByMonth } from '../../../../data/services/electricService.ts';
 import { fa, is, no } from 'zod/locales';
+import { set } from 'zod/v3';
 
 interface GenerateBillsModalProps {
   members: Member[];
@@ -110,7 +115,17 @@ export const GenerateBillsModal = ({ members, opened, onClose }: GenerateBillsMo
   return (
     <Modal.Stack>
       {/* Form Modal */}
-      <Modal {...stack.register('form')} title='Generate Bills' size='md' onClose={handleModalClose} opened={opened}>
+      <Modal
+        {...stack.register('form')}
+        title='Generate Bills'
+        size='md'
+        onClose={handleModalClose}
+        opened={opened}
+        styles={{
+          header: {
+            borderBottom: '1px solid var(--mantine-color-gray-3)',
+          },
+        }}>
         {!billingData || loading ? (
           <GenerateBillModalSkeleton />
         ) : (
@@ -244,8 +259,16 @@ const FormContent = ({
     throw new Error('Billing months data is incomplete');
   }
 
-  const { wifiMemberIds, activeMemberIdsByFloor, activeMembers } = useMemo(() => {
-    const wifiIds: string[] = [];
+  const optionsFilter: OptionsFilter = ({ options, search }) => {
+    const filtered = (options as ComboboxItem[]).filter((option) =>
+      option.label.toLowerCase().trim().includes(search.toLowerCase().trim())
+    );
+
+    filtered.sort((a, b) => a.label.localeCompare(b.label));
+    return filtered;
+  };
+
+  const { activeMemberIdsByFloor, activeMembers } = useMemo(() => {
     const floorIds = {
       '2nd': [] as string[],
       '3rd': [] as string[],
@@ -253,43 +276,19 @@ const FormContent = ({
     const memberOptions = members.reduce((acc: { value: string; label: string }[], member) => {
       if (member.isActive) {
         acc.push({ value: member.id, label: member.name || 'Unnamed' });
-        if (member.optedForWifi) wifiIds.push(member.id);
         floorIds[member.floor].push(member.id);
       }
       return acc;
     }, []);
 
     return {
-      wifiMemberIds: wifiIds,
       activeMemberIdsByFloor: floorIds,
       activeMembers: memberOptions,
     };
   }, [members]);
 
-  const [floorBillAmounts, setFloorBillAmounts] = useState<{ [F in Floor]: number | '0' }>({
-    '2nd': '0',
-    '3rd': '0',
-  });
-
   // State to track selected expense members for reactive switch updates
   const [selectedExpenseMembers, setSelectedExpenseMembers] = useState<string[]>([]);
-
-  const computeFloorBill = useCallback((values: FormData) => {
-    const secondFloorBill = values.secondFloorElectricityBill;
-    const thirdFloorBill = values.thirdFloorElectricityBill;
-    const secondFloorMembers = values.activeMemberCounts?.['2nd'] || 0;
-    const thirdFloorMembers = values.activeMemberCounts?.['3rd'] || 0;
-
-    setFloorBillAmounts({
-      '2nd': secondFloorBill && secondFloorMembers ? Math.ceil(secondFloorBill / secondFloorMembers) : '0',
-      '3rd': thirdFloorBill && thirdFloorMembers ? Math.ceil(thirdFloorBill / thirdFloorMembers) : '0',
-    });
-  }, []);
-
-  const monthlyDataCache = useRef<Map<string, FormData>>(new Map());
-  const monthlyInitialValuesCache = useRef<Map<string, FormData>>(new Map());
-  const isProcessingRef = useRef(false);
-  const [isFetching, setIsFetching] = useState(false);
 
   const form = useForm<FormData>({
     mode: 'uncontrolled',
@@ -308,149 +307,329 @@ const FormContent = ({
       secondFloorElectricityBill: undefined,
       thirdFloorElectricityBill: undefined,
     },
-    onValuesChange(values, previous) {
-    //   // Prevent processing during programmatic updates
-    //   if (isProcessingRef.current) return;
+    onValuesChange: (values, previous) => {
+      if (isProcessingRef.current) return;
+      console.log('Form values changed:', { values, previous });
+      computeFloorBill(values, previous);
+      computeWifiCharges(values, previous);
 
-    //   console.log('Form values changed:', { values, previous });
-    //   const currentMonthKey = new Date(values.billingMonths.nextBillingMonth || '').toISOString().slice(0, 7);
-    //   const previousMonthKey = new Date(previous.billingMonths.nextBillingMonth || '').toISOString().slice(0, 7);
-
-    //   // Compute floor bills on relevant field changes
-    //   if (
-    //     previous.secondFloorElectricityBill !== values.secondFloorElectricityBill ||
-    //     previous.thirdFloorElectricityBill !== values.thirdFloorElectricityBill ||
-    //     previous.activeMemberCounts?.['2nd'] !== values.activeMemberCounts?.['2nd'] ||
-    //     previous.activeMemberCounts?.['3rd'] !== values.activeMemberCounts?.['3rd']
-    //   ) {
-    //     computeFloorBill(values);
-    //   }
-
-    //   // Update selected expense members state when it changes
-    //   if (previous.additionalExpenses?.addExpenseMemberIds !== values.additionalExpenses?.addExpenseMemberIds) {
-    //     setSelectedExpenseMembers(values.additionalExpenses?.addExpenseMemberIds || []);
-    //   }
-
-    //   // Handle month changes
-    //   if (currentMonthKey && previousMonthKey && currentMonthKey !== previousMonthKey) {
-    //     handleMonthChange(currentMonthKey, previousMonthKey, values, previous);
-    //   }
-    },
-  });
-
-  form.watch('billingMonths.nextBillingMonth', ({ value: nextDate, previousValue: previousDate }) => {
-      const currentMonthKey = new Date(nextDate || '').toISOString().slice(0, 7);
-      const previousMonthKey = new Date(previousDate || '').toISOString().slice(0, 7);
-
-      handleMonthChange(currentMonthKey, previousMonthKey, form.getValues(), form.getInitialValues());
-  });
-
-  // Extracted month change handler for clarity
-  const handleMonthChange = useCallback(
-    async (currentMonthKey: string, previousMonthKey: string, values: FormData, previous: FormData) => {
-      console.log(`Month changed from ${previousMonthKey} to ${currentMonthKey}`);
-
-      // Step 1: Always save previous month's data
-      monthlyDataCache.current.set(previousMonthKey, { ...previous });
-      // Also cache initial values for the month if not already cached
-      if (!monthlyInitialValuesCache.current.has(previousMonthKey)) {
-        monthlyInitialValuesCache.current.set(previousMonthKey, form.getInitialValues());
+      // Compute additional charges per head
+      const expenseAmount = values.additionalExpenses?.addExpenseAmount || 0;
+      const expenseMemberCount = values.additionalExpenses?.addExpenseMemberIds?.length || 0;
+      const newPerHead = expenseAmount && expenseMemberCount ? Math.ceil(expenseAmount / expenseMemberCount) : 0;
+      if (newPerHead !== additionalChargesPerHead) {
+        setAdditionalChargesPerHead(newPerHead);
       }
 
-      // Step 2: Check for cached data
-      const cachedData = monthlyDataCache.current.get(currentMonthKey);
-      const cachedInitialValues = monthlyInitialValuesCache.current.get(currentMonthKey);
+      // Update selectedExpenseMembers state when the MultiSelect changes
+      const newSelection = values.additionalExpenses?.addExpenseMemberIds || [];
+      if (newSelection.length !== selectedExpenseMembers.length) {
+        console.log('I am called in onValuesChange');
+        setSelectedExpenseMembers(newSelection);
+      }
+    },
+    validateInputOnChange: true,
+  });
 
-      if (cachedData) {
-        console.log(`Restoring cached data for ${currentMonthKey}`);
-        isProcessingRef.current = true;
-        form.setValues(cachedData);
-        form.resetDirty(cachedInitialValues);
-        // Update selected expense members from cached data
-        setSelectedExpenseMembers(cachedData.additionalExpenses?.addExpenseMemberIds || []);
-        isProcessingRef.current = false;
+  const computePerHeadBill = (totalBill: number | undefined, memberCount: number) => {
+    return totalBill && memberCount ? Math.ceil(totalBill / memberCount) : 0;
+  };
+
+  const [floorBillAmounts, setFloorBillAmounts] = useState<{ [F in Floor]: number }>(() => {
+    const currentFormValues = form.getValues();
+    const secondFloorBill = computePerHeadBill(
+      currentFormValues.secondFloorElectricityBill,
+      currentFormValues.activeMemberCounts['2nd']
+    );
+    const thirdFloorBill = computePerHeadBill(
+      currentFormValues.thirdFloorElectricityBill,
+      currentFormValues.activeMemberCounts['3rd']
+    );
+
+    return {
+      '2nd': secondFloorBill,
+      '3rd': thirdFloorBill,
+    };
+  });
+
+  const computeFloorBill = (values: FormData, previous: FormData) => {
+    const secondFloorBill = values.secondFloorElectricityBill;
+    const thirdFloorBill = values.thirdFloorElectricityBill;
+    const secondFloorMembers = values.activeMemberCounts['2nd'];
+    const thirdFloorMembers = values.activeMemberCounts['3rd'];
+
+    if (
+      secondFloorBill !== previous.secondFloorElectricityBill ||
+      secondFloorMembers !== previous.activeMemberCounts['2nd'] ||
+      thirdFloorBill !== previous.thirdFloorElectricityBill ||
+      thirdFloorMembers !== previous.activeMemberCounts['3rd']
+    ) {
+      setFloorBillAmounts({
+        '2nd': computePerHeadBill(secondFloorBill, secondFloorMembers),
+        '3rd': computePerHeadBill(thirdFloorBill, thirdFloorMembers),
+      });
+    }
+  };
+
+  const monthlyDataCache = useRef<Map<string, FormData>>(new Map());
+  const monthlyInitialValuesCache = useRef<Map<string, FormData>>(new Map());
+  const isProcessingRef = useRef(false);
+  const [isFetching, setIsFetching] = useState(false);
+
+  const [wifiCharges, setWifiCharges] = useState(() => {
+    const wifiMonthlyCharge = data.wifiCharges.wifiMonthlyCharge || 0;
+    const wifiMemberCount = data.wifiCharges.wifiMemberIds.length || 0;
+    return wifiMonthlyCharge && wifiMemberCount
+      ? Math.ceil(data.wifiCharges.wifiMonthlyCharge / data.wifiCharges.wifiMemberIds.length)
+      : 0;
+  });
+
+  // Add state for additional charges per head
+  const [additionalChargesPerHead, setAdditionalChargesPerHead] = useState(0);
+
+  const computeWifiCharges = useMemo(
+    () => (values: FormData, previous: FormData) => {
+      const wifiMemberIds = values.wifiCharges?.wifiMemberIds?.length || 0;
+      const wifiMonthlyCharge = values.wifiCharges?.wifiMonthlyCharge || 0;
+
+      if (
+        wifiMemberIds !== previous.wifiCharges?.wifiMemberIds?.length ||
+        wifiMonthlyCharge !== previous.wifiCharges.wifiMonthlyCharge
+      ) {
+        // Update the form state or perform any necessary actions
+        setWifiCharges(wifiMonthlyCharge && wifiMemberIds ? Math.ceil(wifiMonthlyCharge / wifiMemberIds) : 0);
+      }
+    },
+    []
+  );
+
+  const isUpdatingRef = useRef(false);
+
+  // Watch for month changes
+  form.watch('billingMonths.nextBillingMonth', ({ value: nextDate, previousValue: previousDate }) => {
+    // Skip if we're in the middle of processing
+    if (isProcessingRef.current) {
+      return;
+    }
+
+    const currentMonthKey = new Date(nextDate || '').toISOString().slice(0, 7);
+    const previousMonthKey = new Date(previousDate || '').toISOString().slice(0, 7);
+
+    console.log('Detected month change:', { currentMonthKey, previousMonthKey });
+
+    if (previousMonthKey === currentMonthKey) {
+      isProcessingRef.current = true;
+      form.setFieldValue('billingMonths.nextBillingMonth', previousDate);
+      isProcessingRef.current = false;
+      return;
+    }
+
+    // Only trigger if the month actually changed
+    if (currentMonthKey !== previousMonthKey) {
+      // First is always Generate, subsequent toggles are Update or Generate
+      isUpdatingRef.current = !isUpdatingRef.current;
+
+      handleMonthChange(currentMonthKey, previousMonthKey);
+    }
+  });
+
+  // Extracted month change handler
+  const handleMonthChange = useCallback(
+    async (currentMonthKey: string, previousMonthKey: string) => {
+      // Prevent re-entry
+      if (isProcessingRef.current) {
         return;
       }
 
-      // Step 3: Fetch data for new month
-      console.log(`Fetching electric bill for ${currentMonthKey}`);
-      setIsFetching(true);
+      console.log(`Month changed from ${previousMonthKey} to ${currentMonthKey}`);
+
+      // Set processing flag immediately
+      isProcessingRef.current = true;
 
       try {
-        const bill = await fetchElectricBillByMonth(currentMonthKey);
+        const previousValues = form.getValues();
 
-        // CRITICAL FIX: Preserve the user's exact Date object to prevent re-triggering onValuesChange
-        const billData: FormData = {
+        // Step 1: Always save previous month's data (with correct date)
+        console.log(`Saving data for ${previousMonthKey}`);
+        const dataToCache = {
+          ...previousValues,
           billingMonths: {
-            currentBillingMonth: data.billingMonths.currentBillingMonth.toDate(),
-            nextBillingMonth: values.billingMonths.nextBillingMonth, // Use existing Date object
-          },
-          secondFloorElectricityBill: bill.floorCosts['2nd'].bill,
-          thirdFloorElectricityBill: bill.floorCosts['3rd'].bill,
-          activeMemberCounts: {
-            '2nd': bill.floorCosts['2nd'].totalMembers,
-            '3rd': bill.floorCosts['3rd'].totalMembers,
-          },
-          additionalExpenses: {
-            addExpenseMemberIds: bill.expenses.members || [],
-            addExpenseAmount: bill.expenses.amount,
-            addExpenseDescription: bill.expenses.description,
-          },
-          wifiCharges: {
-            wifiMonthlyCharge: bill.wifiCharges.amount,
-            wifiMemberIds: bill.wifiCharges.members || [],
+            ...previousValues.billingMonths,
+            // Store with the actual month key date
+            nextBillingMonth: new Date(previousMonthKey + '-01'),
           },
         };
+        monthlyDataCache.current.set(previousMonthKey, dataToCache);
 
-        // Cache and apply
-        monthlyDataCache.current.set(currentMonthKey, billData);
-        monthlyInitialValuesCache.current.set(currentMonthKey, billData);
-
-        isProcessingRef.current = true;
-        form.setValues(billData);
-        form.resetDirty(billData);
-        // Update selected expense members from fetched data
-        setSelectedExpenseMembers(billData.additionalExpenses?.addExpenseMemberIds || []);
-        isProcessingRef.current = false;
-
-        console.log(`Successfully loaded bill data for ${currentMonthKey}`);
-      } catch (fetchError) {
-        console.error(`Failed to fetch bill for ${currentMonthKey}:`, fetchError);
-
-        // Revert to previous month on error
-        const previousData = monthlyDataCache.current.get(previousMonthKey);
-        const previousInitialValues = monthlyInitialValuesCache.current.get(previousMonthKey);
-        if (previousData) {
-          isProcessingRef.current = true;
-          form.setValues(previousData);
-          form.resetDirty(previousInitialValues);
-          // Restore selected expense members from previous data
-          setSelectedExpenseMembers(previousData.additionalExpenses?.addExpenseMemberIds || []);
-          isProcessingRef.current = false;
+        // Cache initial values for previous month if not already cached
+        if (!monthlyInitialValuesCache.current.has(previousMonthKey)) {
+          monthlyInitialValuesCache.current.set(previousMonthKey, form.getInitialValues());
         }
 
-        notifyError(
-          fetchError instanceof Error ? fetchError.message : `Failed to fetch electric bill for ${currentMonthKey}`
-        );
-        onError('bill');
+        // Step 2: Check for cached data for the new month
+        const cachedData = monthlyDataCache.current.get(currentMonthKey);
+        const cachedInitialValues = monthlyInitialValuesCache.current.get(currentMonthKey);
+
+        if (cachedData) {
+          console.log(`Restoring cached data for ${currentMonthKey}`);
+
+          // Restore with the correct date for the current month
+          const dataToRestore = {
+            ...cachedData,
+            billingMonths: {
+              ...cachedData.billingMonths,
+              nextBillingMonth: new Date(currentMonthKey + '-01'),
+            },
+          };
+
+          form.setValues(dataToRestore);
+          form.resetDirty(cachedInitialValues);
+          setSelectedExpenseMembers(cachedData.additionalExpenses?.addExpenseMemberIds || []);
+
+          // Update additionalChargesPerHead from cached data
+          const expenseAmount = cachedData.additionalExpenses?.addExpenseAmount || 0;
+          const expenseMemberCount = cachedData.additionalExpenses?.addExpenseMemberIds?.length || 0;
+          setAdditionalChargesPerHead(computePerHeadBill(expenseAmount, expenseMemberCount));
+
+          // Update wifiCharges from cached data
+          const wifiMonthlyCharge = cachedData.wifiCharges?.wifiMonthlyCharge || 0;
+          const wifiMemberCount = cachedData.wifiCharges?.wifiMemberIds?.length || 0;
+          setWifiCharges(computePerHeadBill(wifiMonthlyCharge, wifiMemberCount));
+
+          return;
+        }
+
+        // Step 3: Fetch data for new month
+        console.log(`Fetching electric bill for ${currentMonthKey}`);
+        setIsFetching(true);
+
+        try {
+          const bill = await fetchElectricBillByMonth(currentMonthKey);
+
+          const billData: FormData = {
+            billingMonths: {
+              currentBillingMonth: data.billingMonths.currentBillingMonth.toDate(),
+              nextBillingMonth: new Date(currentMonthKey + '-01'), // Use the month key to create correct date
+            },
+            secondFloorElectricityBill: bill.floorCosts['2nd'].bill,
+            thirdFloorElectricityBill: bill.floorCosts['3rd'].bill,
+            activeMemberCounts: {
+              '2nd': bill.floorCosts['2nd'].totalMembers,
+              '3rd': bill.floorCosts['3rd'].totalMembers,
+            },
+            additionalExpenses: {
+              addExpenseMemberIds: bill.expenses.members || [],
+              addExpenseAmount: bill.expenses.amount,
+              addExpenseDescription: bill.expenses.description,
+            },
+            wifiCharges: {
+              wifiMonthlyCharge: bill.wifiCharges.amount,
+              wifiMemberIds: bill.wifiCharges.members || [],
+            },
+          };
+
+          // Cache data
+          monthlyDataCache.current.set(currentMonthKey, billData);
+          monthlyInitialValuesCache.current.set(currentMonthKey, billData);
+
+          // Update currentMonthRef BEFORE setting values
+          //   currentMonthRef.current = currentMonthKey;
+
+          if (
+            activeMembers.length !== bill.expenses.members.length ||
+            activeMembers.length !== bill.wifiCharges.members.length
+          ) {
+            console.log(
+              `Warning: Active members count (${activeMembers.length}) does not match bill expense members count (${
+                bill.expenses.members?.length || 0
+              })`
+            );
+            const allBillMembers = new Set([...(bill.expenses.members || []), ...(bill.wifiCharges.members || [])]);
+            const missingMembers = Array.from(allBillMembers).filter(
+              (mId) => !activeMembers.some((am) => am.value === mId)
+            );
+
+            if (missingMembers.length > 0) {
+              console.log(`Missing members in active list: ${missingMembers.join(', ')}`);
+              activeMembers.push(
+                ...missingMembers.map((mId) => ({ value: mId, label: 'Deleted member', disabled: true }))
+              );
+            }
+          }
+
+          form.setValues(billData);
+          form.resetDirty(billData);
+          setSelectedExpenseMembers(billData.additionalExpenses?.addExpenseMemberIds || []);
+
+          // Update additionalChargesPerHead from cached data
+          const expenseAmount = billData.additionalExpenses?.addExpenseAmount || 0;
+          const expenseMemberCount = billData.additionalExpenses?.addExpenseMemberIds?.length || 0;
+          setAdditionalChargesPerHead(computePerHeadBill(expenseAmount, expenseMemberCount));
+
+          // Update wifiCharges from cached data
+          const wifiMonthlyCharge = billData.wifiCharges?.wifiMonthlyCharge || 0;
+          const wifiMemberCount = billData.wifiCharges?.wifiMemberIds?.length || 0;
+          setWifiCharges(computePerHeadBill(wifiMonthlyCharge, wifiMemberCount));
+
+          console.log(`Successfully loaded bill data for ${currentMonthKey}`);
+        } catch (fetchError) {
+          console.error(`Failed to fetch bill for ${currentMonthKey}:`, fetchError);
+
+          // Revert to previous month
+          const previousData = monthlyDataCache.current.get(previousMonthKey);
+          const previousInitialValues = monthlyInitialValuesCache.current.get(previousMonthKey);
+
+          if (previousData) {
+            // Update currentMonthRef back to previous month
+            // currentMonthRef.current = previousMonthKey;
+
+            // Restore with correct date for previous month
+            const dataToRestore = {
+              ...previousData,
+              billingMonths: {
+                ...previousData.billingMonths,
+                nextBillingMonth: new Date(previousMonthKey + '-01'),
+              },
+            };
+
+            form.setValues(dataToRestore);
+            form.resetDirty(previousInitialValues);
+            setSelectedExpenseMembers(previousData.additionalExpenses?.addExpenseMemberIds || []);
+
+            // Update additionalChargesPerHead from cached data
+            const expenseAmount = previousData.additionalExpenses?.addExpenseAmount || 0;
+            const expenseMemberCount = previousData.additionalExpenses?.addExpenseMemberIds?.length || 0;
+            setAdditionalChargesPerHead(computePerHeadBill(expenseAmount, expenseMemberCount));
+
+            // Update wifiCharges from cached data
+            const wifiMonthlyCharge = previousData.wifiCharges?.wifiMonthlyCharge || 0;
+            const wifiMemberCount = previousData.wifiCharges?.wifiMemberIds?.length || 0;
+            setWifiCharges(computePerHeadBill(wifiMonthlyCharge, wifiMemberCount));
+          }
+
+          notifyError(
+            fetchError instanceof Error ? fetchError.message : `Failed to fetch electric bill for ${currentMonthKey}`
+          );
+          onError('bill');
+        } finally {
+          setIsFetching(false);
+        }
       } finally {
-        setIsFetching(false);
+        // Always reset processing flag
+        isProcessingRef.current = false;
       }
     },
-    [data.billingMonths, form, onError]
+    [data.billingMonths, form, onError, activeMembers]
   );
 
-  // Calculate floor selection state based on reactive state
-  const floorSelectionState = useMemo(() => {
-    return {
-      '2nd':
-        activeMemberIdsByFloor['2nd'].length > 0 &&
-        activeMemberIdsByFloor['2nd'].every((id) => selectedExpenseMembers.includes(id)),
-      '3rd':
-        activeMemberIdsByFloor['3rd'].length > 0 &&
-        activeMemberIdsByFloor['3rd'].every((id) => selectedExpenseMembers.includes(id)),
-    };
-  }, [selectedExpenseMembers, activeMemberIdsByFloor]);
+  // Derive floor selection state from selectedExpenseMembers (no ref needed)
+  const floorSelectionState = useMemo(
+    () => ({
+      '2nd': activeMemberIdsByFloor['2nd'].every((id) => selectedExpenseMembers.includes(id)),
+      '3rd': activeMemberIdsByFloor['3rd'].every((id) => selectedExpenseMembers.includes(id)),
+    }),
+    [selectedExpenseMembers, activeMemberIdsByFloor]
+  );
 
   const toggleFloorExpense = useCallback(
     (floor: Floor, checked: boolean) => {
@@ -470,18 +649,20 @@ const FormContent = ({
     [selectedExpenseMembers, activeMemberIdsByFloor, form]
   );
 
-  const isCurrentMonth = useMemo(() => {
-    const selectedMonthKey = new Date(form.values.billingMonths?.nextBillingMonth || '').toISOString().slice(0, 7);
-    const currentMonthKey = data.billingMonths.currentBillingMonth.toDate().toISOString().slice(0, 7);
-    return selectedMonthKey === currentMonthKey;
-  }, [form.values.billingMonths?.nextBillingMonth, data.billingMonths.currentBillingMonth]);
+  const handleReset = () => {
+    form.reset();
+    // Manually reset states to ensure UI consistency
+    setSelectedExpenseMembers([]);
+    setAdditionalChargesPerHead(0); // Reset additional charges per head
+  };
 
+  console.log('Rendering FormContent');
   return (
     <form onSubmit={form.onSubmit(onSubmit)}>
       <Box pos='relative'>
         <LoadingOverlay visible={isFetching} zIndex={1000} overlayProps={{ radius: 'sm', blur: 2 }} />
 
-        <Stack gap='lg'>
+        <Stack gap='lg' mt='xl'>
           <Group gap='xs' align='center'>
             <Text size='sm' fw={500} flex={1}>
               Billing Month:
@@ -491,6 +672,9 @@ const FormContent = ({
               defaultValue={data.billingMonths.nextBillingMonth.toDate()}
               minDate={data.billingMonths.currentBillingMonth.toDate()}
               maxDate={data.billingMonths.nextBillingMonth.toDate()}
+              popoverProps={{
+                transitionProps: { transition: 'pop', duration: 200 },
+              }}
               required
               flex={2}
               disabled={isFetching}
@@ -500,14 +684,15 @@ const FormContent = ({
 
           <Divider label='Electricity Charges' labelPosition='left' mt='md' />
 
-          <Group align='flex-end'>
+          <Group align='flex-end' justify='center'>
             <NumberInputWithCurrency
               required
               label='2nd Floor'
-              description={`₹${floorBillAmounts['2nd']} per member`}
+              description={`₹${floorBillAmounts['2nd']}/member`}
               placeholder='500'
               min={0}
               flex={2}
+              inputWrapperOrder={['label', 'input', 'description', 'error']}
               key={form.key('secondFloorElectricityBill')}
               {...form.getInputProps('secondFloorElectricityBill')}
             />
@@ -526,7 +711,7 @@ const FormContent = ({
             <NumberInputWithCurrency
               required
               label='3rd Floor'
-              description={`₹${floorBillAmounts['3rd']} per member`}
+              description={`₹${floorBillAmounts['3rd']}/member`}
               placeholder='500'
               min={0}
               flex={2}
@@ -562,10 +747,11 @@ const FormContent = ({
               label='Select Members'
               data={activeMembers}
               placeholder={form.values.additionalExpenses?.addExpenseMemberIds?.length ? '' : 'Select members'}
+              required={!!form.values.additionalExpenses?.addExpenseAmount} // Required if amount is filled
               hidePickedOptions
               maxDropdownHeight={200}
               comboboxProps={{
-                transitionProps: { transition: 'scale', duration: 200 },
+                transitionProps: { transition: 'pop', duration: 200 },
                 shadow: 'md',
               }}
               flex={2}
@@ -574,18 +760,30 @@ const FormContent = ({
             />
             <NumberInputWithCurrency
               label='Amount'
+              description={additionalChargesPerHead ? `₹${additionalChargesPerHead}/member` : undefined}
+              required={!!form.values.additionalExpenses?.addExpenseMemberIds?.length} // Required if members are selected
               flex={1}
               placeholder='100'
               key={form.key('additionalExpenses.addExpenseAmount')}
               {...form.getInputProps('additionalExpenses.addExpenseAmount')}
             />
           </Group>
+
           <Textarea
             label='Description'
             autosize
             minRows={1}
-            bdrs='xl'
             placeholder='Enter expense description'
+            required={
+              !!form.values.additionalExpenses?.addExpenseAmount ||
+              !!form.values.additionalExpenses?.addExpenseMemberIds?.length
+            } // Required if either amount or members are filled
+            rightSection={
+              form.values.additionalExpenses?.addExpenseDescription ? (
+                <Input.ClearButton onClick={() => form.setFieldValue('additionalExpenses.addExpenseDescription', '')} />
+              ) : undefined
+            }
+            rightSectionPointerEvents='auto'
             key={form.key('additionalExpenses.addExpenseDescription')}
             {...form.getInputProps('additionalExpenses.addExpenseDescription')}
           />
@@ -596,11 +794,13 @@ const FormContent = ({
             <MultiSelect
               label='WiFi Members'
               data={activeMembers}
-              placeholder='Select members'
+              required={!!form.getValues().wifiCharges?.wifiMonthlyCharge} // Required if amount is filled
+              placeholder={form.getValues().wifiCharges?.wifiMemberIds?.length ? '' : 'Select members'}
               hidePickedOptions
               maxDropdownHeight={200}
+              filter={optionsFilter}
               comboboxProps={{
-                transitionProps: { transition: 'scale', duration: 200 },
+                transitionProps: { transition: 'pop', duration: 200 },
                 shadow: 'md',
               }}
               flex={2}
@@ -611,6 +811,8 @@ const FormContent = ({
             <NumberInputWithCurrency
               label='Amount'
               placeholder='600'
+              required={!!form.getValues().wifiCharges?.wifiMemberIds?.length} // Required if members are selected
+              description={wifiCharges ? `₹${wifiCharges}/member` : undefined}
               flex={1}
               step={50}
               key={form.key('wifiCharges.wifiMonthlyCharge')}
@@ -623,11 +825,11 @@ const FormContent = ({
               Cancel
             </Button>
             <Group justify='flex-end'>
-              <Button variant='outline' disabled={!form.isDirty() || isFetching} onClick={() => form.reset()}>
+              <Button variant='outline' disabled={!form.isDirty() || isFetching} onClick={handleReset}>
                 Reset
               </Button>
               <Button type='submit' loading={isFetching} disabled={!form.isDirty()}>
-                {isCurrentMonth ? 'Generate' : 'Update'}
+                {isUpdatingRef.current ? 'Update' : 'Generate'}
               </Button>
             </Group>
           </Group>

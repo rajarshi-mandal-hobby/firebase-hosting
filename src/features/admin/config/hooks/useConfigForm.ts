@@ -1,10 +1,11 @@
 import { useForm } from '@mantine/form';
-import { useEffect, useActionState, startTransition } from 'react';
+import { useEffect, useActionState, startTransition, useRef } from 'react';
 import { saveGlobalSettings } from '../../../../data/services/configService';
 import type { SaveResult } from '../../../../data/shemas/formResults';
 import { GlobalSettings, type GlobalSettingsFormValues } from '../../../../data/shemas/GlobalSettings';
 import { notifyLoading, notifyUpdate } from '../../../../utils/notifications';
 import { formValidator, zInteger, zStringTrimmed } from '../../../../utils/validators';
+import { fa } from 'zod/locales';
 
 const sanitizeValues = (values: GlobalSettingsFormValues): GlobalSettingsFormValues => ({
   bedRents: {
@@ -65,9 +66,12 @@ export const useConfigForm = (settings: GlobalSettings, handleRefresh: () => voi
     transformValues: sanitizeValues,
   });
 
+  const validatedOnMountRef = useRef(false);
+
   // Validate form on mount
   useEffect(() => {
-    if (form.isValid()) return;
+    if (validatedOnMountRef.current || form.isValid()) return;
+    validatedOnMountRef.current = true;
     form.validate();
   }, [form]);
 

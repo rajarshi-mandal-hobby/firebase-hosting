@@ -1,5 +1,6 @@
-const loading = false;
-const error = 'error';
-const obj = { a: 1 };
+const old = [1, 2];
+const newValues = [1, 2, 3];
 
-console.log(!obj && !!error || loading);
+// Find added values
+const added = newValues.filter(x => !old.includes(x));
+console.log('Added values:', added); // Output: [3]
