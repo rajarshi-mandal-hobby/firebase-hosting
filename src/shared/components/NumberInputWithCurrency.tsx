@@ -1,6 +1,4 @@
-import { NumberInput, Loader } from '@mantine/core';
-import type { NumberInputProps } from '@mantine/core';
-import { forwardRef } from 'react';
+import { NumberInput } from '@mantine/core';
 import { IconRupee } from './icons';
 
 // Remove ref from props interface, let forwardRef handle it
@@ -9,4 +7,5 @@ export const NumberInputWithCurrency = NumberInput.withProps({
   stepHoldDelay: 500,
   stepHoldInterval: 100,
   step: 100,
+  allowNegative: false,
 });

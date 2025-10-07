@@ -13,23 +13,19 @@ import {
   LoadingOverlay,
   Box,
   Textarea,
-  type ComboboxItem,
-  type OptionsFilter,
-  ScrollArea,
   Input,
 } from '@mantine/core';
 import { type Floor } from '../../../../data/shemas/GlobalSettings';
 import { useGenerateBills, type GenerateBillsData } from './hooks/useGenerateBills';
 import { useForm } from '@mantine/form';
 import type { Member } from '../../../../shared/types/firestore-types';
-import { notify, notifyError } from '../../../../utils/notifications.tsx';
-import { useRef, useCallback, useMemo, useTransition, useState, act } from 'react';
+import { notifyError } from '../../../../utils/notifications.tsx';
+import { useRef, useCallback, useMemo, useState, useDeferredValue } from 'react';
 import { MonthPickerInput } from '@mantine/dates';
 import { NumberInputWithCurrency } from '../../../../shared/components/NumberInputWithCurrency.tsx';
 import { GenerateBillModalSkeleton } from './GenerateBillModalSkeleton.tsx';
 import { fetchElectricBillByMonth } from '../../../../data/services/electricService.ts';
-import { fa, is, no } from 'zod/locales';
-import { set } from 'zod/v3';
+import { fa } from 'zod/locales';
 
 interface GenerateBillsModalProps {
   members: Member[];
@@ -98,11 +94,9 @@ export const GenerateBillsModal = ({ members, opened, onClose }: GenerateBillsMo
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       stack.closeAll();
-      notify.success('Bills generated successfully!');
       handleModalClose();
     } catch (error) {
       console.error('Error generating bills:', error);
-      notify.error('Failed to generate bills');
     }
   }, [stack, handleModalClose]);
 
@@ -136,7 +130,6 @@ export const GenerateBillsModal = ({ members, opened, onClose }: GenerateBillsMo
             error={error}
             onSubmit={handleFormSubmit}
             onClose={handleModalClose}
-            onError={() => stack.toggle('error')}
           />
         )}
       </Modal>
@@ -149,7 +142,9 @@ export const GenerateBillsModal = ({ members, opened, onClose }: GenerateBillsMo
         size='sm'
         onClose={handleModalClose}>
         <Stack>
-          <Text>{error?.message}</Text>
+          <Text size='sm' ff='monospace'>
+            {error?.message}
+          </Text>
           <Group justify='flex-end' mt='md'>
             <Button variant='outline' onClick={handleModalClose}>
               Cancel
@@ -246,27 +241,16 @@ const FormContent = ({
   error,
   onSubmit,
   onClose,
-  onError,
 }: {
   members: Member[];
   data: GenerateBillsData;
   error: unknown;
   onSubmit: (formData: FormData) => void;
   onClose: () => void;
-  onError: (from: string) => void;
 }) => {
   if (!data.billingMonths) {
     throw new Error('Billing months data is incomplete');
   }
-
-  const optionsFilter: OptionsFilter = ({ options, search }) => {
-    const filtered = (options as ComboboxItem[]).filter((option) =>
-      option.label.toLowerCase().trim().includes(search.toLowerCase().trim())
-    );
-
-    filtered.sort((a, b) => a.label.localeCompare(b.label));
-    return filtered;
-  };
 
   const { activeMemberIdsByFloor, activeMembers } = useMemo(() => {
     const floorIds = {
@@ -287,8 +271,20 @@ const FormContent = ({
     };
   }, [members]);
 
-  // State to track selected expense members for reactive switch updates
-  const [selectedExpenseMembers, setSelectedExpenseMembers] = useState<string[]>([]);
+  const [wifiCharges, setWifiCharges] = useState(() => {
+    const wifiMonthlyCharge = data.wifiCharges.wifiMonthlyCharge || 0;
+    const wifiMemberCount = data.wifiCharges.wifiMemberIds.length || 0;
+    return wifiMonthlyCharge && wifiMemberCount
+      ? Math.ceil(data.wifiCharges.wifiMonthlyCharge / data.wifiCharges.wifiMemberIds.length)
+      : 0;
+  });
+
+  const computePerHeadBill = (totalBill: number | undefined, memberCount: number) => {
+    return totalBill && memberCount ? Math.ceil(totalBill / memberCount) : 0;
+  };
+
+  const [resetExpensesGroup, setResetExpensesGroup] = useState(false);
+  const [resetWifiGroup, setResetWifiGroup] = useState(false);
 
   const form = useForm<FormData>({
     mode: 'uncontrolled',
@@ -309,31 +305,35 @@ const FormContent = ({
     },
     onValuesChange: (values, previous) => {
       if (isProcessingRef.current) return;
-      console.log('Form values changed:', { values, previous });
+      console.log('🎨 onValuesChange triggered with values:', values);
+
+      setResetExpensesGroup(!!values.additionalExpenses?.addExpenseAmount);
+      setResetWifiGroup(!!values.wifiCharges?.wifiMonthlyCharge || !!values.wifiCharges?.wifiMemberIds?.length);
+
       computeFloorBill(values, previous);
-      computeWifiCharges(values, previous);
+
+      // Compute WiFi charges per head
+      const wifiMemberIds = values.wifiCharges?.wifiMemberIds?.length || 0;
+      const wifiMonthlyCharge = values.wifiCharges?.wifiMonthlyCharge || 0;
+
+      if (
+        wifiMemberIds !== previous.wifiCharges?.wifiMemberIds?.length ||
+        wifiMonthlyCharge !== previous.wifiCharges?.wifiMonthlyCharge
+      ) {
+        const newWifiCharges = computePerHeadBill(wifiMonthlyCharge, wifiMemberIds);
+        setWifiCharges(newWifiCharges);
+      }
 
       // Compute additional charges per head
       const expenseAmount = values.additionalExpenses?.addExpenseAmount || 0;
       const expenseMemberCount = values.additionalExpenses?.addExpenseMemberIds?.length || 0;
-      const newPerHead = expenseAmount && expenseMemberCount ? Math.ceil(expenseAmount / expenseMemberCount) : 0;
+      const newPerHead = computePerHeadBill(expenseAmount, expenseMemberCount);
+
       if (newPerHead !== additionalChargesPerHead) {
         setAdditionalChargesPerHead(newPerHead);
       }
-
-      // Update selectedExpenseMembers state when the MultiSelect changes
-      const newSelection = values.additionalExpenses?.addExpenseMemberIds || [];
-      if (newSelection.length !== selectedExpenseMembers.length) {
-        console.log('I am called in onValuesChange');
-        setSelectedExpenseMembers(newSelection);
-      }
     },
-    validateInputOnChange: true,
   });
-
-  const computePerHeadBill = (totalBill: number | undefined, memberCount: number) => {
-    return totalBill && memberCount ? Math.ceil(totalBill / memberCount) : 0;
-  };
 
   const [floorBillAmounts, setFloorBillAmounts] = useState<{ [F in Floor]: number }>(() => {
     const currentFormValues = form.getValues();
@@ -376,32 +376,8 @@ const FormContent = ({
   const isProcessingRef = useRef(false);
   const [isFetching, setIsFetching] = useState(false);
 
-  const [wifiCharges, setWifiCharges] = useState(() => {
-    const wifiMonthlyCharge = data.wifiCharges.wifiMonthlyCharge || 0;
-    const wifiMemberCount = data.wifiCharges.wifiMemberIds.length || 0;
-    return wifiMonthlyCharge && wifiMemberCount
-      ? Math.ceil(data.wifiCharges.wifiMonthlyCharge / data.wifiCharges.wifiMemberIds.length)
-      : 0;
-  });
-
   // Add state for additional charges per head
   const [additionalChargesPerHead, setAdditionalChargesPerHead] = useState(0);
-
-  const computeWifiCharges = useMemo(
-    () => (values: FormData, previous: FormData) => {
-      const wifiMemberIds = values.wifiCharges?.wifiMemberIds?.length || 0;
-      const wifiMonthlyCharge = values.wifiCharges?.wifiMonthlyCharge || 0;
-
-      if (
-        wifiMemberIds !== previous.wifiCharges?.wifiMemberIds?.length ||
-        wifiMonthlyCharge !== previous.wifiCharges.wifiMonthlyCharge
-      ) {
-        // Update the form state or perform any necessary actions
-        setWifiCharges(wifiMonthlyCharge && wifiMemberIds ? Math.ceil(wifiMonthlyCharge / wifiMemberIds) : 0);
-      }
-    },
-    []
-  );
 
   const isUpdatingRef = useRef(false);
 
@@ -484,17 +460,12 @@ const FormContent = ({
 
           form.setValues(dataToRestore);
           form.resetDirty(cachedInitialValues);
-          setSelectedExpenseMembers(cachedData.additionalExpenses?.addExpenseMemberIds || []);
+          //   setSelectedExpenseMembers(cachedData.additionalExpenses?.addExpenseMemberIds || []);
 
           // Update additionalChargesPerHead from cached data
           const expenseAmount = cachedData.additionalExpenses?.addExpenseAmount || 0;
           const expenseMemberCount = cachedData.additionalExpenses?.addExpenseMemberIds?.length || 0;
           setAdditionalChargesPerHead(computePerHeadBill(expenseAmount, expenseMemberCount));
-
-          // Update wifiCharges from cached data
-          const wifiMonthlyCharge = cachedData.wifiCharges?.wifiMonthlyCharge || 0;
-          const wifiMemberCount = cachedData.wifiCharges?.wifiMemberIds?.length || 0;
-          setWifiCharges(computePerHeadBill(wifiMonthlyCharge, wifiMemberCount));
 
           return;
         }
@@ -559,17 +530,12 @@ const FormContent = ({
 
           form.setValues(billData);
           form.resetDirty(billData);
-          setSelectedExpenseMembers(billData.additionalExpenses?.addExpenseMemberIds || []);
+          //   setSelectedExpenseMembers(billData.additionalExpenses?.addExpenseMemberIds || []);
 
           // Update additionalChargesPerHead from cached data
           const expenseAmount = billData.additionalExpenses?.addExpenseAmount || 0;
           const expenseMemberCount = billData.additionalExpenses?.addExpenseMemberIds?.length || 0;
           setAdditionalChargesPerHead(computePerHeadBill(expenseAmount, expenseMemberCount));
-
-          // Update wifiCharges from cached data
-          const wifiMonthlyCharge = billData.wifiCharges?.wifiMonthlyCharge || 0;
-          const wifiMemberCount = billData.wifiCharges?.wifiMemberIds?.length || 0;
-          setWifiCharges(computePerHeadBill(wifiMonthlyCharge, wifiMemberCount));
 
           console.log(`Successfully loaded bill data for ${currentMonthKey}`);
         } catch (fetchError) {
@@ -594,23 +560,17 @@ const FormContent = ({
 
             form.setValues(dataToRestore);
             form.resetDirty(previousInitialValues);
-            setSelectedExpenseMembers(previousData.additionalExpenses?.addExpenseMemberIds || []);
+            // setSelectedExpenseMembers(previousData.additionalExpenses?.addExpenseMemberIds || []);
 
             // Update additionalChargesPerHead from cached data
             const expenseAmount = previousData.additionalExpenses?.addExpenseAmount || 0;
             const expenseMemberCount = previousData.additionalExpenses?.addExpenseMemberIds?.length || 0;
             setAdditionalChargesPerHead(computePerHeadBill(expenseAmount, expenseMemberCount));
-
-            // Update wifiCharges from cached data
-            const wifiMonthlyCharge = previousData.wifiCharges?.wifiMonthlyCharge || 0;
-            const wifiMemberCount = previousData.wifiCharges?.wifiMemberIds?.length || 0;
-            setWifiCharges(computePerHeadBill(wifiMonthlyCharge, wifiMemberCount));
           }
 
           notifyError(
             fetchError instanceof Error ? fetchError.message : `Failed to fetch electric bill for ${currentMonthKey}`
           );
-          onError('bill');
         } finally {
           setIsFetching(false);
         }
@@ -619,48 +579,39 @@ const FormContent = ({
         isProcessingRef.current = false;
       }
     },
-    [data.billingMonths, form, onError, activeMembers]
+    [data.billingMonths, form, activeMembers]
   );
 
   // Derive floor selection state from selectedExpenseMembers (no ref needed)
-  const floorSelectionState = useMemo(
-    () => ({
-      '2nd': activeMemberIdsByFloor['2nd'].every((id) => selectedExpenseMembers.includes(id)),
-      '3rd': activeMemberIdsByFloor['3rd'].every((id) => selectedExpenseMembers.includes(id)),
-    }),
-    [selectedExpenseMembers, activeMemberIdsByFloor]
-  );
+  const floorSelectionState = (floor: Floor) =>
+    activeMemberIdsByFloor[floor].every((id) => form.values.additionalExpenses?.addExpenseMemberIds?.includes(id));
 
-  const toggleFloorExpense = useCallback(
-    (floor: Floor, checked: boolean) => {
-      const current = new Set(selectedExpenseMembers);
-      const floorIds = activeMemberIdsByFloor[floor];
+  const toggleFloorExpense = (floor: Floor, checked: boolean) => {
+    const current = new Set(form.values.additionalExpenses?.addExpenseMemberIds || []);
+    const floorIds = activeMemberIdsByFloor[floor];
 
-      if (checked) {
-        floorIds.forEach((id) => current.add(id));
-      } else {
-        floorIds.forEach((id) => current.delete(id));
-      }
+    if (checked) {
+      floorIds.forEach((id) => current.add(id));
+    } else {
+      floorIds.forEach((id) => current.delete(id));
+    }
 
-      const newSelection = Array.from(current);
-      form.setFieldValue('additionalExpenses.addExpenseMemberIds', newSelection);
-      setSelectedExpenseMembers(newSelection);
-    },
-    [selectedExpenseMembers, activeMemberIdsByFloor, form]
-  );
+    const newSelection = Array.from(current);
+    form.setFieldValue('additionalExpenses.addExpenseMemberIds', newSelection);
+    //   setSelectedExpenseMembers(newSelection);
+  };
 
   const handleReset = () => {
     form.reset();
-    // Manually reset states to ensure UI consistency
-    setSelectedExpenseMembers([]);
-    setAdditionalChargesPerHead(0); // Reset additional charges per head
+    // setSelectedExpenseMembers([]);
+    setAdditionalChargesPerHead(0);
   };
 
   console.log('Rendering FormContent');
   return (
     <form onSubmit={form.onSubmit(onSubmit)}>
       <Box pos='relative'>
-        <LoadingOverlay visible={isFetching} zIndex={1000} overlayProps={{ radius: 'sm', blur: 2 }} />
+        <LoadingOverlay visible={isFetching} />
 
         <Stack gap='lg' mt='xl'>
           <Group gap='xs' align='center'>
@@ -690,7 +641,6 @@ const FormContent = ({
               label='2nd Floor'
               description={`₹${floorBillAmounts['2nd']}/member`}
               placeholder='500'
-              min={0}
               flex={2}
               inputWrapperOrder={['label', 'input', 'description', 'error']}
               key={form.key('secondFloorElectricityBill')}
@@ -707,7 +657,7 @@ const FormContent = ({
             />
           </Group>
 
-          <Group align='flex-end'>
+          <Group align='flex-end' justify='center' key={`reset-expenses-group-${resetExpensesGroup}`}>
             <NumberInputWithCurrency
               required
               label='3rd Floor'
@@ -733,12 +683,12 @@ const FormContent = ({
 
           <Switch
             label='Add All Members on 2nd Floor'
-            checked={floorSelectionState['2nd']}
+            checked={floorSelectionState('2nd')}
             onChange={(event) => toggleFloorExpense('2nd', event.currentTarget.checked)}
           />
           <Switch
             label='Add All Members on 3rd Floor'
-            checked={floorSelectionState['3rd']}
+            checked={floorSelectionState('3rd')}
             onChange={(event) => toggleFloorExpense('3rd', event.currentTarget.checked)}
           />
 
@@ -747,7 +697,10 @@ const FormContent = ({
               label='Select Members'
               data={activeMembers}
               placeholder={form.values.additionalExpenses?.addExpenseMemberIds?.length ? '' : 'Select members'}
-              required={!!form.values.additionalExpenses?.addExpenseAmount} // Required if amount is filled
+              required={
+                !!form.values.additionalExpenses?.addExpenseAmount ||
+                !!form.values.additionalExpenses?.addExpenseDescription
+              } // Required if amount is filled
               hidePickedOptions
               maxDropdownHeight={200}
               comboboxProps={{
@@ -761,7 +714,10 @@ const FormContent = ({
             <NumberInputWithCurrency
               label='Amount'
               description={additionalChargesPerHead ? `₹${additionalChargesPerHead}/member` : undefined}
-              required={!!form.values.additionalExpenses?.addExpenseMemberIds?.length} // Required if members are selected
+              required={
+                !!form.values.additionalExpenses?.addExpenseMemberIds?.length ||
+                !!form.values.additionalExpenses?.addExpenseDescription
+              } // Required if members are selected
               flex={1}
               placeholder='100'
               key={form.key('additionalExpenses.addExpenseAmount')}
@@ -780,7 +736,9 @@ const FormContent = ({
             } // Required if either amount or members are filled
             rightSection={
               form.values.additionalExpenses?.addExpenseDescription ? (
-                <Input.ClearButton onClick={() => form.setFieldValue('additionalExpenses.addExpenseDescription', '')} />
+                <Input.ClearButton
+                  onClick={() => form.setFieldValue('additionalExpenses.addExpenseDescription', undefined)}
+                />
               ) : undefined
             }
             rightSectionPointerEvents='auto'
@@ -790,15 +748,14 @@ const FormContent = ({
 
           <Divider label='WiFi Charges' labelPosition='left' mt='md' />
 
-          <Group align='center' justify='center'>
+          <Group align='center' justify='center' key={`wifi-group-${resetWifiGroup}`}>
             <MultiSelect
               label='WiFi Members'
               data={activeMembers}
-              required={!!form.getValues().wifiCharges?.wifiMonthlyCharge} // Required if amount is filled
-              placeholder={form.getValues().wifiCharges?.wifiMemberIds?.length ? '' : 'Select members'}
+              required={!!form.getValues().wifiCharges?.wifiMonthlyCharge}
+              placeholder={form.getValues().wifiCharges?.wifiMemberIds?.length ? undefined : 'Select members'}
               hidePickedOptions
               maxDropdownHeight={200}
-              filter={optionsFilter}
               comboboxProps={{
                 transitionProps: { transition: 'pop', duration: 200 },
                 shadow: 'md',
@@ -811,7 +768,7 @@ const FormContent = ({
             <NumberInputWithCurrency
               label='Amount'
               placeholder='600'
-              required={!!form.getValues().wifiCharges?.wifiMemberIds?.length} // Required if members are selected
+              required={!!form.getValues().wifiCharges?.wifiMemberIds?.length}
               description={wifiCharges ? `₹${wifiCharges}/member` : undefined}
               flex={1}
               step={50}

@@ -2,7 +2,6 @@ import { notifications } from '@mantine/notifications';
 import { CloseIcon, Loader, rem, type NotificationProps } from '@mantine/core';
 import React from 'react';
 import { IconCheck, IconDoneAll, IconInfo } from '../shared/components';
-import { no } from 'zod/locales';
 
 const AutoCloseTime = 3000; // 3 seconds
 

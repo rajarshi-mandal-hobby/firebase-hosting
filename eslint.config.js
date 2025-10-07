@@ -21,8 +21,12 @@ export default [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        ...globals.es2022,
+      },
       parserOptions: {
+        jsx: true,
         ecmaFeatures: {
           jsx: true,
         },
@@ -35,11 +39,21 @@ export default [
     },
     rules: {
       // React Hook Rules (Critical!)
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs['recommended-latest'].rules,
 
       // React Rules
       ...react.configs.recommended.rules,
       ...react.configs['jsx-runtime'].rules,
+
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/globals': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/set-state-in-render': 'warn',
+      'react-hooks/unsupported-syntax': 'warn',
+      'react-hooks/use-memo': 'warn',
 
       // React Refresh
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],

@@ -1,6 +1,6 @@
 import { NumberFormatter, type NumberFormatterProps } from '@mantine/core';
 
-interface Options extends Omit<NumberFormatterProps, 'prefix'> {
+interface Options extends NumberFormatterProps {
   value?: number;
 }
 
