@@ -1,4 +1,4 @@
-import type { DocumentData, Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 import type { Floor, BedType } from '../../data/shemas/GlobalSettings';
 
 // ======================================
@@ -44,22 +44,6 @@ export const CONFIG_DOCS = {
   GLOBAL_SETTINGS: 'globalSettings',
   ADMINS: 'admins',
 } as const;
-
-// ======================================
-// UTILITY TYPES
-// ======================================
-
-/**
- * Makes a type nullable and optional for mock data scenarios
- */
-type NullableOptional<T> = T | null | undefined;
-
-/**
- * Makes specific keys of a type nullable while keeping them optional
- */
-type MakeNullable<T, K extends keyof T> = Omit<T, K> & {
-  [P in K]?: NullableOptional<T[P]>;
-};
 
 // ======================================
 // CONFIGURATION TYPES
@@ -252,12 +236,7 @@ export interface ElectricBill {
   billingMonth: Timestamp;
   generatedAt: Timestamp;
   lastUpdated: Timestamp;
-  floorCosts: {
-    [K in Floor]: {
-      bill: number;
-      totalMembers: number;
-    };
-  };
+  floorCosts: Record<Floor, { bill: number; totalMembers: number }>;
   expenses: {
     members: string[];
     amount: number;
@@ -267,6 +246,7 @@ export interface ElectricBill {
     members: string[];
     amount: number;
   };
+  memberMap: { [key: string]: string }; // memberId to memberName mapping
 }
 
 // ======================================

@@ -1,43 +1,11 @@
-import { doc, getDocFromCache, getDocFromServer } from 'firebase/firestore';
+import { doc, getDoc, getDocFromCache, getDocFromServer } from 'firebase/firestore';
 import { httpsCallable, getFunctions } from 'firebase/functions';
 import { db } from '../../../firebase';
 import type { SaveResult } from '../shemas/formResults';
 import { GlobalSettings, type GlobalSettingsFormValues } from '../shemas/GlobalSettings';
 import { simulateNetworkDelay } from '../utils/serviceUtils';
 
-/**
- * Fetch both global settings and admin configuration together.
- */
-export const getConfigDb = async (refresh = false): Promise<GlobalSettings> => {
-  await simulateNetworkDelay(1000); // Simulate network delay for UX
-
-  const configCollectionRef = doc(db, 'config', 'globalSettings').withConverter(GlobalSettings);
-
-  // If refresh/serverFirst requested, skip cache attempt and go straight to server.
-  let configCol = await getDocFromServer(configCollectionRef);
-  if (refresh) {
-    configCol = await getDocFromServer(configCollectionRef);
-  } else {
-    // Try cache first; if unavailable or incomplete, fall back to server.
-    try {
-      configCol = await getDocFromCache(configCollectionRef);
-    } catch {
-      configCol = await getDocFromServer(configCollectionRef);
-    }
-  }
-
-  console.log(configCol.metadata.fromCache ? 'Config: loaded from cache' : 'Config: loaded from server');
-
-  // Perform checks after the reduction
-  if (!configCol.exists()) {
-    throw new Error('Global settings document missing');
-  }
-
-  return configCol.data();
-};
-
 const configDocRef = doc(db, 'config', 'globalSettings').withConverter(GlobalSettings);
-let fetchCount = 0; // For testing ErrorBoundary
 let cache: GlobalSettings | null = null;
 let currentFetchPromise: Promise<GlobalSettings> | null = null;
 
@@ -59,31 +27,21 @@ export const fetchGlobalSettings = async (refresh = false) => {
 
   // Create a new promise and store it
   const newPromise = (async () => {
-    await simulateNetworkDelay(500);
+    await simulateNetworkDelay(2000);
     // Throw error first time only for testing ErrorBoundary
     try {
-      let docSnapshot;
-      if (refresh) {
-        docSnapshot = await getDocFromServer(configDocRef);
-      } else {
-        try {
-          docSnapshot = await getDocFromCache(configDocRef);
-        } catch {
-          docSnapshot = await getDocFromServer(configDocRef);
-        }
-      }
-
-      if (fetchCount === 0) {
-        fetchCount += 1;
-        throw new Error('Simulated fetch error');
-      }
+      const docSnapshot = await getDoc(configDocRef);
 
       if (!docSnapshot.exists()) {
         throw new Error('Global settings document missing');
       }
-      console.log(
-        docSnapshot.metadata.fromCache ? 'Global settings loaded from cache' : 'Global settings loaded from server'
-      );
+
+      const fromCache = docSnapshot.metadata.fromCache;
+      console.log('Global settings fetched. From cache:', fromCache, 'From server:', !fromCache);
+      if (fromCache) {
+        throw new Error('Data is stale');
+      }
+
       const data = docSnapshot.data();
       cache = data; // Cache the data
       return data;

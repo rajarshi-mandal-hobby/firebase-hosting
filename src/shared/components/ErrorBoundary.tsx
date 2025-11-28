@@ -1,6 +1,8 @@
 import { Component } from 'react';
 import type { ReactNode } from 'react';
 import { ErrorContainer } from './ErrorContainer';
+import { Button, Code, Paper, Stack, Title, Text, Group } from '@mantine/core';
+import { th } from 'zod/v4/locales';
 
 interface Props {
   children: ReactNode;
@@ -35,7 +37,30 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError && this.state.error) {
-      return <ErrorContainer error={this.state.error} resetErrorBoundary={this.resetErrorBoundary} />;
+      const { error } = this.state;
+      return (
+        <Stack gap='sm' style={{ wordBreak: 'break-word' }}>
+          <Title order={2} ta='center' fw={500}>
+            {'Oops! :('}
+          </Title>
+          <Title order={4} ta='center' c='dimmed'>
+            There is must be some mistake.
+          </Title>
+          <Paper p='lg' withBorder>
+            <Text size='sm' fw={500} mb='xs'>
+              Info: {error.name}
+            </Text>
+            <Text size='xs' c='dimmed' mt='xs' component='pre' style={{ whiteSpace: 'pre-wrap' }}>
+              {error.stack || error.message || 'An unknown error occurred.'}
+            </Text>
+            <Group align='center' justify='flex-end'>
+              <Button mt='lg' onClick={this.resetErrorBoundary}>
+                Reset
+              </Button>
+            </Group>
+          </Paper>
+        </Stack>
+      );
     }
 
     return this.props.children;

@@ -1,26 +1,49 @@
-import { List, Text } from '@mantine/core';
+import { Group, List, Table, Text, ThemeIcon, type TableData } from '@mantine/core';
 import { memo } from 'react';
 import { formatDate } from '../utils';
 import { CurrencyFormatter } from './CurrencyFormatter';
-import {
-  IconPhone,
-  IconBed,
-  IconCalendarMonth,
-  IconRupee,
-  IconUniversalCurrency,
-  IconPayments,
-  IconWifi,
-  IconFirebase,
-} from './icons';
+
 import type { Member } from '../types/firestore-types';
 import type { Timestamp } from 'firebase/firestore';
+import {
+  IconBed,
+  IconCalendarMonth,
+  IconCall,
+  IconPayments,
+  IconRupee,
+  IconUniversalCurrency,
+  IconWifi,
+  IconFirebase,
+} from '../icons';
+
+type TableRowProps = {
+  heading: string;
+  value: any;
+  icon: React.ElementType;
+};
+
+const TableRow = ({ heading, value, icon: Icon }: TableRowProps) => (
+  <Table.Tr>
+    <Table.Th pl={0} fw={500} w={155}>
+      <Group wrap='nowrap' gap='xs'>
+        <Icon size={14} />
+        {heading}
+      </Group>
+    </Table.Th>
+    <Table.Td pr={0}>
+      <Text fz='sm' lineClamp={1}>
+        {value}
+      </Text>
+    </Table.Td>
+  </Table.Tr>
+);
 
 interface MemberDetailsListProps {
   member: Member;
   isAdmin?: boolean;
 }
 
-export const MemberDetailsList = memo<MemberDetailsListProps>(({ member, isAdmin = false }) => {
+export const MemberDetailsList = ({ member, isAdmin = false }: MemberDetailsListProps) => {
   const formatTimestamp = (timestamp: Timestamp | undefined) => {
     if (!timestamp) return 'Not set';
     try {
@@ -34,58 +57,31 @@ export const MemberDetailsList = memo<MemberDetailsListProps>(({ member, isAdmin
       return 'Invalid date';
     }
   };
-  return (
-    <List spacing='xs' listStyleType='none' size='sm'>
-      <List.Item icon={<IconPhone size={16} />}>
-        <Text component='a' href={`tel:${member.phone}`} size='sm'>
-          Phone: {member.phone}
-        </Text>
-      </List.Item>
-      <List.Item icon={<IconBed size={16} />}>
-        Floor: {member.floor} - {member.bedType}{' '}
-      </List.Item>
-      <List.Item icon={<IconCalendarMonth size={16} />}>Move-in: {formatDate(member.moveInDate)}</List.Item>
-      <List.Item icon={<IconRupee size={16} />}>
-        Current Rent: <CurrencyFormatter value={member.currentRent} />
-        /month
-      </List.Item>
-      <List.Item icon={<IconUniversalCurrency size={16} />}>
-        Rent at Joining: <CurrencyFormatter value={member.rentAtJoining} />
-      </List.Item>
-      <List.Item icon={<IconUniversalCurrency size={16} />}>
-        Advance Deposit: <CurrencyFormatter value={member.advanceDeposit} />
-      </List.Item>
-      <List.Item icon={<IconUniversalCurrency size={16} />}>
-        Security Deposit: <CurrencyFormatter value={member.securityDeposit} />
-      </List.Item>
-      <List.Item icon={<IconPayments size={16} />} fw={500}>
-        Total Agreed Deposit: <CurrencyFormatter value={member.totalAgreedDeposit} />
-      </List.Item>
-      <List.Item icon={<IconWifi size={16} />}>WiFi: {member.optedForWifi ? 'Opted In' : 'Not Opted'}</List.Item>
 
-      {/* Admin-only fields */}
-      {isAdmin && member && (
-        <>
-          {member.firebaseUid && (
-            <List.Item icon={<IconFirebase size={16} />}>Firebase UID: {member.firebaseUid}</List.Item>
-          )}
-          {member.fcmToken && (
-            <List.Item icon={<IconFirebase size={16} />}>
-              FCM Token: {member.fcmToken.substring(0, 20)}...
-            </List.Item>
-          )}
-          {member.leaveDate && (
-            <List.Item icon={<IconFirebase size={16} />} c='orange'>
-              Leave Date: {formatTimestamp(member.leaveDate)}
-            </List.Item>
-          )}
-          {member.ttlExpiry && (
-            <List.Item icon={<IconFirebase size={16} />} c='red'>
-              TTL Expiry: {formatTimestamp(member.ttlExpiry)}
-            </List.Item>
-          )}
-        </>
-      )}
-    </List>
+  return (
+    <Table layout='fixed' verticalSpacing='sm' fz='sm'>
+      <Table.Tbody>
+        <TableRow heading='Phone' value={member.phone} icon={IconCall} />
+        <TableRow heading='Move-in Date' value={formatDate(member.moveInDate)} icon={IconCalendarMonth} />
+        <TableRow heading='Floor & Bed' value={`${member.floor} - ${member.bedType}`} icon={IconBed} />
+        <TableRow heading='Current Rent' value={'₹' + member.currentRent + '/month'} icon={IconRupee} />
+        <TableRow heading='Rent at Joining' value={'₹' + member.rentAtJoining + '/month'} icon={IconUniversalCurrency} />
+        <TableRow heading='Advance Deposit' value={'₹' + member.advanceDeposit} icon={IconUniversalCurrency} />
+        <TableRow heading='Security Deposit' value={'₹' + member.securityDeposit} icon={IconUniversalCurrency} />
+        <TableRow heading='Total Agreed Deposit' value={'₹' + member.totalAgreedDeposit} icon={IconPayments} />
+        <TableRow heading='WiFi' value={member.optedForWifi ? 'Opted In' : 'Not Opted'} icon={IconWifi} />
+        {/* Admin-only fields */}
+        {isAdmin &&
+          member.leaveDate &&
+          <TableRow heading='Leave Date' value={formatTimestamp(member.leaveDate)} icon={IconFirebase} />}
+        {isAdmin &&
+          member.ttlExpiry &&
+          <TableRow heading='TTL Expiry' value={formatTimestamp(member.ttlExpiry)} icon={IconFirebase} />}
+        {isAdmin &&
+          member.firebaseUid &&
+          <TableRow heading='Firebase UID' value={member.firebaseUid} icon={IconFirebase} />}
+        {isAdmin && member.fcmToken && <TableRow heading='FCM Token' value={member.fcmToken} icon={IconFirebase} />}
+      </Table.Tbody>
+    </Table>
   );
-});
+};

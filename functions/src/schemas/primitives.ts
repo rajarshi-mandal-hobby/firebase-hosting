@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Common building blocks
 export const zInteger = z.number('Must be a number').int('Must be an integer');
 export const zPositiveNumber = zInteger.positive('Must be a positive number');
-export const zString = z.string().trim();
+export const zString = z.string('Must be a string').trim();
 
 // Reusable validators (keep messages consistent with frontend)
 export const ZodFourDigitPositiveNumber = zPositiveNumber.min(1600, { message: 'Must be at least 1600' }).max(9999, {

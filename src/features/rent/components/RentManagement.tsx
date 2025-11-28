@@ -1,140 +1,167 @@
-import { Accordion, Button, Group, Skeleton, Stack, Text, Title } from '@mantine/core';
-import { Suspense, useState, lazy, Children, type ReactElement, cloneElement, isValidElement, type SVGProps, type ReactNode } from 'react';
-import { CurrencyFormatter, SharedAvatar, StatusBadge, RentDetailsList } from '../../../shared/components';
-
-import { RecordPaymentModal, AddExpenseModal, GenerateBillsModal } from './modals';
-import { useRentManagementData } from '../hooks';
-import { LoadingBox } from '../../../shared/components/LoadingBox';
-import { RetryBox } from '../../../shared/components/RetryBox';
+import { Stack, Accordion, Center, Group, Title, ActionIcon, Text, Menu } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import React from 'react';
+import { useState } from 'react';
+import { SharedAvatar, RentDetailsList, StatusIndicator, StatusBadge } from '../../../shared/components';
+import type { Member } from '../../../shared/types/firestore-types';
+import { formatNumberIndianLocale } from '../../../shared/utils';
+import {
+  IconCall,
+  IconMoneyBag,
+  IconMoreVertical,
+  IconShare,
+  IconUniversalCurrency,
+  IconWhatsapp,
+} from '../../../shared/icons';
+import { RecordPaymentModal } from './modals/RecordPaymentModal';
+import { AddExpenseModal } from './modals/AddExpenseModal';
 
-export function RentManagement() {
-  const { members, isLoading, totalOutstanding, error, actions } = useRentManagementData();
-  const [generateBillsOpened, { open: openGenerateBills, close: closeGenerateBills }] = useDisclosure(false);
-  const [recordPaymentModal, { open: openRecordPayment, close: closeRecordPayment }] = useDisclosure(false);
+interface RentManagementProps {
+  members: Member[];
+  totalOutstanding: number;
+}
+
+export function RentManagement({ members, totalOutstanding }: RentManagementProps) {
+  const [recordPaymentModalOpened, { open: openRecordPayment, close: closeRecordPayment }] = useDisclosure(false);
   const [addExpenseModal, { open: openAddExpense, close: closeAddExpense }] = useDisclosure(false);
-  const [selectedMember, setSelectedMember] = useState<{ name: string; outstandingBalance: number } | null>(null);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
-  console.log('🎨 Rendering RentManagement');
-
-  // Early return if there's an error
-  if (error) {
-    return <RetryBox error={error || 'Failed to load members'} handleRetry={actions.handleRetry} loading={isLoading} />;
-  }
-
-  if (isLoading) {
-    return (
-      <Stack gap='lg'>
-        <Group justify='space-between'>
-          <Title order={5}>
-            <Skeleton visible={isLoading}>
-              Total Outstanding:
-              <CurrencyFormatter value={totalOutstanding} />
-            </Skeleton>
-          </Title>
-
-          <Group>
-            <Button onClick={openGenerateBills}>Generate Bills</Button>
-          </Group>
-        </Group>
-        <LoadingBox loadingText='Loading members...' />
-      </Stack>
-    );
-  }
-
+  console.log('Rendering RentManagement', selectedMember);
   return (
-    <Stack gap='lg'>
-      <Group justify='space-between'>
-        <Title order={5}>
+    <Stack>
+      <Group gap='xs'>
+        <Text fw={500} fz='md'>
           Total Outstanding:
-          <Skeleton visible={isLoading}>
-            <CurrencyFormatter value={totalOutstanding} />
-          </Skeleton>
-        </Title>
-        <Group>
-          <Button onClick={openGenerateBills}>Generate Bills</Button>
-        </Group>
+        </Text>
+        <Text fz='md' fw={700} variant='light'>
+          {formatNumberIndianLocale(totalOutstanding)}
+        </Text>
+        <StatusBadge status={totalOutstanding > 0 ? 'Due' : 'Paid'} size={16} />
       </Group>
 
       <Accordion>
         {members.map((member) => {
           return (
             <Accordion.Item key={member.id} value={member.id}>
-              <Accordion.Control>
-                <Group justify='space-between' wrap='nowrap'>
-                  <Group justify='flex-start' wrap='nowrap'>
-                    <SharedAvatar name={member.name} size='md' />
-                    <Title order={5} lineClamp={1}>
-                      {member.name}
-                    </Title>
+              <Center bdrs='lg' style={{ overflow: 'hidden' }}>
+                <Accordion.Control>
+                  <Group wrap='nowrap'>
+                    <StatusIndicator status={member.currentMonthRent.status} position='top-right'>
+                      <SharedAvatar name={member.name} size='md' />
+                    </StatusIndicator>
+                    <Stack gap={0}>
+                      <Title order={5} lineClamp={1}>
+                        {member.name}
+                      </Title>
+                      <Text size='sm' fw={500}>
+                        {formatNumberIndianLocale(member.currentMonthRent.currentOutstanding)}
+                      </Text>
+                    </Stack>
                   </Group>
-                  <Group justify='flex-start' wrap='nowrap' pr='md' gap='xs'>
-                    {member.currentMonthRent && <StatusBadge status={member.currentMonthRent.status} size={16} />}
-                    <CurrencyFormatter value={member.currentMonthRent.currentOutstanding} />
-                  </Group>
-                </Group>
-              </Accordion.Control>
+                </Accordion.Control>
+                <Menu shadow='md' width={200} position='left-start' withArrow arrowPosition='center'>
+                  <Menu.Target>
+                    <ActionIcon
+                      mr='sm'
+                      variant='white'
+                      autoContrast
+                      size={32}
+                      style={{
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                      }}>
+                      <IconMoreVertical size={16} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Label c='var(--mantine-text-color)' fz='sm' tt='full-width'>
+                      {member.name.split(' ')[0]}
+                    </Menu.Label>
+                    <Menu.Divider />
+                    <Menu.Label>Share Rent</Menu.Label>
+                    <Menu.Item
+                      onClick={() => {
+                        const phoneNumber = member.phone; // Replace with the desired phone number (include country code, no +, no spaces)
+                        const message = `Hello ${member.name.split(' ')[0]}, you have an outstanding rent balance of ₹${
+                          member.currentMonthRent.currentOutstanding
+                        }. Please make the payment at your earliest convenience.`; // Pre-fill with desired message
+                        // Construct the WhatsApp URL
+                        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+                        // Open WhatsApp in a new tab/window
+                        window.open(whatsappUrl, '_blank');
+                      }}
+                      leftSection={<IconWhatsapp size={14} />}>
+                      WhatsApp
+                    </Menu.Item>
+                    <Menu.Item
+                      onClick={() => {
+                        navigator.share({
+                          text: `Hello ${member.name.split(' ')[0]}, you have an outstanding rent balance of ₹${
+                            member.currentMonthRent.currentOutstanding
+                          }. Please make the payment at your earliest convenience.`,
+                        });
+                      }}
+                      leftSection={<IconShare size={14} />}>
+                      Share
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconCall size={14} />}
+                      onClick={() => {
+                        window.location.href = `tel:${member.phone}`;
+                      }}>
+                      Call
+                    </Menu.Item>
+                    <Menu.Divider />
+                    <Menu.Item
+                      leftSection={<IconUniversalCurrency size={14} />}
+                      onClick={() => {
+                        setSelectedMember(member);
+                        openRecordPayment();
+                      }}>
+                      Record Payment
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconMoneyBag size={14} />}
+                      onClick={() => {
+                        setSelectedMember(member);
+                        openAddExpense();
+                      }}>
+                      Add Expense
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
+              </Center>
               <Accordion.Panel>
-                {member.currentMonthRent ? (
-                  <RentDetailsList data={member.currentMonthRent} showStatus={false} />
-                ) : (
-                  <Text c='dimmed'>No billing history available</Text>
-                )}
-                <Group mt='md'>
-                  <Button
-                    variant='default'
-                    size='xs'
-                    onClick={() => {
-                      setSelectedMember({
-                        name: member.name,
-                        outstandingBalance: member.currentMonthRent.currentOutstanding,
-                      });
-                      openRecordPayment();
-                    }}>
-                    Record Payment
-                  </Button>
-                  <Button
-                    variant='default'
-                    size='xs'
-                    onClick={() => {
-                      setSelectedMember({
-                        name: member.name,
-                        outstandingBalance: member.currentMonthRent.currentOutstanding,
-                      });
-                      openAddExpense();
-                    }}>
-                    Add Expense
-                  </Button>
-                </Group>
+                <RentDetailsList rentHistory={member.currentMonthRent} />
               </Accordion.Panel>
             </Accordion.Item>
           );
         })}
       </Accordion>
 
-      <Suspense fallback={<LoadingBox loadingText='Loading bill tools...' />}>
-        <GenerateBillsModal members={members} opened={generateBillsOpened} onClose={closeGenerateBills} />
-      </Suspense>
+      {/* <GenerateBillsModal members={members} opened={generateBillsOpened} onClose={closeGenerateBills} /> */}
 
-      {/* <RecordPaymentModal
-        opened={recordPaymentModal}
+      <RecordPaymentModal
+        opened={recordPaymentModalOpened}
         onClose={() => {
-          closeRecordPayment();
           setSelectedMember(null);
+          closeRecordPayment();
         }}
-        memberName={selectedMember?.name}
-        outstandingAmount={selectedMember?.outstandingBalance}
-      /> */}
+        memberName={selectedMember?.name || ''}
+        outstandingAmount={selectedMember?.currentMonthRent.currentOutstanding || 0}
+        totalCharges={selectedMember?.currentMonthRent.totalCharges || 0}
+        amountPaid={selectedMember?.currentMonthRent.amountPaid || 0}
+        paymentNote={selectedMember?.currentMonthRent.outstandingNote || ''}
+      />
 
-      {/* <AddExpenseModal
+      <AddExpenseModal
         opened={addExpenseModal}
         onClose={() => {
           closeAddExpense();
           setSelectedMember(null);
         }}
         memberName={selectedMember?.name}
-      /> */}
+        initialExpenses={selectedMember?.currentMonthRent.expenses}
+      />
     </Stack>
   );
 }

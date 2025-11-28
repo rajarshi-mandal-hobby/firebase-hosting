@@ -1,24 +1,19 @@
 import { useCallback, useRef, useState } from 'react';
 
-export type Tab = 'rent' | 'members' | 'config';
-let currentTab: Tab = 'rent';
+export type Tab = 'rent' | 'members';
 
 export const useTabNavigation = () => {
-  const [activeTab, setActiveTab] = useState<Tab>(currentTab);
-  const visitedTabRef = useRef<Record<Tab, boolean>>({
+  const [activeTab, setActiveTab] = useState<Tab>('rent');
+  const [visitedTab, setVisitedTab] = useState<Record<Tab, boolean>>({
     rent: true,
     members: false,
-    config: false,
   });
 
-  const handleTabChange = useCallback(
+  const handleTabChange = 
     (selectedTab: string) => {
       const tab = selectedTab as Tab;
       setActiveTab(tab);
-      visitedTabRef.current[tab] = true;
-    },
-    [setActiveTab]
-  );
-  currentTab = activeTab;
-  return { activeTab, visitedTab: visitedTabRef.current, handleTabChange } as const;
+      setVisitedTab((prev) => ({ ...prev, [tab]: true }));
+    };
+  return { activeTab, visitedTab, handleTabChange } as const;
 };

@@ -4,17 +4,24 @@ import {
   Button,
   createTheme,
   DEFAULT_THEME,
+  Input,
   Loader,
+  LoadingOverlay,
+  Menu,
+  MenuItem,
   Modal,
   MultiSelect,
   Notification,
   NumberInput,
+  rem,
   SegmentedControl,
   Select,
+  Textarea,
   TextInput,
 } from '@mantine/core';
 import classes from './features/member-dashboard/containers/MemberDashboard.module.css';
 import { CssLoader } from './shared/custom-loader/CssLoader';
+import { MonthPickerInput } from '@mantine/dates';
 
 export const theme = createTheme({
   fontFamily: `Work Sans, ${DEFAULT_THEME.fontFamily}`,
@@ -24,11 +31,26 @@ export const theme = createTheme({
     // sm: rem(15),
   },
   components: {
+    // Text
+    Text: {
+      defaultProps: {
+        size: 'sm',
+      },
+    },
+    // Button
     Button: Button.extend({
       defaultProps: {
         radius: 'xl',
         autoContrast: true,
         fw: 500,
+      },
+    }),
+    // Loading Overlay
+    LoadingOverlay: LoadingOverlay.extend({
+      defaultProps: {
+        overlayProps: {
+          blur: 3,
+        },
       },
     }),
     // Modal
@@ -37,7 +59,6 @@ export const theme = createTheme({
         size: 'md',
         centered: true,
         overlayProps: {
-          opacity: 0.55,
           blur: 3,
         },
         transitionProps: { transition: 'scale', timingFunction: 'ease-in-out' },
@@ -50,6 +71,11 @@ export const theme = createTheme({
       },
     }),
     // Inputs
+    Input: Input.extend({
+      defaultProps: {
+        radius: 'md',
+      },
+    }),
     NumberInput: NumberInput.extend({
       defaultProps: {
         radius: 'md',
@@ -70,6 +96,20 @@ export const theme = createTheme({
         radius: 'md',
       },
     }),
+    Textarea: Textarea.extend({
+      defaultProps: {
+        radius: 'md',
+        autosize: true,
+        minRows: 3,
+      },
+    }),
+    MonthPickerInput: MonthPickerInput.extend({
+      defaultProps: {
+        radius: 'xl',
+      },
+    }),
+    
+    // Segmented Control
     SegmentedControl: SegmentedControl.extend({
       defaultProps: {
         radius: 'xl',
@@ -81,6 +121,27 @@ export const theme = createTheme({
         },
       },
     }),
+    // Menu
+    Menu: Menu.extend({
+      defaultProps: {
+        width: 220,
+        radius: 'lg',
+        shadow: 'lg',
+        withArrow: true,
+        arrowPosition: 'center',
+      },
+    }),
+    MenuItem: MenuItem.extend({
+      defaultProps: {
+        styles: {
+          itemLabel: {
+            paddingTop: rem(2.5),
+            paddingBottom: rem(2.5),
+          },
+        },
+      },
+    }),
+    // Notification
     Notification: Notification.extend({
       defaultProps: {
         radius: 'lg',
@@ -88,9 +149,8 @@ export const theme = createTheme({
     }),
     ActionIcon: ActionIcon.extend({
       defaultProps: {
-        variant: 'outline',
         radius: 'xl',
-        size: 'md',
+        size: rem(32),
       },
     }),
     Accordion: Accordion.extend({
@@ -105,6 +165,7 @@ export const theme = createTheme({
         },
       },
     }),
+    //
     Loader: Loader.extend({
       defaultProps: {
         loaders: { ...Loader.defaultLoaders, custom: CssLoader },

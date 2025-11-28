@@ -1,0 +1,2 @@
+export const computePerHeadBill = (totalBill: number | string | undefined, memberCount: number | string | undefined) =>
+  totalBill && memberCount ? Math.ceil(Number(totalBill) / Number(memberCount)) : 0;

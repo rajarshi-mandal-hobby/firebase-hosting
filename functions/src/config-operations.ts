@@ -1,28 +1,33 @@
 import { onCall } from 'firebase-functions/v2/https';
 import { validateAuth } from './utils/validation';
-import { GlobalSettingsInput, SaveResponse, zodGlobalSettingsInput } from './schemas';
+import { GlobalSettingsValidationResult } from './schemas';
 import { db } from '.';
-import z from 'zod';
-import { logger } from 'firebase-functions';
+import * as v from 'valibot';
 
-exports.saveGlobalSettings = onCall({ cors: false }, async (req): Promise<SaveResponse<GlobalSettingsInput>> => {
-  logger.info('saveGlobalSettings called', req.data);
+type SaveResponse =
+  | {
+      success: boolean;
+    }
+  | {
+      success: false;
+      errors: v.FlatErrors<any>;
+    };
+
+exports.saveGlobalSettings = onCall({ cors: false }, async (req): Promise<SaveResponse> => {
   validateAuth(req);
   // Parse and validate input
-  const result = zodGlobalSettingsInput(req.data);
-
-  logger.info('Validation result:', result);
+  const result = GlobalSettingsValidationResult(req.data);
 
   if (!result.success) {
     return {
       success: false,
-      errors: z.flattenError(result.error),
+      errors: v.flatten(result.issues),
     };
   }
 
   const docRef = db.collection('config').doc('globalSettings');
 
-  await docRef.set(result.data, { merge: true });
+  await docRef.set(result.output, { merge: true });
 
   return {
     success: true,

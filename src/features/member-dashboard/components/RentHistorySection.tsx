@@ -41,7 +41,7 @@ export function RentHistorySection({
                     </Group>
                   </Accordion.Control>
                   <Accordion.Panel>
-                    <RentDetailsList data={history} />
+                    <RentDetailsList rentHistory={history} />
                   </Accordion.Panel>
                 </Accordion.Item>
               ))}

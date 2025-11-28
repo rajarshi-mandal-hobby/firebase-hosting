@@ -253,10 +253,10 @@ export const mockMembers: MemberWithRentHistory[] = [
       previousOutstanding: 0,
       expenses: [{ amount: 200, description: 'Special room maintenance' }],
       totalCharges: 2987,
-      amountPaid: 2987,
-      currentOutstanding: 0,
+      amountPaid: 3000,
+      currentOutstanding: -13,
       outstandingNote: '',
-      status: 'Paid',
+      status: 'Overpaid',
     },
     totalAgreedDeposit: 6400,
 
@@ -337,9 +337,9 @@ export const mockMembers: MemberWithRentHistory[] = [
 export const mockElectricBills: ElectricBill[] = [
   {
     id: '2025-07',
-    billingMonth: createMockTimestamp('2025-06-01'),
-    generatedAt: createMockTimestamp('2025-06-01'),
-    lastUpdated: createMockTimestamp('2025-06-01'),
+    billingMonth: createMockTimestamp('2025-07-01'),
+    generatedAt: createMockTimestamp('2025-07-01'),
+    lastUpdated: createMockTimestamp('2025-07-01'),
     floorCosts: {
       '2nd': {
         bill: 1440, // Historical data when member-5 was still active
@@ -351,13 +351,20 @@ export const mockElectricBills: ElectricBill[] = [
       },
     },
     expenses: {
-      members: ['member-1', 'member-2', 'member-3', 'member-4', 'member-5'], // All members in June
+      members: ['member-1', 'member-2', 'member-3', 'member-4', 'member-5'],
       amount: 1000,
       description: 'Common area maintenance',
     },
     wifiCharges: {
-      members: ['member-1', 'member-2', 'member-4', 'member-5'], // WiFi users in June
+      members: ['member-1', 'member-2', 'member-4'],
       amount: 600,
+    },
+    memberMap: {
+      'member-1': 'John Doe',
+      'member-2': 'Jane Smith',
+      'member-3': 'Bob Wilson',
+      'member-4': 'Alice Johnson',
+      'member-5': 'Charlie Brown',
     },
   },
 ];

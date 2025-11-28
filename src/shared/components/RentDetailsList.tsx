@@ -1,99 +1,91 @@
-import { List } from '@mantine/core';
-import { memo, useMemo } from 'react';
-import type { RentHistory, PaymentStatus } from '../types/firestore-types';
-import { CurrencyFormatter } from './CurrencyFormatter';
-import {
-  IconRupee,
-  IconBulb,
-  IconWifi,
-  IconUniversalCurrency,
-  IconMoneyBag,
-  IconRupeeCircle,
-  IconPayments,
-  IconNotes,
-  MyThemeIcon,
-} from './icons';
-import { getStatusColor, getStatusIcon } from '../utils';
+import { Group, List, Table } from '@mantine/core';
+import type { RentHistory } from '../types/firestore-types';
+import { formatNumberIndianLocale, getStatusAlertConfig, StatusBadge } from '../utils';
+import { IconUniversalCurrency, IconBulb, IconWifi, IconPayments, IconMoneyBag, IconNote, IconRupee } from '../icons';
+import type { ReactNode } from 'react';
+
+type TableRowProps = {
+  heading: string;
+  value: any;
+  Icon: React.ComponentType<{ size: number }> | ReactNode;
+  hasExpenses?: boolean;
+  boldFont?: boolean;
+};
+
+const TableRow = ({ heading, value, Icon, hasExpenses = false, boldFont = false }: TableRowProps) => (
+  <Table.Tr style={hasExpenses ? { borderBottom: 'none' } : undefined}>
+    <Table.Th pl={0} fw={500} w={140}>
+      <Group wrap='nowrap' gap='xs'>
+        {typeof Icon === 'function' ? <Icon size={14} /> : Icon}
+        {heading}
+      </Group>
+    </Table.Th>
+    <Table.Td pr={0} fw={boldFont ? 700 : 400}>
+      {value}
+    </Table.Td>
+  </Table.Tr>
+);
 
 interface RentDetailsListProps {
-  data: RentHistory;
-  showStatus?: boolean;
+  rentHistory: RentHistory;
 }
 
-export const RentDetailsList = memo<RentDetailsListProps>(({ data, showStatus = false }) => {
-  // Memoize expensive calculations
-  const expensesTotal = useMemo(() => data.expenses.reduce((sum, exp) => sum + exp.amount, 0), [data.expenses]);
-
-  // Memoize status-related computations
-  const statusInfo = useMemo(() => {
-    if (!showStatus || !data.status) return null;
-
-    const status = data.status as PaymentStatus;
-    return {
-      color: getStatusColor(status),
-      icon: getStatusIcon(status),
-      status,
-    };
-  }, [showStatus, data.status]);
-
-  // Memoize expense list items to prevent unnecessary re-renders
-  const expenseItems = useMemo(
-    () =>
-      data.expenses.map((expense, idx) => (
-        <List.Item key={`${expense.description}-${idx}`}>
-          {expense.description}: <CurrencyFormatter value={expense.amount} />
-        </List.Item>
-      )),
-    [data.expenses]
-  );
+export const RentDetailsList = ({ rentHistory }: RentDetailsListProps) => {
+  // ✅ Calculate once at render time, not in function
+  const expensesTotal =
+    rentHistory.expenses.length > 0 ? rentHistory.expenses.reduce((sum, exp) => sum + exp.amount, 0) : 0;
+  const statusConfig = getStatusAlertConfig(rentHistory.status);
 
   return (
-    <List spacing='xs' size='sm' listStyleType='none'>
-      <List.Item icon={<IconRupee size={16} />}>
-        Rent: <CurrencyFormatter value={data.rent} />
-      </List.Item>
+    <Table layout='fixed' verticalSpacing='xs' fz='sm' key={rentHistory.id}>
+      <Table.Tbody>
+        <TableRow heading='Rent' value={formatNumberIndianLocale(rentHistory.rent)} Icon={IconUniversalCurrency} />
+        <TableRow heading='Electricity' value={formatNumberIndianLocale(rentHistory.electricity)} Icon={IconBulb} />
+        <TableRow heading='WiFi' value={formatNumberIndianLocale(rentHistory.wifi)} Icon={IconWifi} />
 
-      <List.Item icon={<IconBulb size={16} />}>
-        Electricity: <CurrencyFormatter value={data.electricity} />
-      </List.Item>
+        {rentHistory.expenses.length > 0 && (
+          <>
+            <TableRow
+              heading='Expenses'
+              value={formatNumberIndianLocale(expensesTotal)}
+              Icon={IconUniversalCurrency}
+              hasExpenses
+            />
+            <Table.Tr>
+              <Table.Td colSpan={2} p={0}>
+                <List listStyleType='disc' mb='sm' spacing='xs' size='sm'>
+                  {rentHistory.expenses.map((expense, idx) => (
+                    <List.Item key={idx}>
+                      {expense.description}: ₹{expense.amount}
+                    </List.Item>
+                  ))}
+                </List>
+              </Table.Td>
+            </Table.Tr>
+          </>
+        )}
 
-      <List.Item icon={<IconWifi size={16} />}>
-        WiFi: <CurrencyFormatter value={data.wifi} />
-      </List.Item>
+        <TableRow
+          heading='Total Charges'
+          value={formatNumberIndianLocale(rentHistory.totalCharges)}
+          Icon={IconPayments}
+        />
+        <TableRow heading='Amount Paid' value={formatNumberIndianLocale(rentHistory.amountPaid)} Icon={IconMoneyBag} />
+        <TableRow
+          heading='Outstanding'
+          value={formatNumberIndianLocale(rentHistory.currentOutstanding)}
+          Icon={IconRupee}
+          boldFont
+        />
 
-      {data.expenses.length > 0 && (
-        <List.Item icon={<IconUniversalCurrency size={16} />}>
-          Expenses: <CurrencyFormatter value={expensesTotal} />
-          <List listStyleType='disc' mt='xs' spacing='xs' size='sm'>
-            {expenseItems}
-          </List>
-        </List.Item>
-      )}
+        {rentHistory.outstandingNote && <TableRow heading='Note' value={rentHistory.outstandingNote} Icon={IconNote} />}
 
-      <List.Item icon={<IconMoneyBag size={16} />} fw={500}>
-        Total: <CurrencyFormatter value={data.totalCharges} />
-      </List.Item>
-
-      <List.Item icon={<IconRupeeCircle size={16} />}>
-        Amount Paid: <CurrencyFormatter value={data.amountPaid} />
-      </List.Item>
-
-      <List.Item icon={<IconPayments size={16} />} fw={500}>
-        Outstanding: <CurrencyFormatter value={data.currentOutstanding} />
-      </List.Item>
-
-      {data.outstandingNote && <List.Item icon={<IconNotes size={16} />}>Note: {data.outstandingNote}</List.Item>}
-
-      {statusInfo && (
-        <List.Item
-          fw={500}
-          c={statusInfo.color}
-          icon={<MyThemeIcon icon={statusInfo.icon} size={16} color={statusInfo.color} />}>
-          Status: {statusInfo.status}
-        </List.Item>
-      )}
-    </List>
+        <TableRow
+          heading='Status'
+          value={statusConfig.title}
+          Icon={<StatusBadge size={14} status={rentHistory.status} />}
+        />
+      </Table.Tbody>
+    </Table>
   );
-});
-
-RentDetailsList.displayName = 'RentDetailsList';
+};

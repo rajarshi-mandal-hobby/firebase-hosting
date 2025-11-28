@@ -127,7 +127,7 @@ export function MemberProfile({
           Rent for {currentMonthHistory ? formatMonthYear(currentMonthHistory.id) : 'Current Month'}
         </Title>
 
-        {currentMonthHistory && <RentDetailsList data={currentMonthHistory} showStatus={true} />}
+        {currentMonthHistory && <RentDetailsList rentHistory={currentMonthHistory} showStatus={true} />}
 
         {/* Status Alert with Pay Button */}
         {alertConfig && (
@@ -192,7 +192,7 @@ export function MemberProfile({
                     </Group>
                   </Accordion.Control>
                   <Accordion.Panel>
-                    <RentDetailsList data={history} />
+                    <RentDetailsList rentHistory={history} />
                   </Accordion.Panel>
                 </Accordion.Item>
               ))}

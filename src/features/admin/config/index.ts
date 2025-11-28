@@ -1,1 +1,0 @@
-export { ConfigManagement as default } from './components/ConfigManagement';

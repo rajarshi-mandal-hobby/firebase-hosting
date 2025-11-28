@@ -9,297 +9,419 @@ import {
   Text,
   TextInput,
   Title,
-  Select,
   Popover,
   Checkbox,
+  CloseIcon,
+  Divider,
+  Input,
+  Pill,
+  PillGroup,
+  Badge,
 } from '@mantine/core';
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useDebouncedValue } from '@mantine/hooks';
+import { useState } from 'react';
 import { SharedAvatar, StatusIndicator } from '../../../shared/components';
 import { MemberDetailsList } from '../../../shared/components/MemberDetailsList';
-import { IconFilter, IconPersonAdd, IconPhone, IconSearch } from '../../../shared/components/icons';
-import { MemberModal, DeleteMemberModal, DeactivationModal } from './modals';
-import { useAdminDashboardContext } from '../../../contexts/hooks/AdminDashboardContext';
-import { useAppContext } from '../../../contexts/AppContext';
-import { getMemberCounts } from '../../../shared/utils/memberUtils';
-import type { Member } from '../../../shared/types/firestore-types';
+import type { Floor } from '../../../data/shemas/GlobalSettings';
+import { useMembersManagement } from '../hooks/useMembersManagement';
+import { ErrorContainer } from '../../../shared/components/ErrorContainer';
+import { IconSearch, IconFilter, IconPersonAdd, IconCall, IconBed } from '../../../shared/icons';
+
+type AccountStatusFilter = 'all' | 'active' | 'inactive';
+type FiltersType = {
+  floor: Floor | 'All';
+  accountStatus: AccountStatusFilter;
+  optedForWifi: boolean;
+  latestInactiveMembers: boolean;
+};
+
+const defaultFilters: FiltersType = {
+  floor: 'All',
+  accountStatus: 'active',
+  optedForWifi: false,
+  latestInactiveMembers: false,
+};
 
 export default function MembersManagement() {
-  const { data: adminData } = useAdminDashboardContext();
-  const { searchMembers, filterMembers, fetchInactiveMembers } = useAppContext();
+  // Use independent members management hook
+  const { members, isLoading, error, membersCount, actions } = useMembersManagement();
 
-  // Get members data from admin context
-  const { members } = adminData.membersData;
-
-  // Modal states
-  const [addMemberModal, setAddMemberModal] = useState(false);
-  const [editMemberModal, setEditMemberModal] = useState(false);
-  const [deleteMemberModal, setDeleteMemberModal] = useState(false);
-  const [deactivationModal, setDeactivationModal] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  // Modal states (WIP: Will be implemented)
+  // const [_addMemberModal, _setAddMemberModal] = useState(false);
+  // const [_editMemberModal, _setEditMemberModal] = useState(false);
+  // const [_deleteMemberModal, _setDeleteMemberModal] = useState(false);
+  // const [_deactivationModal, _setDeactivationModal] = useState(false);
+  // const [_selectedMember, _setSelectedMember] = useState<Member | null>(null);
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery] = useDebouncedValue(searchQuery, 300);
-  const [filterOpened, setFilterOpened] = useState(false);
-  const [filters, setFilters] = useState({
-    floor: 'all',
-    accountStatus: 'all' as 'linked' | 'unlinked' | 'all',
-    showInactive: false,
+  const [memberFilter, setMemberFilters] = useState<FiltersType>(defaultFilters);
+  const [opened, setOpened] = useState(false);
+  const [checked, setChecked] = useState(false);
+
+  const isDefaultFilterState = JSON.stringify(memberFilter) === JSON.stringify(defaultFilters);
+  const memberFilterResult = members.filter((member) => {
+    // If account status is active and member is not active, exclude
+    if (memberFilter.accountStatus === 'active' && !member.isActive) {
+      return false;
+    }
+    // If account status is inactive and member is active, exclude
+    if (memberFilter.accountStatus === 'inactive' && member.isActive) {
+      return false;
+    }
+    // If no account status filter and member is not active, exclude
+    if (!memberFilter.accountStatus && !member.isActive) {
+      return false;
+    }
+    // If opted for WiFi filter is enabled and member has not opted for WiFi, exclude
+    if (memberFilter.optedForWifi && !member.optedForWifi) {
+      return false;
+    }
+    // If floor filter is set and member's floor does not match, exclude
+    if (memberFilter.floor !== 'All' && member.floor !== memberFilter.floor) {
+      return false;
+    }
+    // If search query is set and member's name or phone does not match, exclude
+    if (
+      searchQuery &&
+      !member.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !member.phone.includes(searchQuery)
+    ) {
+      return false;
+    }
+    return true;
   });
 
-  // Inactive members state
-  const [inactiveMembers, setInactiveMembers] = useState<Member[]>([]);
-  const [loadingInactive, setLoadingInactive] = useState(false);
+  console.log('🎨 Rendering MembersManagement', membersCount.optedForWifiMembers);
 
-  // Calculate member statistics from members data
-  const memberStats = useMemo(() => getMemberCounts(members), [members]);
+  if (isLoading) {
+    return (
+      <Stack align='center' justify='center' mt='xl'>
+        <Title order={1} c='dimmed'>
+          {'(￣o￣) . z Z'}
+        </Title>
+        <Text>Loading members...</Text>
+      </Stack>
+    );
+  }
 
-  // Get available floors from members
-  const availableFloors = useMemo(() => {
-    const floors = Array.from(new Set(members.map((member) => member.floor))).sort();
-    return [
-      { value: 'all', label: 'All Floors' },
-      ...floors.map((floor) => ({ value: floor, label: `Floor ${floor}` })),
-    ];
-  }, [members]);
-
-  // Fetch inactive members when needed
-  const loadInactiveMembers = useCallback(async () => {
-    if (inactiveMembers.length > 0) return; // Already loaded
-
-    setLoadingInactive(true);
-    try {
-      const inactive = await fetchInactiveMembers();
-      setInactiveMembers(inactive);
-    } catch (error) {
-      console.error('Failed to load inactive members:', error);
-    } finally {
-      setLoadingInactive(false);
-    }
-  }, [fetchInactiveMembers, inactiveMembers.length]);
-
-  // Load inactive members when showInactive filter is enabled
-  useEffect(() => {
-    if (filters.showInactive) {
-      loadInactiveMembers();
-    }
-  }, [filters.showInactive, loadInactiveMembers]);
-
-  // Get the base member list (active + inactive if needed)
-  const baseMemberList = useMemo(() => {
-    if (filters.showInactive) {
-      return [...members, ...inactiveMembers];
-    }
-    return members;
-  }, [members, inactiveMembers, filters.showInactive]);
-
-  // Apply search and filters
-  const filteredMembers = useMemo(() => {
-    // First apply search
-    let members = searchMembers(debouncedSearchQuery, baseMemberList);
-
-    // Then apply filters
-    members = filterMembers(members, {
-      floor: filters.floor,
-      accountStatus: filters.accountStatus,
-    });
-
-    return members;
-  }, [searchMembers, filterMembers, debouncedSearchQuery, baseMemberList, filters]);
-
-  // Check if any filters are active
-  const hasActiveFilters = useMemo(() => {
-    return filters.floor !== 'all' || filters.accountStatus !== 'all' || filters.showInactive;
-  }, [filters]);
-
-  // Reset filters
-  const resetFilters = useCallback(() => {
-    setFilters({
-      floor: 'all',
-      accountStatus: 'all',
-      showInactive: false,
-    });
-  }, []);
+  if (error) {
+    return <ErrorContainer error={error} onRetry={actions.handleRefetch} />;
+  }
 
   return (
-    <Stack>
-      <Title order={4}>
-        Active Members: {memberStats.active} | WiFi: {memberStats.wifiOptedIn} | Total: {memberStats.total}
-      </Title>
+    <Stack gap='lg'>
+      <Group gap='lg'>
+        <Group gap='xs'>
+          <Title order={5}>Total:</Title>
+          <Badge size='lg' circle color='indigo.7'>
+            {members.length}
+          </Badge>
+        </Group>
+        <Group gap='xs'>
+          <Title order={5}>Active:</Title>
+          <Badge size='lg' color='green.7' circle>
+            {membersCount.activeMembers}
+          </Badge>
+        </Group>
+        <Group gap='xs'>
+          <Title order={5}>WiFi:</Title>
+          <Badge size='lg' circle color='gray.7'>
+            {membersCount.optedForWifiMembers}
+          </Badge>
+        </Group>
+      </Group>
 
       <Group>
         <TextInput
           placeholder='Search by name or phone...'
-          leftSection={<IconSearch />}
+          leftSection={<IconSearch size={20} />}
+          rightSection={searchQuery && <Input.ClearButton onClick={() => setSearchQuery('')} />}
           radius='xl'
           flex={1}
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.currentTarget.value)}
         />
 
-        <Popover
-          width={300}
-          position='bottom-end'
-          withArrow
-          shadow='md'
-          opened={filterOpened}
-          onChange={setFilterOpened}>
+        <Popover width='350' withArrow shadow='xl' position='bottom' opened={opened} onChange={setOpened}>
           <Popover.Target>
             <ActionIcon
-              size={rem(32)}
+              size={30}
               aria-label='Filter'
-              variant={hasActiveFilters ? 'filled' : 'outline'}
-              color={hasActiveFilters ? 'blue' : 'dark.8'}
-              onClick={() => setFilterOpened((o) => !o)}>
-              <IconFilter size={'70%'} />
+              onClick={() => setOpened((o) => !o)}
+              variant={isDefaultFilterState ? 'outline' : 'filled'}>
+              <IconFilter size={20} />
             </ActionIcon>
           </Popover.Target>
+          {/* <Collapse in={opened}> */}
           <Popover.Dropdown>
-            <Stack gap='md'>
-              <Text size='sm' fw={500}>
-                Filter Members
-              </Text>
+            <Stack>
+              <Title order={5}>Filters</Title>
+              <Group gap='xs'>
+                <Text size='sm' fw={500}>
+                  Status:
+                </Text>
+                <Button
+                  size='xs'
+                  variant={memberFilter.accountStatus === 'active' ? 'filled' : 'light'}
+                  disabled={isLoading}
+                  onClick={() => {
+                    if (memberFilter.accountStatus === 'active') {
+                      return;
+                    }
 
-              <Select
-                label='Floor'
-                placeholder='Select floor'
-                data={availableFloors}
-                value={filters.floor}
-                onChange={(value) => setFilters((prev) => ({ ...prev, floor: value || 'all' }))}
-                clearable
-                searchable
-              />
+                    setMemberFilters((prev) => ({ ...prev, accountStatus: 'active', latestInactiveMembers: false }));
+                  }}>
+                  Active
+                </Button>
+                <Button
+                  size='xs'
+                  variant={memberFilter.accountStatus === 'inactive' ? 'filled' : 'light'}
+                  loading={isLoading}
+                  disabled={isLoading}
+                  rightSection={memberFilter.accountStatus === 'inactive' ? <CloseIcon size={rem(12)} /> : null}
+                  onClick={() => {
+                    setMemberFilters((prev) => ({
+                      ...prev,
+                      accountStatus: memberFilter.accountStatus === 'inactive' ? 'active' : 'inactive',
+                      latestInactiveMembers: false,
+                    }));
 
-              <Select
-                label='Account Status'
-                placeholder='Select account status'
-                data={[
-                  { value: 'all', label: 'All Members' },
-                  { value: 'linked', label: 'Account Linked' },
-                  { value: 'unlinked', label: 'Account Not Linked' },
-                ]}
-                value={filters.accountStatus}
-                onChange={(value) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    accountStatus: (value as 'linked' | 'unlinked' | 'all') || 'all',
-                  }))
-                }
-              />
+                    actions.handleInactiveMembers();
+                  }}>
+                  Inactive
+                </Button>
+                <Button
+                  size='xs'
+                  variant={memberFilter.accountStatus === 'all' ? 'filled' : 'light'}
+                  disabled={isLoading}
+                  rightSection={memberFilter.accountStatus === 'all' ? <CloseIcon size={rem(12)} /> : null}
+                  onClick={() => {
+                    let status: AccountStatusFilter = 'all';
+                    if (memberFilter.accountStatus === 'all') {
+                      status = 'active';
+                    }
+                    setMemberFilters((prev) => ({ ...prev, accountStatus: status, latestInactiveMembers: false }));
+
+                    actions.handleInactiveMembers();
+                  }}>
+                  All
+                </Button>
+              </Group>
 
               <Checkbox
-                label={`Include inactive members ${loadingInactive ? '(loading...)' : ''}`}
-                checked={filters.showInactive}
-                onChange={(event) =>
-                  setFilters((prev) => ({
+                label='Get the latest inactive members'
+                checked={memberFilter.latestInactiveMembers}
+                onChange={(event) => {
+                  const checked = event.currentTarget.checked;
+                  actions.handleInactiveMembers(checked);
+                  setOpened(!checked);
+                  setMemberFilters((prev) => ({
                     ...prev,
-                    showInactive: event.currentTarget.checked,
-                  }))
-                }
-                disabled={loadingInactive}
+                    accountStatus: 'inactive',
+                    latestInactiveMembers: checked,
+                  }));
+                }}
               />
 
-              {hasActiveFilters && (
-                <Button variant='light' size='xs' onClick={resetFilters} fullWidth>
-                  Clear All Filters
+              <Divider />
+
+              <Group>
+                <Text size='sm' fw={500}>
+                  Floor:
+                </Text>
+                <Button
+                  size='xs'
+                  variant={memberFilter.floor === 'All' ? 'filled' : 'light'}
+                  disabled={isLoading}
+                  value='All'
+                  onClick={(event) => {
+                    const value = event.currentTarget.value as Floor | 'All';
+                    if (value === null) return;
+                    setMemberFilters((prev) => ({ ...prev, floor: value, latestInactiveMembers: false }));
+                  }}>
+                  All
                 </Button>
-              )}
+                <Button
+                  size='xs'
+                  variant={memberFilter.floor === '2nd' ? 'filled' : 'light'}
+                  disabled={isLoading}
+                  value='2nd'
+                  rightSection={memberFilter.floor === '2nd' ? <CloseIcon size={rem(12)} /> : null}
+                  onClick={(event) => {
+                    let value = event.currentTarget.value as Floor | 'All';
+                    console.log('Clicked floor button, value:', value);
+                    if (value === null) return;
+                    value = memberFilter.floor === '2nd' ? 'All' : '2nd';
+                    setMemberFilters((prev) => ({ ...prev, floor: value, latestInactiveMembers: false }));
+                  }}>
+                  2nd
+                </Button>
+                <Button
+                  size='xs'
+                  variant={memberFilter.floor === '3rd' ? 'filled' : 'light'}
+                  disabled={isLoading}
+                  value='3rd'
+                  rightSection={memberFilter.floor === '3rd' ? <CloseIcon size={rem(12)} /> : null}
+                  onClick={(event) => {
+                    let value = event.currentTarget.value as Floor | 'All';
+                    if (value === null) return;
+                    value = memberFilter.floor === '3rd' ? 'All' : '3rd';
+                    setMemberFilters((prev) => ({ ...prev, floor: value, latestInactiveMembers: false }));
+                  }}>
+                  3rd
+                </Button>
+              </Group>
+
+              <Divider />
+
+              <Group gap='xs'>
+                <Text size='sm' fw={500}>
+                  Wi-Fi:
+                </Text>
+                <Button
+                  size='xs'
+                  variant={memberFilter.optedForWifi ? 'filled' : 'light'}
+                  disabled={isLoading}
+                  value='WiFi'
+                  rightSection={memberFilter.optedForWifi ? <CloseIcon size={rem(12)} /> : null}
+                  onClick={() => {
+                    setMemberFilters((prev) => ({
+                      ...prev,
+                      optedForWifi: !prev.optedForWifi,
+                      latestInactiveMembers: false,
+                    }));
+                  }}>
+                  Opted In
+                </Button>
+              </Group>
+
+              <Button
+                size='sm'
+                mt='md'
+                disabled={isDefaultFilterState}
+                onClick={() => {
+                  setMemberFilters(defaultFilters);
+                }}>
+                Clear All Filters
+              </Button>
             </Stack>
+            {/* </Collapse> */}
           </Popover.Dropdown>
         </Popover>
-
-        <ActionIcon
-          size={rem(32)}
-          aria-label='Add Member'
-          variant='filled'
-          color='dark.8'
-          onClick={() => setAddMemberModal(true)}>
-          <IconPersonAdd size={'70%'} />
-        </ActionIcon>
       </Group>
 
       <Accordion>
-        {filteredMembers.map((member) => (
-          <Accordion.Item key={member.id} value={member.id}>
-            <Center>
-              <Accordion.Control>
-                <Group>
-                  <StatusIndicator status={member.isActive ? 'active' : 'inactive'}>
-                    <SharedAvatar src={null} name={member.name} size='md' />
-                  </StatusIndicator>
-                  <Stack gap={0}>
-                    <Title order={5}>{member.name}</Title>
-                    {/* <Text component='a' href={`tel:${member.phone}`} size='xs' c='dimmed'>
-                      Phone: {member.phone}
-                    </Text> */}
-                  </Stack>
-                </Group>
-              </Accordion.Control>
-              <ActionIcon aria-label='View Details' mr='sm'>
-                <IconPhone size={16} />
-              </ActionIcon>
-            </Center>
-            <Accordion.Panel>
-              <MemberDetailsList member={member} isAdmin={true} />
-              <Group mt='md' justify='flex-end'>
-                <Button
-                  variant='default'
-                  size='xs'
-                  onClick={() => {
-                    setSelectedMember(member);
-                    setEditMemberModal(true);
-                  }}>
-                  Edit
-                </Button>
-                <Button variant='default' size='xs'>
-                  History
-                </Button>
-                {member.isActive ? (
+        {isLoading ? (
+          <Stack align='center' justify='center' mt='xl'>
+            <Title order={1} c='dimmed'>
+              {'(￣o￣) . z Z'}
+            </Title>
+            <Text size='sm'>Loading members...</Text>
+          </Stack>
+        ) : memberFilterResult.length > 0 ? (
+          memberFilterResult.map((member) => (
+            <Accordion.Item key={member.id} value={member.id}>
+              <Center>
+                <Accordion.Control>
+                  <Group>
+                    <StatusIndicator status={member.isActive ? 'active' : 'inactive'} position='top-right' size={14}>
+                      <SharedAvatar src={null} name={member.name} size='md' />
+                    </StatusIndicator>
+                    <Stack gap={0}>
+                      <Title order={5}>{member.name}</Title>
+                      <Group gap='xs'>
+                        <IconBed size={14} color='gray.7' />
+                        <Text size='xs' c='gray.7'>
+                          {member.floor} - {member.bedType}
+                        </Text>
+                      </Group>
+                    </Stack>
+                  </Group>
+                </Accordion.Control>
+                <ActionIcon
+                  mr='sm'
+                  onClick={() => (window.location.href = `tel:${member.phone}`)}
+                  variant='subtle'
+                  size={30}>
+                  <IconCall size={16} />
+                </ActionIcon>
+              </Center>
+              <Accordion.Panel>
+                <MemberDetailsList member={member} isAdmin={true} />
+                <Group mt='md' justify='flex-end'>
                   <Button
-                    color='orange'
+                    variant='default'
                     size='xs'
-                    variant='light'
-                    onClick={() => {
-                      setSelectedMember(member);
-                      setDeactivationModal(true);
-                    }}>
-                    Deactivate
+                    // onClick={() => {
+                    //   setSelectedMember(member);
+                    //   setEditMemberModal(true);
+                    // }}
+                  >
+                    Edit
                   </Button>
-                ) : (
-                  <>
+                  <Button variant='default' size='xs'>
+                    History
+                  </Button>
+                  {member.isActive ? (
                     <Button
-                      color='green'
+                      color='orange'
                       size='xs'
                       variant='light'
-                      onClick={() => {
-                        setSelectedMember(member);
-                        setAddMemberModal(true);
-                      }}>
-                      Reactivate
+                      // onClick={() => {
+                      //   setSelectedMember(member);
+                      //   setDeactivationModal(true);
+                      // }}
+                    >
+                      Deactivate
                     </Button>
-                    <Button
-                      color='red'
-                      size='xs'
-                      variant='light'
-                      onClick={() => {
-                        setSelectedMember(member);
-                        setDeleteMemberModal(true);
-                      }}>
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </Group>
-            </Accordion.Panel>
-          </Accordion.Item>
-        ))}
+                  ) : (
+                    <>
+                      <Button
+                        color='green'
+                        size='xs'
+                        variant='light'
+                        // onClick={() => {
+                        //   setSelectedMember(member);
+                        //   setAddMemberModal(true);
+                        // }}
+                      >
+                        Reactivate
+                      </Button>
+                      <Button
+                        color='red'
+                        size='xs'
+                        variant='light'
+                        // onClick={() => {
+                        //   setSelectedMember(member);
+                        //   setDeleteMemberModal(true);
+                        // }}
+                      >
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </Group>
+              </Accordion.Panel>
+            </Accordion.Item>
+          ))
+        ) : (
+          <Stack align='center' justify='center' mt='xl'>
+            <Title order={1} c='dimmed'>
+              {'（︶^︶）'}
+            </Title>
+            <Text size='sm'>
+              {memberFilter.accountStatus === 'inactive' && members.length === 0
+                ? 'No inactive members found, Please check the "Latest inactive members" Filter.'
+                : 'No members found matching the criteria.'}
+            </Text>
+          </Stack>
+        )}
       </Accordion>
 
       {/* Modals */}
-      <MemberModal opened={addMemberModal} onClose={() => setAddMemberModal(false)} mode='add' member={null} />
+      {/* <MemberModal opened={addMemberModal} onClose={() => setAddMemberModal(false)} mode='add' member={null} /> */}
 
-      <MemberModal
+      {/* <MemberModal
         opened={editMemberModal}
         onClose={() => {
           setEditMemberModal(false);
@@ -325,7 +447,7 @@ export default function MembersManagement() {
           setSelectedMember(null);
         }}
         member={selectedMember}
-      />
+      /> */}
     </Stack>
   );
 }

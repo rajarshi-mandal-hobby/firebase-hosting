@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { connectFirestoreEmulator, initializeFirestore, Firestore, persistentLocalCache } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator, GoogleAuthProvider } from 'firebase/auth';
+import { connectFirestoreEmulator, getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
@@ -20,10 +20,13 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase services
 export const auth = getAuth(app);
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ cacheSizeBytes: 10 * 1024 * 1024 }), // 10 MB cache
-});
-// export const db = getFirestore(app);
+// Initialize Google Auth Provider
+export const googleProvider = new GoogleAuthProvider();
+
+// export const db = initializeFirestore(app, {
+//   localCache: persistentLocalCache({ cacheSizeBytes: 10 * 1024 * 1024 }), // 10 MB cache
+// });
+export const db = getFirestore(app);
 export const functions = getFunctions(app);
 export const storage = getStorage(app);
 

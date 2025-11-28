@@ -6,5 +6,5 @@ interface Options extends NumberFormatterProps {
 
 // Component-based currency display for NumberFormatter features
 export const CurrencyFormatter = ({ value, ...props }: Options) => (
-  <NumberFormatter prefix={'₹'} value={value} {...props} />
+  <NumberFormatter prefix={'₹'} value={value} thousandSeparator=',' thousandsGroupStyle='lakh' {...props} />
 );

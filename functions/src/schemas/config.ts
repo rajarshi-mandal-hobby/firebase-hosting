@@ -1,7 +1,6 @@
-import { z } from 'zod';
-import { ZodFourDigitPositiveNumber, zThreeToFourDigitsNumber, zUpiVpa } from './primitives';
 import { Timestamp, DocumentData } from 'firebase-admin/firestore';
 import { Floor, BedType } from '../types/shared';
+import * as v from 'valibot';
 
 // Configuration types
 // New: explicit per-floor bed counts to avoid indexing a type as a value
@@ -12,10 +11,10 @@ export type BedRents = {
 
 export type BedCounts2nd = {
   [B in BedType]: number;
-}
+};
 export type BedCounts3rd = {
   [B in Exclude<BedType, 'Special'>]: number;
-}
+};
 
 export interface GlobalSettings {
   // replaced invalid syntax with the explicit BedTypes mapping
@@ -67,36 +66,46 @@ export type GlobalSettingsInput = Omit<
   'activememberCounts' | 'currentBillingMonth' | 'nextBillingMonth'
 >;
 
-// Strict schema for full objects (no .optional() on fields)
-export const GlobalSettingsInputSchema: z.ZodType<GlobalSettingsInput> = z.object({
-  bedRents: z.object({
-    '2nd': z.object({
-      Bed: ZodFourDigitPositiveNumber,
-      Room: ZodFourDigitPositiveNumber,
-      Special: ZodFourDigitPositiveNumber,
+const bedRentNumberValidation = v.pipe(
+  v.number('Must be a number'),
+  v.integer('Must be an integer'),
+  v.minValue(1600, 'Must be at least 1600'),
+  v.maxValue(9999, 'Must be at most 4 digits')
+);
+
+export const GlobalSettingsInputSchema = v.object({
+  bedRents: v.object({
+    '2nd': v.object({
+      Bed: bedRentNumberValidation,
+      Room: bedRentNumberValidation,
+      Special: bedRentNumberValidation,
     }),
-    '3rd': z.object({
-      Bed: ZodFourDigitPositiveNumber,
-      Room: ZodFourDigitPositiveNumber,
+    '3rd': v.object({
+      Bed: bedRentNumberValidation,
+      Room: bedRentNumberValidation,
     }),
   }),
-  securityDeposit: ZodFourDigitPositiveNumber,
-  wifiMonthlyCharge: zThreeToFourDigitsNumber,
-  upiVpa: zUpiVpa,
+  securityDeposit: v.pipe(
+    v.number('Must be a number'),
+    v.integer('Must be an integer'),
+    v.minValue(1000, 'Must be at least 1000'),
+    v.maxValue(9999, 'Must be at most 4 digits')
+  ),
+  wifiMonthlyCharge: v.pipe(
+    v.number('Must be a number'),
+    v.integer('Must be an integer'),
+    v.minValue(100, 'Must be at least 3 digits'),
+    v.maxValue(9999, 'Must be at most 4 digits')
+  ),
+  upiVpa: v.pipe(
+    v.string('Must be a string'),
+    v.transform((s) => s.trim().toLowerCase()),
+    v.regex(/^[a-z0-9_-]{3,20}@[a-z0-9]{3,10}$/, 'Must be UPI VPA format (e.g. name@bank)')
+  ),
 });
 
-export const zodGlobalSettingsInput = (requestData: any) => GlobalSettingsInputSchema.safeParse(requestData);
+export const GlobalSettingsValidationResult = (requestData: any) => v.safeParse(GlobalSettingsInputSchema, requestData);
 
-export const GlobalSettingsToFormKey: Record<string, string> = {
-  'bedTypes.2nd.Bed': 'secondBed',
-  'bedTypes.2nd.Room': 'secondRoom',
-  'bedTypes.2nd.Special': 'secondSpecial',
-  'bedTypes.3rd.Bed': 'thirdBed',
-  'bedTypes.3rd.Room': 'thirdRoom',
-  securityDeposit: 'securityDeposit',
-  wifiMonthlyCharge: 'wifiMonthlyCharge',
-  upiVpa: 'upiVpa',
-};
 
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];

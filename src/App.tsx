@@ -11,6 +11,9 @@ import { SignIn } from './pages/SignIn';
 import { AuthProvider } from './contexts/AuthContext';
 import { AdminDashboard } from './features/admin/pages/AdminDashboard';
 import { AppContainer } from './shared/components';
+import { GenerateBillsPage } from './features/admin/pages/GenerateBillsPage';
+import { DefaultRentsPage } from './features/admin/pages/DefaultRentsPage';
+import { AddMemberPage } from './features/admin/pages/AddMemberPage';
 
 const router = createBrowserRouter([
   {
@@ -29,6 +32,22 @@ const router = createBrowserRouter([
     path: '/signin',
     element: <SignIn />,
   },
+  {
+    path: '/generate-bills',
+    element: <GenerateBillsPage />,
+  },
+  {
+    path: '/default-rents',
+    element: <DefaultRentsPage />,
+  },
+  {
+    path: '/add-member',
+    element: <AddMemberPage />,
+  },
+  {
+    path: '*',
+    element: <div>404 Not Found</div>,
+  }
 ]);
 
 function App() {
