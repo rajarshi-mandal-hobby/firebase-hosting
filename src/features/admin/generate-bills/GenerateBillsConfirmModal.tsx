@@ -9,9 +9,9 @@ import {
   Title,
   Text,
 } from '@mantine/core';
-import { computePerHeadBill } from '../../../utils/utils';
 import type { GenerateBillFormData } from './hooks/useGenerateBillsForm';
 import { useCategorizeMembersByExpense } from './hooks/useCategorizeMembersByExpense';
+import { computePerHeadBill } from '../../../shared/utils';
 
 interface GenerateBillsConfirmModalProps {
   opened: boolean;

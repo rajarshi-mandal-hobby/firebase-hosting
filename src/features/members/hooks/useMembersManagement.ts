@@ -7,50 +7,59 @@ import { fetchMembers, type MemberFilters } from '../../../data/services/members
  * Handles fetching and merging of active and inactive members
  */
 export const useMembersManagement = () => {
-  const [allMembers, setAllMembers] = useState<Member[]>([]);
+  const [activeMembers, setActiveMembers] = useState<Member[]>([]);
+  const [inactiveMembers, setInactiveMembers] = useState<Member[]>([]);
   const [membersCount, setMembersCount] = useState({
     activeMembers: 0,
     inactiveMembers: 0,
-    optedForWifiMembers: 0,
+    totalMembers: 0,
   });
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [filters, setFilters] = useState<MemberFilters>({ reload: false, isActive: 'active' });
-  const inactiveMemberCalled = useRef(false);
+  const isInactiveMemberCalled = useRef(false);
 
   const fetchEvent = useEffectEvent(() => {
     // Determine if we should fetch based on filters or initial load
-    const shouldFetch = filters.reload || allMembers.length === 0 || membersCount.activeMembers === allMembers.length;
-    console.log('useMembersManagement fetchEvent called, shouldFetch:', shouldFetch);
-    if (!shouldFetch || isLoading || inactiveMemberCalled.current) {
-      console.log('Fetch skipped - isLoading:', isLoading, 'inactiveMemberCalled:', inactiveMemberCalled.current);
+    const isFetchRequired =
+      filters.reload ||
+      activeMembers.length === 0 ||
+      (membersCount.inactiveMembers === 0 && filters.isActive === 'inactive');
+
+    if (!isFetchRequired || isLoading || isInactiveMemberCalled.current) {
       return;
     }
-    console.log('useMembersManagement effect triggered, filter:', filters.isActive, 'reload:', filters.reload);
 
     const fetchMembersDb = async () => {
       setLoading(true);
       setError(null);
       try {
-        const activeMembers = await fetchMembers({ ...filters, isActive: 'active' });
+        const isActive = filters.isActive === 'active' ? 'active' : 'inactive';
+        const members = await fetchMembers({ ...filters, isActive });
 
-        let inactiveMembers: Member[] = [];
-        if (filters.isActive === 'inactive') {
-          inactiveMembers = await fetchMembers({ ...filters, isActive: 'inactive' });
-          inactiveMemberCalled.current = true;
+        if (filters.isActive === 'active') {
+          setActiveMembers(members);
+            setMembersCount((prev) => ({
+            ...prev,
+            activeMembers: members.length,
+            totalMembers: members.length + prev.inactiveMembers,
+          }));
+        } else {
+          setInactiveMembers(members);
+          setMembersCount((prev) => ({
+            ...prev,
+            inactiveMembers: members.length,
+            totalMembers: prev.activeMembers + members.length,
+          }));
+          isInactiveMemberCalled.current = true;
         }
-
-        const membersData = [...activeMembers, ...inactiveMembers];
-
-        setMembersCount({
-          activeMembers: activeMembers.length,
-          inactiveMembers: inactiveMembers.length,
-          optedForWifiMembers: membersData.filter((m) => m.optedForWifi).length,
-        });
-        setAllMembers(membersData);
       } catch (err) {
-        setError(err as Error);
-        console.error('Error fetching members:', err);
+        const error = err instanceof Error ? err : new Error('Unknown error occurred');
+        if (filters.isActive === 'inactive') {
+          isInactiveMemberCalled.current = false;
+        }
+        setError(error);
+        console.error('Error fetching members:', error);
       } finally {
         setLoading(false);
         if (filters.reload) {
@@ -69,7 +78,7 @@ export const useMembersManagement = () => {
   };
 
   const handleInactiveMembers = (refetch = false) => {
-    inactiveMemberCalled.current = false;
+    isInactiveMemberCalled.current = false;
     setFilters((prev) => ({ ...prev, isActive: 'inactive', reload: refetch }));
   };
 
@@ -80,7 +89,8 @@ export const useMembersManagement = () => {
   };
 
   return {
-    members: allMembers,
+    activeMembers,
+    inactiveMembers,
     isLoading,
     error,
     membersCount,

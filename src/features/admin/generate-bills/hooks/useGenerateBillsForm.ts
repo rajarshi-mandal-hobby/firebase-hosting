@@ -4,12 +4,12 @@ import { useState, useRef } from 'react';
 import dayjs from 'dayjs';
 import type { Floor } from '../../../../data/shemas/GlobalSettings';
 import type { GenerateBillsData } from './useGenerateBillsData';
-import { computePerHeadBill } from '../../../../utils/utils';
 import { formValidator, zInteger, zStringTrimmed, zThreeToFourDigit } from '../../../../utils/validators';
 import { fetchElectricBillByMonth } from '../../../../data/services/electricService';
 import { notifyError } from '../../../../utils/notifications';
 import { useDisclosure } from '@mantine/hooks';
 import { saveBillData } from '../../../../data/services/billDataService';
+import { computePerHeadBill } from '../../../../shared/utils';
 
 type DerivedUIState = {
   floorBills: { [F in Floor]: number };

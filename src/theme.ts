@@ -162,6 +162,7 @@ export const theme = createTheme({
           item: classes.accordionItem,
           control: classes.accordionControl,
           chevron: classes.accordionChevron,
+          label: classes.accordionLabel,
         },
       },
     }),

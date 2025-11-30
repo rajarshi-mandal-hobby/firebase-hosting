@@ -95,7 +95,7 @@ export const AddMemberConfirmationModal = ({
 
   return (
     <Modal opened={opened} onClose={actions.onClose} title='Confirmation' style={{}}>
-      <SimpleGrid cols={2} spacing='md'>
+      <SimpleGrid cols={2} spacing='xs' verticalSpacing='md'>
         {data.map(DisplayDataValues)}
       </SimpleGrid>
 

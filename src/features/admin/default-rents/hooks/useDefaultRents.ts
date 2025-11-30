@@ -3,7 +3,7 @@ import { fetchGlobalSettings } from '../../../../data/services/configService';
 import type { GlobalSettings } from '../../../../data/shemas/GlobalSettings';
 
 export const useDefaultRents = () => {
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [settings, setSettings] = useState<GlobalSettings | null>(null);
   const [refetch, setRefetch] = useState(false);
@@ -12,13 +12,13 @@ export const useDefaultRents = () => {
   const fetchEvent = useEffectEvent(() => {
     const shouldFetch = !settings || refetch;
 
-    if (!shouldFetch || loading) {
+    if (!shouldFetch || isLoading) {
       return;
     }
 
     console.log('useSettings effect triggered, refetch:', refetch);
     const fetchSettings = async () => {
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
       try {
         const data = await fetchGlobalSettings(refetch);
@@ -29,7 +29,7 @@ export const useDefaultRents = () => {
         setError(error);
         refetchCountRef.current++; // Increment retry count on failure
       } finally {
-        setLoading(false);
+        setIsLoading(false);
         if (refetch) {
           setRefetch(false);
         }
@@ -50,5 +50,5 @@ export const useDefaultRents = () => {
     setRefetch(true);
   };
 
-  return { settings, loading, error, actions: { handleRefresh } };
+  return { settings, isLoading, error, actions: { handleRefresh } };
 };

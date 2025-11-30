@@ -1,12 +1,11 @@
 import { useState, useTransition } from 'react';
-import type { AddMemberFormData } from '../components/AddMemberForm';
 import { useForm } from '@mantine/form';
-import type { Floor, GlobalSettings } from '../../../../data/shemas/GlobalSettings';
+import type { BedType, Floor, GlobalSettings } from '../../../../data/shemas/GlobalSettings';
 import dayjs from 'dayjs';
 import { notifySuccess } from '../../../../utils/notifications';
 import { useDisclosure } from '@mantine/hooks';
 
-const formatPhoneNumber = (value: number | string): number => {
+const sanitizePhoneInput = (value: number | string): number => {
   const phoneStr = String(value).replace(/\D/g, '').slice(-10);
   return Number(phoneStr);
 };
@@ -16,13 +15,28 @@ const isPositiveInteger = (value: number | string): boolean => {
 };
 
 type UseAddMemberFormProps = {
-  settings: GlobalSettings;
+    settings: GlobalSettings;
+}
+
+export type AddMemberFormData = {
+  name: string;
+  phone: string | number;
+  floor: Floor | null;
+  bedType: BedType | null;
+  rentAmount: number | string;
+  rentAtJoining?: number | string;
+  securityDeposit: number | string;
+  advanceDeposit: number | string;
+  optedForWifi: boolean;
+  moveInDate: string;
+  notes: string;
+  amountPaid: number | string;
 };
 
 export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
   const [isSaving, saveTransition] = useTransition();
   const [outstandingAmount, setOutstandingAmount] = useState<number>(0);
-  const [isFullAmountPaid, setIsFullAmountPaid] = useState<boolean>(true);
+  const [isFullAmountPaid, setIsFullAmountPaid] = useState<boolean>(false);
   const [isConfirmModalOpen, confirmModalHandlers] = useDisclosure(false);
 
   const form = useForm<AddMemberFormData>({
@@ -33,6 +47,7 @@ export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
       floor: null,
       bedType: null,
       rentAmount: '',
+      rentAtJoining: '',
       securityDeposit: settings.securityDeposit,
       advanceDeposit: '',
       optedForWifi: false,
@@ -45,10 +60,10 @@ export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
         Number(previous.rentAmount || 0) + Number(previous.securityDeposit || 0) + Number(previous.advanceDeposit || 0);
       const newTotalAmount =
         Number(values.rentAmount || 0) + Number(values.securityDeposit || 0) + Number(values.advanceDeposit || 0);
-      if (newTotalAmount !== previousAmount) {
-        form.setFieldValue('amountPaid', newTotalAmount);
-        return;
-      }
+    //   if (newTotalAmount !== previousAmount) {
+    //     form.setFieldValue('amountPaid', newTotalAmount);
+    //     return;
+    //   }
 
       if (values.amountPaid !== previous.amountPaid) {
         const outStanding = newTotalAmount - Number(values.amountPaid || 0);
@@ -62,7 +77,6 @@ export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
 
       // Priority 1: Clear bedType and rentAmount when floor changes
       if (hasFloorChanged) {
-        console.log('Floor changed to:', values.floor);
         form.setFieldValue('bedType', null);
         form.setFieldValue('rentAmount', '');
         form.setFieldValue('advanceDeposit', '');
@@ -113,7 +127,7 @@ export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
       },
       phone: (value) => {
         if (!value) return 'Phone number is required';
-        const formattedPhone = formatPhoneNumber(value);
+        const formattedPhone = sanitizePhoneInput(value);
         if (!/^[0-9]{10}$/.test(formattedPhone.toString())) {
           return 'Phone must be 10 digits';
         }
@@ -141,7 +155,7 @@ export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
         .split(' ')
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' '),
-      phone: formatPhoneNumber(values.phone),
+      phone: sanitizePhoneInput(values.phone),
     }),
   });
 

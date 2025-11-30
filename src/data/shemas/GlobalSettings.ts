@@ -4,8 +4,8 @@ export type Floor = '2nd' | '3rd';
 export type BedType = 'Bed' | 'Room' | 'Special';
 
 // Only allow 'Bed', 'Room', 'Special' as keys, but 'Special' is only for '2nd'
-type SecondFloor = Pick<Record<BedType, number>, 'Bed' | 'Room' | 'Special'>;
-type ThirdFloor = Pick<Record<BedType, number>, 'Bed' | 'Room'>;
+type SecondFloor = Record<BedType, number>;
+type ThirdFloor = Record<Exclude<BedType, 'Special'>, number> & { Special?: never };
 
 export type BedRents = {
   [F in Floor]: F extends '2nd' ? SecondFloor : ThirdFloor;

@@ -14,17 +14,28 @@ import {
   CloseIcon,
   Divider,
   Input,
-  Pill,
-  PillGroup,
   Badge,
+  Menu,
 } from '@mantine/core';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { SharedAvatar, StatusIndicator } from '../../../shared/components';
 import { MemberDetailsList } from '../../../shared/components/MemberDetailsList';
 import type { Floor } from '../../../data/shemas/GlobalSettings';
+import type { Member } from '../../../shared/types/firestore-types'; // Add this import
 import { useMembersManagement } from '../hooks/useMembersManagement';
 import { ErrorContainer } from '../../../shared/components/ErrorContainer';
-import { IconSearch, IconFilter, IconPersonAdd, IconCall, IconBed } from '../../../shared/icons';
+import {
+  IconSearch,
+  IconFilter,
+  IconCall,
+  IconBed,
+  IconMoreVertical,
+  IconHistory,
+  IconEdit,
+  IconClose,
+  IconCheck,
+} from '../../../shared/icons';
+import { useNavigate } from 'react-router-dom';
 
 type AccountStatusFilter = 'all' | 'active' | 'inactive';
 type FiltersType = {
@@ -43,7 +54,8 @@ const defaultFilters: FiltersType = {
 
 export default function MembersManagement() {
   // Use independent members management hook
-  const { members, isLoading, error, membersCount, actions } = useMembersManagement();
+  const { activeMembers, inactiveMembers, isLoading, error, membersCount, actions } = useMembersManagement();
+    const navigate = useNavigate();
 
   // Modal states (WIP: Will be implemented)
   // const [_addMemberModal, _setAddMemberModal] = useState(false);
@@ -56,42 +68,67 @@ export default function MembersManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [memberFilter, setMemberFilters] = useState<FiltersType>(defaultFilters);
   const [opened, setOpened] = useState(false);
-  const [checked, setChecked] = useState(false);
 
   const isDefaultFilterState = JSON.stringify(memberFilter) === JSON.stringify(defaultFilters);
-  const memberFilterResult = members.filter((member) => {
-    // If account status is active and member is not active, exclude
-    if (memberFilter.accountStatus === 'active' && !member.isActive) {
-      return false;
-    }
-    // If account status is inactive and member is active, exclude
-    if (memberFilter.accountStatus === 'inactive' && member.isActive) {
-      return false;
-    }
-    // If no account status filter and member is not active, exclude
-    if (!memberFilter.accountStatus && !member.isActive) {
-      return false;
-    }
-    // If opted for WiFi filter is enabled and member has not opted for WiFi, exclude
-    if (memberFilter.optedForWifi && !member.optedForWifi) {
-      return false;
-    }
-    // If floor filter is set and member's floor does not match, exclude
-    if (memberFilter.floor !== 'All' && member.floor !== memberFilter.floor) {
-      return false;
-    }
-    // If search query is set and member's name or phone does not match, exclude
-    if (
-      searchQuery &&
-      !member.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !member.phone.includes(searchQuery)
-    ) {
-      return false;
-    }
-    return true;
-  });
 
-  console.log('🎨 Rendering MembersManagement', membersCount.optedForWifiMembers);
+  const newMemberFilterResult = useMemo(() => {
+    console.log('Filtering members');
+    // 1. Select the base dataset efficiently
+    let baseMembers: readonly Member[];
+
+    switch (memberFilter.accountStatus) {
+      case 'active':
+        baseMembers = activeMembers;
+        break;
+      case 'inactive':
+        baseMembers = inactiveMembers;
+        break;
+      case 'all':
+        // Combine only when necessary
+        baseMembers = [...activeMembers, ...inactiveMembers];
+        break;
+      default:
+        baseMembers = activeMembers;
+    }
+
+    // 2. Normalize search query once outside the loop
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    // 3. Single-pass filtering
+    return baseMembers.filter((member) => {
+      // WiFi Check
+      if (memberFilter.optedForWifi && !member.optedForWifi) {
+        return false;
+      }
+
+      // Floor Check
+      if (memberFilter.floor !== 'All' && member.floor !== memberFilter.floor) {
+        return false;
+      }
+
+      // Search Query Check
+      if (normalizedQuery) {
+        const nameMatch = member.name.toLowerCase().includes(normalizedQuery);
+        const phoneMatch = member.phone.includes(normalizedQuery);
+        if (!nameMatch && !phoneMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [
+    activeMembers,
+    inactiveMembers,
+    memberFilter.accountStatus,
+    memberFilter.floor,
+    memberFilter.optedForWifi,
+    searchQuery,
+  ]);
+
+  // Removed redundant 'memberFilterResult' calculation here
+
+  console.log('🎨 Rendering MembersManagement', newMemberFilterResult.length);
 
   if (isLoading) {
     return (
@@ -114,7 +151,7 @@ export default function MembersManagement() {
         <Group gap='xs'>
           <Title order={5}>Total:</Title>
           <Badge size='lg' circle color='indigo.7'>
-            {members.length}
+            {membersCount.totalMembers}
           </Badge>
         </Group>
         <Group gap='xs'>
@@ -124,9 +161,9 @@ export default function MembersManagement() {
           </Badge>
         </Group>
         <Group gap='xs'>
-          <Title order={5}>WiFi:</Title>
+          <Title order={5}>Filtered:</Title>
           <Badge size='lg' circle color='gray.7'>
-            {membersCount.optedForWifiMembers}
+            {newMemberFilterResult.length}
           </Badge>
         </Group>
       </Group>
@@ -318,8 +355,8 @@ export default function MembersManagement() {
             </Title>
             <Text size='sm'>Loading members...</Text>
           </Stack>
-        ) : memberFilterResult.length > 0 ? (
-          memberFilterResult.map((member) => (
+        ) : newMemberFilterResult.length > 0 ? (
+          newMemberFilterResult.map((member) => (
             <Accordion.Item key={member.id} value={member.id}>
               <Center>
                 <Accordion.Control>
@@ -338,69 +375,49 @@ export default function MembersManagement() {
                     </Stack>
                   </Group>
                 </Accordion.Control>
-                <ActionIcon
-                  mr='sm'
-                  onClick={() => (window.location.href = `tel:${member.phone}`)}
-                  variant='subtle'
-                  size={30}>
-                  <IconCall size={16} />
-                </ActionIcon>
+                <Menu shadow='md' width={200} position='left-start' withArrow arrowPosition='center'>
+                  <Menu.Target>
+                    <ActionIcon
+                      mr='sm'
+                      variant='white'
+                      autoContrast
+                      size={32}
+                      style={{
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                      }}>
+                      <IconMoreVertical size={16} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Label c='var(--mantine-text-color)' fz='sm' tt='full-width'>
+                      {member.name.split(' ')[0]}
+                    </Menu.Label>
+                    <Menu.Divider />
+                    <Menu.Item
+                      leftSection={<IconCall size={14} />}
+                      onClick={() => {
+                        window.location.href = `tel:${member.phone}`;
+                      }}>
+                      Call
+                    </Menu.Item>
+                    <Menu.Item leftSection={<IconHistory size={14} />}>History</Menu.Item>
+                    <Menu.Divider />
+                    <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => {
+                        navigate('/add-member/', { state: { member } });
+                    }}>Edit</Menu.Item>
+                    {member.isActive ? (
+                      <Menu.Item leftSection={<IconClose size={14} />}>Deactivate</Menu.Item>
+                    ) : (
+                      <>
+                        <Menu.Item leftSection={<IconCheck size={14} />}>Reactivate</Menu.Item>
+                        <Menu.Item leftSection={<IconClose size={14} />}>Delete</Menu.Item>
+                      </>
+                    )}
+                  </Menu.Dropdown>
+                </Menu>
               </Center>
               <Accordion.Panel>
                 <MemberDetailsList member={member} isAdmin={true} />
-                <Group mt='md' justify='flex-end'>
-                  <Button
-                    variant='default'
-                    size='xs'
-                    // onClick={() => {
-                    //   setSelectedMember(member);
-                    //   setEditMemberModal(true);
-                    // }}
-                  >
-                    Edit
-                  </Button>
-                  <Button variant='default' size='xs'>
-                    History
-                  </Button>
-                  {member.isActive ? (
-                    <Button
-                      color='orange'
-                      size='xs'
-                      variant='light'
-                      // onClick={() => {
-                      //   setSelectedMember(member);
-                      //   setDeactivationModal(true);
-                      // }}
-                    >
-                      Deactivate
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        color='green'
-                        size='xs'
-                        variant='light'
-                        // onClick={() => {
-                        //   setSelectedMember(member);
-                        //   setAddMemberModal(true);
-                        // }}
-                      >
-                        Reactivate
-                      </Button>
-                      <Button
-                        color='red'
-                        size='xs'
-                        variant='light'
-                        // onClick={() => {
-                        //   setSelectedMember(member);
-                        //   setDeleteMemberModal(true);
-                        // }}
-                      >
-                        Delete
-                      </Button>
-                    </>
-                  )}
-                </Group>
               </Accordion.Panel>
             </Accordion.Item>
           ))
@@ -410,7 +427,7 @@ export default function MembersManagement() {
               {'（︶^︶）'}
             </Title>
             <Text size='sm'>
-              {memberFilter.accountStatus === 'inactive' && members.length === 0
+              {memberFilter.accountStatus === 'inactive' && newMemberFilterResult.length === 0
                 ? 'No inactive members found, Please check the "Latest inactive members" Filter.'
                 : 'No members found matching the criteria.'}
             </Text>

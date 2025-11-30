@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { startTransition, useCallback, useRef, useState } from 'react';
 
 export type Tab = 'rent' | 'members';
 
@@ -9,11 +9,11 @@ export const useTabNavigation = () => {
     members: false,
   });
 
-  const handleTabChange = 
-    (selectedTab: string) => {
-      const tab = selectedTab as Tab;
-      setActiveTab(tab);
-      setVisitedTab((prev) => ({ ...prev, [tab]: true }));
-    };
+  const handleTabChange = (selectedTab: string) => {
+    const tab = selectedTab as Tab;
+    setActiveTab(tab);
+    setVisitedTab((prev) => ({ ...prev, [tab]: true }));
+  };
+
   return { activeTab, visitedTab, handleTabChange } as const;
 };
