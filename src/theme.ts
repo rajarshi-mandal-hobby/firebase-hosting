@@ -1,9 +1,11 @@
 import {
   Accordion,
   ActionIcon,
+  Alert,
   Button,
   createTheme,
   DEFAULT_THEME,
+  Fieldset,
   Input,
   Loader,
   LoadingOverlay,
@@ -18,6 +20,7 @@ import {
   Select,
   Textarea,
   TextInput,
+  type CSSVariablesResolver,
 } from '@mantine/core';
 import classes from './features/member-dashboard/containers/MemberDashboard.module.css';
 import { CssLoader } from './shared/custom-loader/CssLoader';
@@ -27,10 +30,17 @@ export const theme = createTheme({
   fontFamily: `Work Sans, ${DEFAULT_THEME.fontFamily}`,
   primaryColor: 'dark',
   defaultRadius: 'lg',
-  fontSizes: {
-    // sm: rem(15),
-  },
   components: {
+    Fieldset: Fieldset.extend({
+      defaultProps: {
+        styles: {
+          legend: {
+            fontSize: rem(16),
+            fontWeight: 700,
+          },
+        },
+      },
+    }),
     // Text
     Text: {
       defaultProps: {
@@ -108,7 +118,7 @@ export const theme = createTheme({
         radius: 'xl',
       },
     }),
-    
+
     // Segmented Control
     SegmentedControl: SegmentedControl.extend({
       defaultProps: {

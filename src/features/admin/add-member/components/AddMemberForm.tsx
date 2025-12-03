@@ -24,15 +24,18 @@ import { IconCalendarMonth, IconCall } from '../../../../shared/icons';
 import { formatNumberIndianLocale } from '../../../../shared/utils';
 import { AddMemberConfirmationModal } from './AddMemberConfirmationModal';
 import { useAddMemberForm } from '../hooks/useAddMemberForm';
+import type { Member } from '../../../../shared/types/firestore-types';
 
 type AddMemberFormProps = {
   settings: GlobalSettings;
-}
+  member?: Member;
+};
 
-export const AddMemberForm = ({ settings }: AddMemberFormProps) => {
+export const AddMemberForm = ({ settings, member }: AddMemberFormProps) => {
   const { isSaving, form, outstandingAmount, calculatedTotalAmount, isFullAmountPaid, actions, isConfirmModalOpen } =
     useAddMemberForm({
       settings,
+      member,
     });
 
   console.log('🎨 Rendering AddMemberForm', form.errors, form.isValid());
@@ -109,10 +112,11 @@ export const AddMemberForm = ({ settings }: AddMemberFormProps) => {
             <Select
               label='Bed Type'
               placeholder='Select bed type'
+              disabled={!form.values.floor}
               data={[
                 { value: 'Bed', label: 'Bed' },
                 { value: 'Room', label: 'Room' },
-                { value: 'Special', label: 'Special', disabled: form.values.floor !== '2nd' },
+                { value: 'Special', label: 'Special' },
               ]}
               required
               key={form.key('bedType')}

@@ -4,6 +4,8 @@ import type { BedType, Floor, GlobalSettings } from '../../../../data/shemas/Glo
 import dayjs from 'dayjs';
 import { notifySuccess } from '../../../../utils/notifications';
 import { useDisclosure } from '@mantine/hooks';
+import { getSafeDate } from '../../../../shared/utils';
+import type { Member } from '../../../../shared/types/firestore-types';
 
 const sanitizePhoneInput = (value: number | string): number => {
   const phoneStr = String(value).replace(/\D/g, '').slice(-10);
@@ -14,9 +16,18 @@ const isPositiveInteger = (value: number | string): boolean => {
   return Number.isInteger(Number(value)) && Number(value) > 0;
 };
 
+const calculateTotalDeposit = (rentAmount: unknown, securityDeposit: unknown, advanceDeposit: unknown): number => {
+  const nums = [rentAmount, securityDeposit, advanceDeposit];
+  return nums.reduce((acc: number, curr) => {
+    const num = Number(curr);
+    return acc + (isNaN(num) ? 0 : num);
+  }, 0);
+};
+
 type UseAddMemberFormProps = {
-    settings: GlobalSettings;
-}
+  settings: GlobalSettings;
+  member?: Member;
+};
 
 export type AddMemberFormData = {
   name: string;
@@ -33,7 +44,7 @@ export type AddMemberFormData = {
   amountPaid: number | string;
 };
 
-export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
+export const useAddMemberForm = ({ settings, member }: UseAddMemberFormProps) => {
   const [isSaving, saveTransition] = useTransition();
   const [outstandingAmount, setOutstandingAmount] = useState<number>(0);
   const [isFullAmountPaid, setIsFullAmountPaid] = useState<boolean>(false);
@@ -42,34 +53,38 @@ export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
   const form = useForm<AddMemberFormData>({
     mode: 'uncontrolled',
     initialValues: {
-      name: '',
-      phone: '',
-      floor: null,
-      bedType: null,
-      rentAmount: '',
-      rentAtJoining: '',
-      securityDeposit: settings.securityDeposit,
-      advanceDeposit: '',
-      optedForWifi: false,
-      moveInDate: dayjs().format('YYYY-MM'),
-      amountPaid: '',
+      name: member?.name || '',
+      phone: member?.phone || '',
+      floor: member?.floor || null,
+      bedType: member?.bedType || null,
+      rentAmount: member?.currentRent || '',
+      rentAtJoining: member?.rentAtJoining || '',
+      securityDeposit: member?.securityDeposit || settings.securityDeposit,
+      advanceDeposit: member?.advanceDeposit || '',
+      optedForWifi: member?.optedForWifi || false,
+      moveInDate: getSafeDate(member?.moveInDate) || dayjs().format('YYYY-MM'),
+      amountPaid: member?.totalAgreedDeposit || '',
       notes: '',
     },
     onValuesChange: (values, previous) => {
-      const previousAmount =
-        Number(previous.rentAmount || 0) + Number(previous.securityDeposit || 0) + Number(previous.advanceDeposit || 0);
-      const newTotalAmount =
-        Number(values.rentAmount || 0) + Number(values.securityDeposit || 0) + Number(values.advanceDeposit || 0);
-    //   if (newTotalAmount !== previousAmount) {
-    //     form.setFieldValue('amountPaid', newTotalAmount);
-    //     return;
-    //   }
+        
+      const previousAmount = calculateTotalDeposit(
+        previous.rentAmount,
+        previous.securityDeposit,
+        previous.advanceDeposit
+      );
+      const newTotalAmount = calculateTotalDeposit(values.rentAmount, values.securityDeposit, values.advanceDeposit);
 
       if (values.amountPaid !== previous.amountPaid) {
-        const outStanding = newTotalAmount - Number(values.amountPaid || 0);
+        const totalDepositReference = member ? member.totalAgreedDeposit : Number(values.amountPaid || 0);
+        const outStanding = newTotalAmount - totalDepositReference;
         console.log('Outstanding amount recalculated', outStanding);
         setOutstandingAmount(outStanding);
-        return;
+      }
+
+      if (previous.bedType !== values.bedType) {
+        form.setFieldValue('amountPaid', '');
+        setIsFullAmountPaid(false);
       }
 
       const hasFloorChanged = values.floor !== previous.floor;
@@ -80,13 +95,11 @@ export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
         form.setFieldValue('bedType', null);
         form.setFieldValue('rentAmount', '');
         form.setFieldValue('advanceDeposit', '');
-        return;
       }
 
       // Priority 3: Clear rentAmount if floor or bedType is empty
       if (floor === null || values.bedType === null) {
         form.setFieldValue('rentAmount', '');
-        return;
       }
 
       const hasBedTypeChanged = values.bedType !== previous.bedType;
@@ -103,7 +116,6 @@ export const useAddMemberForm = ({ settings }: UseAddMemberFormProps) => {
           form.setFieldValue('rentAmount', settings.bedRents['2nd'].Special);
           form.setFieldValue('advanceDeposit', settings.bedRents['2nd'].Special);
         }
-        return;
       }
     },
     validate: {
