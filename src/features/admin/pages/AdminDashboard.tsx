@@ -17,7 +17,7 @@ export const AdminDashboard = () => {
   console.log('🎨 Rendering AdminDashboard');
 
   return (
-    <Stack gap='lg'>
+    <Stack gap='lg' align='stretch' justify='center' p='md'>
       {/* Header with Admin Info and Sign Out */}
       <Group justify='space-between' align='center'>
         <Group gap='xs' align='center'>

@@ -13,7 +13,7 @@ import { AdminDashboard } from './features/admin/pages/AdminDashboard';
 import { AppContainer } from './shared/components';
 import { GenerateBillsPage } from './features/admin/pages/GenerateBillsPage';
 import { DefaultRentsPage } from './features/admin/pages/DefaultRentsPage';
-import { AddMemberPage } from './features/admin/pages/AddMemberPage';
+import { MemberFormPage } from './features/admin/pages/MemberFormPage';
 
 const router = createBrowserRouter([
   {
@@ -42,22 +42,23 @@ const router = createBrowserRouter([
   },
   {
     path: '/add-member',
-    element: <AddMemberPage />,
+    element: <MemberFormPage />,
+  },
+  {
+    path: '/edit-member/',
+    element: <MemberFormPage />,
   },
   {
     path: '*',
     element: <div>404 Not Found</div>,
-  }
+  },
 ]);
 
 function App() {
   return (
     <MantineProvider theme={theme}>
       <AuthProvider>
-        <Notifications
-          position='bottom-center'
-          containerWidth='max-content'
-        />
+        <Notifications position='bottom-center' containerWidth='max-content' />
         <AppContainer>
           <RouterProvider router={router} />
         </AppContainer>

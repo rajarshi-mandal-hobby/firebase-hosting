@@ -403,7 +403,7 @@ export default function MembersManagement() {
                     <Menu.Item leftSection={<IconHistory size={14} />}>History</Menu.Item>
                     <Menu.Divider />
                     <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => {
-                        navigate('/add-member/', { state: { member } });
+                        navigate('/edit-member/', { state: { member } });
                     }}>Edit</Menu.Item>
                     {member.isActive ? (
                       <Menu.Item leftSection={<IconClose size={14} />}>Deactivate</Menu.Item>

@@ -33,7 +33,7 @@ const createCustomSvg = (svg: React.ReactElement<CustomSvgProps, 'svg'>, display
     })?.filter(Boolean) || [];
 
   // Return a new functional component that renders the customized SVG.
-  const CustomIcon = ({ size = 24, color, style, ...others }: CustomSvgProps) => {
+  const CustomIcon = ({ size = 16, color, style, ...others }: CustomSvgProps) => {
     // Return the new SVG element with our custom props and the extracted paths.
     const iconColor = useIconColor(color);
     return (

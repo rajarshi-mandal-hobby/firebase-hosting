@@ -9,8 +9,8 @@ export const AdminMenu = () => {
   const navigate = useNavigate();
 
   const pathsToPage: { [key: string]: string } = {
-    '/add-member': 'Add Member',
-    '/generate-bills': 'Generate Bills',
+    '/add-member/': 'Add Member',
+    '/generate-bills/': 'Generate Bills',
     '/': 'Admin Dashboard',
   };
 

@@ -18,7 +18,7 @@ interface AppContainerProps extends Omit<ContainerProps, 'children'> {
  */
 export function AppContainer({ children, ...props }: AppContainerProps) {
   return (
-    <Container size='md' p='md' {...props}>
+    <Container strategy='grid' size='xs' {...props}>
       {children}
     </Container>
   );

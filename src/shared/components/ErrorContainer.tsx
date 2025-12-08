@@ -18,7 +18,7 @@ export const ErrorContainer = ({ error, onRetry }: { error: Error; onRetry?: () 
         </Text>
         {onRetry && (
           <Button size='xs' mt='lg' onClick={onRetry}>
-            Reload
+            Retry
           </Button>
         )}
       </Paper>

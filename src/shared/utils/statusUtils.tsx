@@ -16,7 +16,7 @@ type StatusConfigEntry = {
 const StatusConfig: Record<PaymentStatus, StatusConfigEntry> = {
   Paid: {
     icon: IconCheck,
-    color: 'green.6',
+    color: 'green',
     title: 'Payment Complete',
     message: 'Your rent for this month has been paid in full.',
   },
@@ -28,13 +28,13 @@ const StatusConfig: Record<PaymentStatus, StatusConfigEntry> = {
   },
   Partial: {
     icon: IconPriorityHigh,
-    color: 'orange.6',
+    color: 'orange',
     title: 'Partial Payment',
     message: 'You have made a partial payment. Please complete the remaining amount.',
   },
   Due: {
     icon: IconPriorityHigh,
-    color: 'red.7',
+    color: 'red',
     title: 'Payment Due',
     message: 'Your rent payment is pending. Please make the payment before 15th of this month.',
   },

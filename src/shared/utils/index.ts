@@ -13,15 +13,22 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
+export const toNumber = (value: string | number): number => {
+  if (typeof value === 'number') return value;
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+};
+
 /**
  * Utility function to format numbers as per Indian locale
  * @param number - The number to format
  * @param isCurrency - Whether to format as currency (default: true)
  * @returns Formatted number string
  */
-export const formatNumberIndianLocale = (number: number, isCurrency = true): string => {
+export const formatNumberIndianLocale = (number: number | string, isCurrency = true): string => {
   // Check if the number has a decimal part using Math.floor()
-  const hasDecimal = number % 1 !== 0;
+  const num = toNumber(number);
+  const hasDecimal = num % 1 !== 0;
 
   // Define base options for currency formatting
   const numberFormatOptions: Intl.NumberFormatOptions | undefined = isCurrency
@@ -36,7 +43,7 @@ export const formatNumberIndianLocale = (number: number, isCurrency = true): str
 
   // Create and use the formatter
   const formatter = new Intl.NumberFormat('en-IN', numberFormatOptions);
-  return formatter.format(number);
+  return formatter.format(num);
 };
 
 // == Ordinal Suffix Formatting ==
@@ -69,25 +76,34 @@ export const computePerHeadBill = (totalBill: number | string | undefined, membe
   totalBill && memberCount ? Math.ceil(Number(totalBill) / Number(memberCount)) : 0;
 
 /**
- * Formats a mobile number into a standardized format.
- * Supports Indian mobile numbers with optional country codes.
- * @param input - The mobile number string to format.
- * @returns The formatted mobile number string.
+ * Normalizes a phone input by removing non-digit characters and ensuring it is 10 digits long.
+ * @param value - The phone number input as a string or number.
+ * @returns The normalized phone number as a string.
  */
-export const formatMobileNumber = (input?: string) => {
-  if (!input) return input;
-  // Remove spaces, dashes, and parentheses for normalization
-  const normalized = input.replace(/[\s\-()]/g, '');
-
-  // Match country code (+91, 91, 0091, 0) and 10-digit mobile number
-  const match = normalized.match(/^(\+91|0091|91|0)?([6789]\d{9})$/);
-  if (!match) return input; // fallback if not matching expected pattern
-
-  const countryCode = match[1] || '+91';
-  const mobile = match[2];
-  // Format as 5-5 chunks: 98765 43210
-  return `${countryCode} ${mobile.slice(0, 5)} ${mobile.slice(5)}`;
+export const normalizePhoneInput = (value: number | string): string => {
+  const phoneStr = String(value).replace(/\D/g, '').slice(-10);
+  return phoneStr;
 };
+
+/** Formats a phone number by inserting a space after every 5 digits.
+ * @param inputValue - The phone number input as a string or number.
+ * @returns The formatted phone number as a string.
+ */
+export const formatPhoneNumber = (inputValue: any) => {
+  // 1. Remove all non-numeric characters (enforce numbers only) AND remove spaces
+  const noSpacesOrLetters = normalizePhoneInput(inputValue);
+
+  // 2. Insert a space after every 5 digits using regex
+  const formatted = noSpacesOrLetters.replace(/(\d{5})/g, '$1 ').trim();
+
+  return formatted;
+};
+
+/** Formats a phone number for display by adding the country code prefix.
+ * @param value - The phone number input as a string or number.
+ * @returns The formatted phone number with country code as a string.
+ */
+export const displayPhoneNumber = (value: number | string) => `+91 ${formatPhoneNumber(value)}`;
 
 /**
  * Safely retrieves a date string in 'YYYY-MM' format from various date representations.
@@ -110,4 +126,13 @@ export const getSafeDate = (dateVal: any): string => {
 
   // Fallback for strings or Date objects
   return dayjs(dateVal).format('YYYY-MM');
+};
+
+/** Checks if a sentence contains at least one word with two or more letters.
+ * @param sentence - The sentence to check.
+ * @returns True if the sentence contains at least one word with two or more letters, false otherwise.
+ */
+export const hasTwoLetterWord = (sentence: string): boolean => {
+  const words = sentence.split(/\s+/).filter(Boolean); // Split by whitespace and remove empty strings
+  return words.some((word) => word.length >= 2); // Check if any word has a length >= 2
 };

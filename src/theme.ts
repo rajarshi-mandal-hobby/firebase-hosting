@@ -3,6 +3,7 @@ import {
   ActionIcon,
   Alert,
   Button,
+  Combobox,
   createTheme,
   DEFAULT_THEME,
   Fieldset,
@@ -21,23 +22,60 @@ import {
   Textarea,
   TextInput,
   type CSSVariablesResolver,
+  type MantineColorsTuple,
 } from '@mantine/core';
 import classes from './features/member-dashboard/containers/MemberDashboard.module.css';
 import { CssLoader } from './shared/custom-loader/CssLoader';
 import { MonthPickerInput } from '@mantine/dates';
 
+const red: MantineColorsTuple = [
+  '#ffe8e9',
+  '#ffd1d1',
+  '#fba0a0',
+  '#f76d6d',
+  '#f44141',
+  '#f22625',
+  '#f21616',
+  '#d8070b',
+  '#c10007',
+  '#a90003',
+];
+
+const dark: MantineColorsTuple = [
+  '#ced4da',
+  '#adb5bd',
+  '#868e96',
+  '#495057',
+  '#424242',
+  '#3b3b3b',
+  '#2e2e2e',
+  '#242424',
+  '#1f1f1f',
+  '#141414',
+];
 export const theme = createTheme({
   fontFamily: `Work Sans, ${DEFAULT_THEME.fontFamily}`,
   primaryColor: 'dark',
   defaultRadius: 'lg',
+  colors: {
+    red,
+    dark,
+  },
   components: {
-    Fieldset: Fieldset.extend({
+    // Select
+    Select: Select.extend({
       defaultProps: {
-        styles: {
-          legend: {
-            fontSize: rem(16),
-            fontWeight: 700,
-          },
+        radius: 'md',
+        rightSectionWidth: rem(30),
+        withAlignedLabels: true,
+        comboboxProps: { shadow: 'md', transitionProps: { transition: 'fade-down', duration: 150 } },
+      },
+    }),
+    // Alert
+    Alert: Alert.extend({
+      styles: {
+        icon: {
+          marginRight: rem(4),
         },
       },
     }),
@@ -96,11 +134,6 @@ export const theme = createTheme({
         radius: 'md',
       },
     }),
-    Select: Select.extend({
-      defaultProps: {
-        radius: 'md',
-      },
-    }),
     MultiSelect: MultiSelect.extend({
       defaultProps: {
         radius: 'md',
@@ -136,9 +169,10 @@ export const theme = createTheme({
       defaultProps: {
         width: 220,
         radius: 'lg',
-        shadow: 'lg',
+        shadow: 'md',
         withArrow: true,
         arrowPosition: 'center',
+        transitionProps: { transition: 'pop-top-right', duration: 150 },
       },
     }),
     MenuItem: MenuItem.extend({

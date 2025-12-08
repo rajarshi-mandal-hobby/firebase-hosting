@@ -32,28 +32,6 @@ export const validateMemberName = (name: string): { isValid: boolean; error?: st
 };
 
 /**
- * Validate phone number (10 digits only, +91 added by UI/backend)
- */
-export const validatePhoneNumber = (phone: string): { isValid: boolean; error?: string } => {
-  const cleanPhone = phone.replace(/\D/g, ''); // Remove non-digits
-
-  if (!cleanPhone) {
-    return { isValid: false, error: 'Phone number is required' };
-  }
-
-  if (cleanPhone.length !== 10) {
-    return { isValid: false, error: 'Phone number must be exactly 10 digits' };
-  }
-
-  // Check if starts with valid Indian mobile prefixes (6, 7, 8, 9)
-  if (!/^[6-9]/.test(cleanPhone)) {
-    return { isValid: false, error: 'Phone number must start with 6, 7, 8, or 9' };
-  }
-
-  return { isValid: true };
-};
-
-/**
  * Format phone number with +91 prefix
  */
 export const formatPhoneNumber = (phone: string): string => {
@@ -106,16 +84,6 @@ export const validateMemberUniqueness = (
 // FINANCIAL CALCULATION UTILITIES
 // ======================================
 
-/**
- * Calculate total deposit for a new member
- */
-export const calculateTotalDeposit = (
-  securityDeposit: number,
-  advanceDeposit: number,
-  rentAtJoining: number
-): number => {
-  return securityDeposit + advanceDeposit + rentAtJoining;
-};
 
 /**
  * Calculate settlement preview for member deactivation
