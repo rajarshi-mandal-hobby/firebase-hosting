@@ -1,15 +1,13 @@
 import { Component } from 'react';
 import type { ReactNode } from 'react';
-import { ErrorContainer } from './ErrorContainer';
-import { Button, Code, Paper, Stack, Title, Text, Group } from '@mantine/core';
-import { th } from 'zod/v4/locales';
+import { Button, Paper, Stack, Title, Text, Group } from '@mantine/core';
 
-interface Props {
+type Props = {
   children: ReactNode;
-  onRetry?: () => void; // New optional prop for operation-specific retries
+  onRetry: () => void;
 }
 
-interface State {
+type State = {
   hasError: boolean;
   error: Error | null;
 }
@@ -30,9 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   resetErrorBoundary = () => {
     this.setState({ hasError: false, error: null });
-    if (this.props.onRetry) {
-      this.props.onRetry();
-    }
+    this.props.onRetry();
   };
 
   render() {

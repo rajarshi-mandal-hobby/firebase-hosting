@@ -1,12 +1,8 @@
-import { Box, SegmentedControl, Stack } from '@mantine/core';
-import { Activity, lazy, startTransition, Suspense, useState } from 'react';
-import { LoadingBox, LoaderSleeping } from '../../../../shared/components/LoadingBox';
-import { RentManagement, useRentManagement } from '../../../rent';
-import { useTabNavigation } from '../hooks/useTabNavigation';
+import { SegmentedControl, Stack } from '@mantine/core';
+import { Activity, startTransition, useState } from 'react';
+import { RentManagement } from '../../../rent';
 import type { Tab } from '../hooks/useTabNavigation';
-import { ErrorContainer } from '../../../../shared/components/ErrorContainer';
-
-const MembersManagement = lazy(() => import('../../../members/components/MembersManagement'));
+import { MembersManagement } from '../../../members/components/MembersManagement';
 
 // SegmentedControl expects an array of { label, value }
 const TAB_DATA: { label: string; value: Tab }[] = [
@@ -30,21 +26,13 @@ export const TabNavigation = () => {
         fullWidth
       />
 
-      {/* <Box hidden={activeTab !== 'rent'} aria-hidden={activeTab !== 'rent'}> */}
       <Activity mode={active === 'rent' ? 'visible' : 'hidden'}>
         <RentManagement />
       </Activity>
-      {/* </Box> */}
 
-      {/* <Box hidden={activeTab !== 'members'} aria-hidden={activeTab !== 'members'}> */}
-      {/* {visitedTab.members && ( */}
       <Activity mode={active === 'members' ? 'visible' : 'hidden'}>
-        {/* <Suspense fallback={<LoaderSleeping componentName='Members Management' />}> */}
-          <MembersManagement />
-        {/* </Suspense> */}
+        <MembersManagement />
       </Activity>
-      {/* )} */}
-      {/* </Box> */}
     </Stack>
   );
 };

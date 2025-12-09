@@ -1,25 +1,21 @@
 import { Container } from '@mantine/core';
 import type { ContainerProps } from '@mantine/core';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { ErrorBoundary } from './ErrorBoundary';
 
-interface AppContainerProps extends Omit<ContainerProps, 'children'> {
+type AppContainerProps = Omit<ContainerProps, 'children'> & {
   /** Container content */
   children: ReactNode;
 }
 
-/**
- * Main App Container Component
- *
- * Provides consistent container sizing across the application:
- * - Large screens: Container size 'md' with full viewport height
- * - Small screens: Container size 'sm' with full viewport height
- * - Applies Nunito Sans font family
- * - Consistent padding and spacing
- */
-export function AppContainer({ children, ...props }: AppContainerProps) {
+export const AppContainer = ({ children, ...props }: AppContainerProps) => {
+  const [resetKey, setResetKey] = useState(0);
+
   return (
-    <Container strategy='grid' size='xs' {...props}>
-      {children}
-    </Container>
+    <ErrorBoundary onRetry={() => setResetKey((prev) => prev + 1)}>
+      <Container strategy='grid' size='xs' {...props} key={resetKey}>
+        {children}
+      </Container>
+    </ErrorBoundary>
   );
 }

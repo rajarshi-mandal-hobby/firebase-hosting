@@ -1,5 +1,5 @@
 import { LoadingOverlay } from '@mantine/core';
-import { LoaderSleeping } from './LoadingBox';
+import { LoaderSleeping } from './LoaderSleeping';
 
 export const MyLoadingOverlay = LoadingOverlay.withProps({
   overlayProps: {

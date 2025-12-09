@@ -15,10 +15,10 @@ import {
   Divider,
   Input,
   Badge,
-  Menu,
+  Menu
 } from '@mantine/core';
 import { useMemo, useState } from 'react';
-import { SharedAvatar, StatusIndicator } from '../../../shared/components';
+import { LoadingBox, NothingToShow, SharedAvatar, StatusIndicator } from '../../../shared/components';
 import { MemberDetailsList } from '../../../shared/components/MemberDetailsList';
 import type { Floor } from '../../../data/shemas/GlobalSettings';
 import type { Member } from '../../../shared/types/firestore-types'; // Add this import
@@ -33,7 +33,7 @@ import {
   IconHistory,
   IconEdit,
   IconClose,
-  IconCheck,
+  IconCheck
 } from '../../../shared/icons';
 import { useNavigate } from 'react-router-dom';
 
@@ -49,20 +49,13 @@ const defaultFilters: FiltersType = {
   floor: 'All',
   accountStatus: 'active',
   optedForWifi: false,
-  latestInactiveMembers: false,
+  latestInactiveMembers: false
 };
 
-export default function MembersManagement() {
+export const MembersManagement = () => {
   // Use independent members management hook
   const { activeMembers, inactiveMembers, isLoading, error, membersCount, actions } = useMembersManagement();
-    const navigate = useNavigate();
-
-  // Modal states (WIP: Will be implemented)
-  // const [_addMemberModal, _setAddMemberModal] = useState(false);
-  // const [_editMemberModal, _setEditMemberModal] = useState(false);
-  // const [_deleteMemberModal, _setDeleteMemberModal] = useState(false);
-  // const [_deactivationModal, _setDeactivationModal] = useState(false);
-  // const [_selectedMember, _setSelectedMember] = useState<Member | null>(null);
+  const navigate = useNavigate();
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -123,7 +116,7 @@ export default function MembersManagement() {
     memberFilter.accountStatus,
     memberFilter.floor,
     memberFilter.optedForWifi,
-    searchQuery,
+    searchQuery
   ]);
 
   // Removed redundant 'memberFilterResult' calculation here
@@ -131,14 +124,7 @@ export default function MembersManagement() {
   console.log('🎨 Rendering MembersManagement', newMemberFilterResult.length);
 
   if (isLoading) {
-    return (
-      <Stack align='center' justify='center' mt='xl'>
-        <Title order={1} c='dimmed'>
-          {'(￣o￣) . z Z'}
-        </Title>
-        <Text>Loading members...</Text>
-      </Stack>
-    );
+    return <LoadingBox />;
   }
 
   if (error) {
@@ -146,23 +132,23 @@ export default function MembersManagement() {
   }
 
   return (
-    <Stack gap='lg'>
-      <Group gap='lg'>
-        <Group gap='xs'>
+    <Stack gap="lg">
+      <Group gap="lg">
+        <Group gap="xs">
           <Title order={5}>Total:</Title>
-          <Badge size='lg' circle color='indigo.7'>
+          <Badge size="lg" circle color="indigo.7" variant="outline">
             {membersCount.totalMembers}
           </Badge>
         </Group>
-        <Group gap='xs'>
+        <Group gap="xs">
           <Title order={5}>Active:</Title>
-          <Badge size='lg' color='green.7' circle>
+          <Badge size="lg" color="green.7" circle variant="outline">
             {membersCount.activeMembers}
           </Badge>
         </Group>
-        <Group gap='xs'>
+        <Group gap="xs">
           <Title order={5}>Filtered:</Title>
-          <Badge size='lg' circle color='gray.7'>
+          <Badge size="lg" circle color="gray.7" variant="outline">
             {newMemberFilterResult.length}
           </Badge>
         </Group>
@@ -170,22 +156,23 @@ export default function MembersManagement() {
 
       <Group>
         <TextInput
-          placeholder='Search by name or phone...'
+          placeholder="Search by name or phone..."
           leftSection={<IconSearch size={20} />}
           rightSection={searchQuery && <Input.ClearButton onClick={() => setSearchQuery('')} />}
-          radius='xl'
+          radius="xl"
           flex={1}
           value={searchQuery}
+          inputMode="search"
+          type="search"
           onChange={(event) => setSearchQuery(event.currentTarget.value)}
         />
-
-        <Popover width='350' withArrow shadow='xl' position='bottom' opened={opened} onChange={setOpened}>
+        <Popover width="350" withArrow opened={opened} onChange={setOpened}>
           <Popover.Target>
             <ActionIcon
               size={30}
-              aria-label='Filter'
+              aria-label="Filter"
               onClick={() => setOpened((o) => !o)}
-              variant={isDefaultFilterState ? 'outline' : 'filled'}>
+              variant={isDefaultFilterState ? 'filled' : 'outline'}>
               <IconFilter size={20} />
             </ActionIcon>
           </Popover.Target>
@@ -193,12 +180,12 @@ export default function MembersManagement() {
           <Popover.Dropdown>
             <Stack>
               <Title order={5}>Filters</Title>
-              <Group gap='xs'>
-                <Text size='sm' fw={500}>
+              <Group gap="xs">
+                <Text size="sm" fw={500}>
                   Status:
                 </Text>
                 <Button
-                  size='xs'
+                  size="xs"
                   variant={memberFilter.accountStatus === 'active' ? 'filled' : 'light'}
                   disabled={isLoading}
                   onClick={() => {
@@ -211,7 +198,7 @@ export default function MembersManagement() {
                   Active
                 </Button>
                 <Button
-                  size='xs'
+                  size="xs"
                   variant={memberFilter.accountStatus === 'inactive' ? 'filled' : 'light'}
                   loading={isLoading}
                   disabled={isLoading}
@@ -220,7 +207,7 @@ export default function MembersManagement() {
                     setMemberFilters((prev) => ({
                       ...prev,
                       accountStatus: memberFilter.accountStatus === 'inactive' ? 'active' : 'inactive',
-                      latestInactiveMembers: false,
+                      latestInactiveMembers: false
                     }));
 
                     actions.handleInactiveMembers();
@@ -228,7 +215,7 @@ export default function MembersManagement() {
                   Inactive
                 </Button>
                 <Button
-                  size='xs'
+                  size="xs"
                   variant={memberFilter.accountStatus === 'all' ? 'filled' : 'light'}
                   disabled={isLoading}
                   rightSection={memberFilter.accountStatus === 'all' ? <CloseIcon size={rem(12)} /> : null}
@@ -246,7 +233,7 @@ export default function MembersManagement() {
               </Group>
 
               <Checkbox
-                label='Get the latest inactive members'
+                label="Get the latest inactive members"
                 checked={memberFilter.latestInactiveMembers}
                 onChange={(event) => {
                   const checked = event.currentTarget.checked;
@@ -255,7 +242,7 @@ export default function MembersManagement() {
                   setMemberFilters((prev) => ({
                     ...prev,
                     accountStatus: 'inactive',
-                    latestInactiveMembers: checked,
+                    latestInactiveMembers: checked
                   }));
                 }}
               />
@@ -263,14 +250,14 @@ export default function MembersManagement() {
               <Divider />
 
               <Group>
-                <Text size='sm' fw={500}>
+                <Text size="sm" fw={500}>
                   Floor:
                 </Text>
                 <Button
-                  size='xs'
+                  size="xs"
                   variant={memberFilter.floor === 'All' ? 'filled' : 'light'}
                   disabled={isLoading}
-                  value='All'
+                  value="All"
                   onClick={(event) => {
                     const value = event.currentTarget.value as Floor | 'All';
                     if (value === null) return;
@@ -279,10 +266,10 @@ export default function MembersManagement() {
                   All
                 </Button>
                 <Button
-                  size='xs'
+                  size="xs"
                   variant={memberFilter.floor === '2nd' ? 'filled' : 'light'}
                   disabled={isLoading}
-                  value='2nd'
+                  value="2nd"
                   rightSection={memberFilter.floor === '2nd' ? <CloseIcon size={rem(12)} /> : null}
                   onClick={(event) => {
                     let value = event.currentTarget.value as Floor | 'All';
@@ -294,10 +281,10 @@ export default function MembersManagement() {
                   2nd
                 </Button>
                 <Button
-                  size='xs'
+                  size="xs"
                   variant={memberFilter.floor === '3rd' ? 'filled' : 'light'}
                   disabled={isLoading}
-                  value='3rd'
+                  value="3rd"
                   rightSection={memberFilter.floor === '3rd' ? <CloseIcon size={rem(12)} /> : null}
                   onClick={(event) => {
                     let value = event.currentTarget.value as Floor | 'All';
@@ -311,21 +298,21 @@ export default function MembersManagement() {
 
               <Divider />
 
-              <Group gap='xs'>
-                <Text size='sm' fw={500}>
+              <Group gap="xs">
+                <Text size="sm" fw={500}>
                   Wi-Fi:
                 </Text>
                 <Button
-                  size='xs'
+                  size="xs"
                   variant={memberFilter.optedForWifi ? 'filled' : 'light'}
                   disabled={isLoading}
-                  value='WiFi'
+                  value="WiFi"
                   rightSection={memberFilter.optedForWifi ? <CloseIcon size={rem(12)} /> : null}
                   onClick={() => {
                     setMemberFilters((prev) => ({
                       ...prev,
                       optedForWifi: !prev.optedForWifi,
-                      latestInactiveMembers: false,
+                      latestInactiveMembers: false
                     }));
                   }}>
                   Opted In
@@ -333,8 +320,8 @@ export default function MembersManagement() {
               </Group>
 
               <Button
-                size='sm'
-                mt='md'
+                size="sm"
+                mt="md"
                 disabled={isDefaultFilterState}
                 onClick={() => {
                   setMemberFilters(defaultFilters);
@@ -349,47 +336,42 @@ export default function MembersManagement() {
 
       <Accordion>
         {isLoading ? (
-          <Stack align='center' justify='center' mt='xl'>
-            <Title order={1} c='dimmed'>
-              {'(￣o￣) . z Z'}
-            </Title>
-            <Text size='sm'>Loading members...</Text>
-          </Stack>
+          <LoadingBox />
         ) : newMemberFilterResult.length > 0 ? (
           newMemberFilterResult.map((member) => (
             <Accordion.Item key={member.id} value={member.id}>
               <Center>
                 <Accordion.Control>
                   <Group>
-                    <StatusIndicator status={member.isActive ? 'active' : 'inactive'} position='top-right' size={14}>
-                      <SharedAvatar src={null} name={member.name} size='md' />
+                    <StatusIndicator status={member.isActive ? 'active' : 'inactive'} position="top-right" size={14}>
+                      <SharedAvatar src={null} name={member.name} size="md" />
                     </StatusIndicator>
                     <Stack gap={0}>
                       <Title order={5}>{member.name}</Title>
-                      <Group gap='xs'>
-                        <IconBed size={14} color='gray.7' />
-                        <Text size='xs' c='gray.7'>
+                      <Group gap="xs">
+                        <IconBed size={14} color="gray.7" />
+                        <Text size="xs" c="gray.7">
                           {member.floor} - {member.bedType}
                         </Text>
                       </Group>
                     </Stack>
                   </Group>
                 </Accordion.Control>
-                <Menu shadow='md' width={200} position='left-start' withArrow arrowPosition='center'>
+                <Menu shadow="md" width={200} position="left-start" withArrow arrowPosition="center">
                   <Menu.Target>
                     <ActionIcon
-                      mr='sm'
-                      variant='white'
+                      mr="sm"
+                      variant="white"
                       autoContrast
                       size={32}
                       style={{
-                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
                       }}>
                       <IconMoreVertical size={16} />
                     </ActionIcon>
                   </Menu.Target>
                   <Menu.Dropdown>
-                    <Menu.Label c='var(--mantine-text-color)' fz='sm' tt='full-width'>
+                    <Menu.Label c="var(--mantine-text-color)" fz="sm" tt="full-width">
                       {member.name.split(' ')[0]}
                     </Menu.Label>
                     <Menu.Divider />
@@ -402,9 +384,13 @@ export default function MembersManagement() {
                     </Menu.Item>
                     <Menu.Item leftSection={<IconHistory size={14} />}>History</Menu.Item>
                     <Menu.Divider />
-                    <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => {
+                    <Menu.Item
+                      leftSection={<IconEdit size={14} />}
+                      onClick={() => {
                         navigate('/edit-member/', { state: { member } });
-                    }}>Edit</Menu.Item>
+                      }}>
+                      Edit
+                    </Menu.Item>
                     {member.isActive ? (
                       <Menu.Item leftSection={<IconClose size={14} />}>Deactivate</Menu.Item>
                     ) : (
@@ -422,16 +408,13 @@ export default function MembersManagement() {
             </Accordion.Item>
           ))
         ) : (
-          <Stack align='center' justify='center' mt='xl'>
-            <Title order={1} c='dimmed'>
-              {'（︶^︶）'}
-            </Title>
-            <Text size='sm'>
-              {memberFilter.accountStatus === 'inactive' && newMemberFilterResult.length === 0
+          <NothingToShow
+            message={
+              memberFilter.accountStatus === 'inactive' && newMemberFilterResult.length === 0
                 ? 'No inactive members found, Please check the "Latest inactive members" Filter.'
-                : 'No members found matching the criteria.'}
-            </Text>
-          </Stack>
+                : 'No members found matching the criteria.'
+            }
+          />
         )}
       </Accordion>
 
@@ -467,4 +450,4 @@ export default function MembersManagement() {
       /> */}
     </Stack>
   );
-}
+};

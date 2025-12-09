@@ -1,8 +1,5 @@
-import { Group, List, Table, Text, ThemeIcon, type TableData } from '@mantine/core';
-import { memo } from 'react';
+import { Group, Table, Text } from '@mantine/core';
 import { formatDate } from '../utils';
-import { CurrencyFormatter } from './CurrencyFormatter';
-
 import type { Member } from '../types/firestore-types';
 import type { Timestamp } from 'firebase/firestore';
 import {
@@ -38,7 +35,7 @@ const TableRow = ({ heading, value, icon: Icon }: TableRowProps) => (
   </Table.Tr>
 );
 
-interface MemberDetailsListProps {
+type MemberDetailsListProps = {
   member: Member;
   isAdmin?: boolean;
 }

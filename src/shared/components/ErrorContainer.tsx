@@ -13,11 +13,11 @@ export const ErrorContainer = ({ error, onRetry }: { error: Error; onRetry?: () 
         <Text fw={500} mb='xs'>
           Info: {error.name}
         </Text>
-        <Text size='sm' c='dimmed' mt='xs' component='pre' style={{ whiteSpace: 'pre-wrap' }}>
+        <Text c='dimmed' mt='xs' component='pre' style={{ whiteSpace: 'pre-wrap' }}>
           {error.message ?? 'An unknown error occurred.'}
         </Text>
         {onRetry && (
-          <Button size='xs' mt='lg' onClick={onRetry}>
+          <Button mt='lg' onClick={onRetry}>
             Retry
           </Button>
         )}

@@ -1,28 +1,48 @@
 /* MemberDashboard CSS Module */
 
-.accordionItem {
+.accordion-item {
   /* Inactive state - gray background with body color border */
   background-color: var(--mantine-color-gray-1);
   border: 1px solid var(--mantine-color-body);
-  &[data-active] {
+  overflow: hidden;
+  :global(.mantine-ActionIcon-root) {
+    margin-inline-end: var(--mantine-spacing-md);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.5);
+  }
+  &[data-active='true'] {
+    background-color: var(--mantine-color-gray-0);
+
+    /* Target child elements when item is active */
+    :global(.mantine-Center-root) {
+      background-color: var(--mantine-color-gray-0);
+    }
+  }
+  &:hover {
     background-color: var(--mantine-color-gray-0);
   }
 }
 
-.accordionChevron {
+.accordion-chevron {
   background-color: var(--mantine-primary-color-contrast);
   height: var(--accordion-chevron-size);
   width: var(--accordion-chevron-size);
   border-radius: var(--mantine-radius-lg);
   justify-content: center;
   border: 0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.5);
+  transition: all 0.15s ease-in-out;
   &[data-rotate] {
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.5);
   }
 }
 
-.accordionLabel {
-    padding-top: var(--mantine-spacing-md);
-    padding-bottom: var(--mantine-spacing-md);
+.accordion-label {
+  padding-top: var(--mantine-spacing-lg);
+  padding-bottom: var(--mantine-spacing-lg);
+}
+
+.accordion-control {
+  &:hover {
+    background: none;
+  }
 }

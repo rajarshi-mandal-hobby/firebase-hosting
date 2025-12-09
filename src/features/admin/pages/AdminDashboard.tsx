@@ -11,7 +11,7 @@ export const AdminDashboard = () => {
   const adminName = user?.displayName || 'Admin';
 
   if (loading) {
-    return <LoadingBox loadingText='Loading authentication status...' />;
+    return <LoadingBox />;
   }
 
   console.log('🎨 Rendering AdminDashboard');

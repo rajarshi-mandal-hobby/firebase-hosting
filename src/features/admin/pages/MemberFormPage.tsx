@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { ErrorBoundary } from '../../../shared/components';
+import { ErrorBoundary, LoaderSleeping } from '../../../shared/components';
 import { ErrorContainer } from '../../../shared/components/ErrorContainer';
 import { useDefaultRents } from '../default-rents/hooks/useDefaultRents';
 import { FormPageHeader } from './shared-components/FormPageHeader';
 import type { Member } from '../../../shared/types/firestore-types';
 import { useLocation } from 'react-router-dom';
-import { LoaderSleeping } from '../../../shared/components/LoadingBox';
 import MemberDetailsForm from '../add-member/components/MemberDetailsForm';
 
 type MemberFormProps = {

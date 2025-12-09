@@ -3,10 +3,8 @@ import {
   ActionIcon,
   Alert,
   Button,
-  Combobox,
   createTheme,
   DEFAULT_THEME,
-  Fieldset,
   Input,
   Loader,
   LoadingOverlay,
@@ -16,12 +14,12 @@ import {
   MultiSelect,
   Notification,
   NumberInput,
+  Popover,
   rem,
   SegmentedControl,
   Select,
   Textarea,
   TextInput,
-  type CSSVariablesResolver,
   type MantineColorsTuple,
 } from '@mantine/core';
 import classes from './features/member-dashboard/containers/MemberDashboard.module.css';
@@ -203,10 +201,10 @@ export const theme = createTheme({
         radius: 'lg',
         chevronSize: 24,
         classNames: {
-          item: classes.accordionItem,
-          control: classes.accordionControl,
-          chevron: classes.accordionChevron,
-          label: classes.accordionLabel,
+          item: classes['accordion-item'],
+          control:classes['accordion-control'],
+          chevron: classes['accordion-chevron'],
+          label: classes['accordion-label'],
         },
       },
     }),
@@ -215,6 +213,15 @@ export const theme = createTheme({
       defaultProps: {
         loaders: { ...Loader.defaultLoaders, custom: CssLoader },
         type: 'custom',
+      },
+    }),
+    // Popover
+    Popover: Popover.extend({
+      defaultProps: {
+        shadow: 'var(--mantine-shadow-md)',
+        transitionProps: { transition: 'pop-top-right', duration: 150 },
+        withArrow: true,
+        arrowPosition: 'center',
       },
     }),
   },

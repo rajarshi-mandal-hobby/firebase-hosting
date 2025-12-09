@@ -1,5 +1,4 @@
 import { Center, Stack, Title, Text, Button, Paper } from '@mantine/core';
-import { AppContainer } from '../shared/components';
 import { useNavigate } from 'react-router-dom';
 
 export function SignIn() {
