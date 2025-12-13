@@ -1,311 +1,211 @@
-// // Deactivation Modal Component - Handles member deactivation with settlement calculation
-// import { useCallback, useEffect, useMemo, useState, type FC } from "react";
-// import {
-//   Stack,
-//   Group,
-//   Text,
-//   Badge,
-//   Avatar,
-//   Button,
-//   Divider,
-//   NumberFormatter,
-//   Loader,
-// } from "@mantine/core";
-// import { MonthPickerInput } from "@mantine/dates";
-// import { notifications } from "@mantine/notifications";
-// import { SharedModal } from "../../../../shared/components/SharedModal";
-// // import { useAppContext } from "../../../../contexts/AppContext";
-// import type {
-//   Member,
-//   SettlementPreview,
-// } from "../../../../shared/types/firestore-types";
-// import { calculateSettlementPreview } from "../../../../shared/utils/memberUtils";
+// Deactivation Modal Component - Handles member deactivation with settlement calculation
+import { useMemo, useState, useTransition } from 'react';
+import { Stack, Group, Text, Badge, Button, Modal, Title, Alert } from '@mantine/core';
+import { MonthPickerInput } from '@mantine/dates';
+// import { useAppContext } from "../../../../contexts/AppContext";
+import type { Member } from '../../../../shared/types/firestore-types';
+import { formatNumberIndianLocale } from '../../../../shared/utils';
+import { IconCalendarMonth, IconInfo } from '../../../../shared/icons';
+import { notifyError, notifySuccess } from '../../../../utils/notifications';
+import type { MemberActionModalProps } from '..';
+import { GroupSpaceApart } from '../../../../shared/components';
 
-// interface DeactivationModalProps {
-//   opened: boolean;
-//   onClose: () => void;
-//   member: Member | null;
-// }
+type SettlementStatus = 'Refund Due' | 'Payment Due' | 'Settled';
 
-// export const DeactivationModal: FC<DeactivationModalProps> = ({
-//   opened,
-//   onClose,
-//   member,
-// }) => {
-// //   const { deactivateMember } = useAppContext();
-//   const [leaveDate, setLeaveDate] = useState<Date>(new Date());
-//   const [deactivating, setDeactivating] = useState(false);
-//   const [loadingPreview, setLoadingPreview] = useState(false);
-//   const [settlementPreview, setSettlementPreview] =
-//     useState<SettlementPreview | null>(null);
+type SettlementPreview = {
+  leaveMonth: string | null;
+  totalAgreedDeposit: number;
+  currentRent: number;
+  remainingAdvance: number;
+  outstandingBalance: number;
+  refundAmount: number;
+  status: SettlementStatus;
+  text: string;
+  color: string;
+};
 
-//   // Settlement calculation will be handled by backend
-//   // Frontend only displays the data received from AppContext
+const getSettlementStatus = (refundAmount: number): { status: SettlementStatus; color: string; text: string } => {
+  switch (true) {
+    case refundAmount > 0:
+      return {
+        status: 'Refund Due',
+        color: 'red',
+        text: 'I Give'
+      };
+    case refundAmount < 0:
+      return {
+        status: 'Payment Due',
+        color: 'green.8',
+        text: 'I Get'
+      };
+    default:
+      return {
+        status: 'Settled',
+        color: 'gray.7',
+        text: 'Settled'
+      };
+  }
+};
 
-//   // Calculate display data - using useMemo for performance
-//   const displayData = useMemo(() => {
-//     if (settlementPreview) {
-//       return settlementPreview;
-//     }
+export const DeactivationModal = ({ opened, member, onClose, onExitTransitionEnd }: MemberActionModalProps) => {
+  const [leaveDate, setLeaveDate] = useState<string | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [isSaving, startSaving] = useTransition();
 
-//     if (!member) {
-//       return {
-//         totalAgreedDeposit: 0,
-//         outstandingBalance: 0,
-//         refundAmount: 0,
-//         status: "Loading...",
-//       };
-//     }
+  const settlementPreview = useMemo<SettlementPreview | null>(() => {
+    if (!member) return null;
 
-//     // Fallback calculation with proper number conversion
-//     const totalDeposit = Number(member.totalAgreedDeposit) || 5500;
-//     const outstanding = Number(member.outstandingBalance) || 1200;
-//     const refund = totalDeposit - outstanding;
+    const remainingAdvance = member.totalAgreedDeposit - member.currentRent;
+    const outstanding = member.currentMonthRent.currentOutstanding;
+    const refund = remainingAdvance - outstanding;
 
-//     return {
-//       totalAgreedDeposit: totalDeposit,
-//       outstandingBalance: outstanding,
-//       refundAmount: refund,
-//       status:
-//         refund > 0 ? "Refund Due" : refund < 0 ? "Payment Due" : "Settled",
-//     };
-//   }, [settlementPreview, member]);
+    return {
+      leaveMonth: leaveDate,
+      totalAgreedDeposit: member.totalAgreedDeposit,
+      currentRent: member.currentRent,
+      remainingAdvance,
+      outstandingBalance: outstanding,
+      refundAmount: refund,
+      text: getSettlementStatus(refund).text,
+      status: getSettlementStatus(refund).status,
+      color: getSettlementStatus(refund).color
+    };
+  }, [member, leaveDate]);
 
-//   // Fetch settlement preview when member or leave date changes
-//   const fetchSettlementPreview = useCallback(
-//     async (currentMember: Member, currentLeaveDate: Date) => {
-//       if (!currentMember) return;
+  const handleReset = () => {
+    setLeaveDate(null);
+    setDateError(null);
+  };
 
-//       try {
-//         setLoadingPreview(true);
+  const handleConfirmDeactivation = () => {
+    if (!member) {
+      notifyError('Member not found');
+      handleReset();
+      onClose();
+      return;
+    }
 
-//         // Call backend for settlement calculation preview
-//         // This will be implemented when backend is ready
-//         // For now, use settlement calculation utilities for preview
-//         const preview = calculateSettlementPreview(
-//           currentMember,
-//           currentLeaveDate
-//         );
-//         setSettlementPreview(preview);
-//       } catch (error) {
-//         console.error("Error calculating settlement preview:", error);
-//         notifications.show({
-//           title: "Error",
-//           message:
-//             "Failed to calculate settlement preview. Using basic calculation.",
-//           color: "orange",
-//         });
-//       } finally {
-//         setLoadingPreview(false);
-//       }
-//     },
-//     []
-//   );
+    if (!leaveDate) {
+      setDateError('Please select a leave date');
+      return;
+    }
 
-//   // Effect for handling settlement preview - includes debouncing for leave date changes
-//   useEffect(() => {
-//     if (!opened || !member) return;
+    try {
+      startSaving(async () => {
+        await new Promise((resolve, _reject) => setTimeout(() => resolve(true), 1500));
+        handleReset();
+        onClose();
+        notifySuccess('Member deactivated successfully');
+      });
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : 'Something went wrong');
+    }
+  };
 
-//     // Debounce the settlement preview fetch to avoid excessive API calls
-//     const timeoutId = setTimeout(() => {
-//       void fetchSettlementPreview(member, leaveDate);
-//     }, 300);
+  const handleLeaveDateChange = (date: string | null) => {
+    setLeaveDate(date);
+    setDateError(null);
+  };
 
-//     return () => clearTimeout(timeoutId);
-//   }, [opened, member, leaveDate, fetchSettlementPreview]);
+  const handleTransitionEnd = () => {
+    onExitTransitionEnd?.();
+    handleReset();
+  };
 
-//   // Effect for resetting state when modal closes
-//   useEffect(() => {
-//     if (!opened) {
-//       setSettlementPreview(null);
-//       setLeaveDate(new Date());
-//     }
-//   }, [opened]);
+  console.log('🎨 Rendering DeactivationModal');
 
-//   const handleConfirmDeactivation = async () => {
-//     if (!member) return;
+  return (
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      onExitTransitionEnd={handleTransitionEnd}
+      title="Deactivate Member"
+      centered
+      size="sm">
+      {member && settlementPreview && (
+        <Stack gap="xl">
+          {/* Member Info */}
+          <Stack gap={0}>
+            <Text fw={500} size="lg">
+              {member.name}
+            </Text>
+            <Group gap="xs">
+              <Text>
+                {member.floor} Floor - {member.bedType}
+              </Text>
+            </Group>
+            {/* Leave Date */}
+            <MonthPickerInput
+              label="Leave Month"
+              placeholder="Select Vacate Month"
+              value={leaveDate}
+              onChange={handleLeaveDateChange}
+              error={dateError}
+              leftSection={<IconCalendarMonth />}
+              required
+              disabled={isSaving}
+              mt="md"
+            />
+          </Stack>
 
-//     try {
-//       setDeactivating(true);
+          <Stack gap={'xs'}>
+            <Title order={5}>Settlement Preview</Title>
 
-//       // Call the real deactivateMember function from AppContext
-//       const settlementResult = await deactivateMember(member.id, leaveDate);
+            <GroupSpaceApart>
+              <Text>Total Agreed Deposit:</Text>
+              <Text fw={500}>{formatNumberIndianLocale(settlementPreview.totalAgreedDeposit)}</Text>
+            </GroupSpaceApart>
+            <GroupSpaceApart>
+              <Text>Current Rent:</Text>
+              <Text fw={500}>{formatNumberIndianLocale(settlementPreview.currentRent)}</Text>
+            </GroupSpaceApart>
+            <GroupSpaceApart>
+              <Text>Remaining Advance:</Text>
+              <Text fw={500}>{formatNumberIndianLocale(settlementPreview.remainingAdvance)}</Text>
+            </GroupSpaceApart>
+            <GroupSpaceApart>
+              <Text>Outstanding Balance:</Text>
+              <Text fw={500} c={settlementPreview.outstandingBalance > 0 ? 'red.6' : 'green.8'}>
+                {formatNumberIndianLocale(settlementPreview.outstandingBalance)}
+              </Text>
+            </GroupSpaceApart>
+            <GroupSpaceApart>
+              <Text fw={500}>Settlement Status:</Text>
+              <Badge color={settlementPreview.color}>{settlementPreview.status}</Badge>
+            </GroupSpaceApart>
+          </Stack>
 
-//       console.log("Member deactivated:", {
-//         memberId: member.id,
-//         memberName: member.name,
-//         leaveDate: leaveDate.toISOString(),
-//         settlement: settlementResult,
-//       });
+          <Alert color={settlementPreview.color} icon={<IconInfo />}>
+            <Text fw={500} mb="xs">
+              {settlementPreview.text} &mdash;{' '}
+              <Text component="span" c={settlementPreview.color} fw={700}>
+                {formatNumberIndianLocale(Math.abs(settlementPreview.refundAmount))}
+              </Text>
+            </Text>
+            <Text size="xs" fw={700}>
+              Previous month&apos;s electricity bill was not calculated. If needed, subtract ₹50-250 rupees.
+              <br />
+              <br />
+              Avg. ₹175 electric bill, {settlementPreview.text}{' '}
+              {formatNumberIndianLocale(settlementPreview.refundAmount - 175)}
+            </Text>
+          </Alert>
 
-//       onClose();
-//     } catch (error) {
-//       console.error("Error deactivating member:", error);
-//       // Error notification is handled by the AppContext
-//     } finally {
-//       setDeactivating(false);
-//     }
-//   };
-
-//   const handleCancel = () => {
-//     setLeaveDate(new Date());
-//     setSettlementPreview(null);
-//     onClose();
-//   };
-
-//   const handleDeactivationClick = () => {
-//     void handleConfirmDeactivation();
-//   };
-
-//   if (!member) return null;
-
-//   return (
-//     <SharedModal
-//       opened={opened}
-//       onClose={handleCancel}
-//       title="Deactivate Member"
-//       size="md"
-//     >
-//       <Stack gap="md">
-//         {/* Member Info */}
-//         <Group>
-//           <Avatar size="lg" radius="xl" color="blue">
-//             {(member.name?.[0] || "M").toUpperCase()}
-//           </Avatar>
-//           <Stack gap={2}>
-//             <Text fw={500} size="lg">
-//               {member.name}
-//             </Text>
-//             <Text size="sm" c="dimmed">
-//               {member.phone}
-//             </Text>
-//             <Badge size="sm" color="gray">
-//               {member.floor} Floor - {member.bedType}
-//             </Badge>
-//           </Stack>
-//         </Group>
-//         <Divider />
-
-//         {/* Financial Summary */}
-//         <Stack gap="xs">
-//           <Group justify="space-between">
-//             <Text fw={500} size="sm">
-//               Settlement Summary
-//             </Text>
-//             {loadingPreview && <Loader size="xs" />}
-//           </Group>
-//           <Group justify="space-between">
-//             <Text size="sm" c="dimmed">
-//               Total Agreed Deposit:
-//             </Text>
-//             <Text size="sm" fw={500}>
-//               <NumberFormatter
-//                 value={displayData.totalAgreedDeposit}
-//                 prefix="₹"
-//                 thousandSeparator
-//               />
-//             </Text>
-//           </Group>
-//           <Group justify="space-between">
-//             <Text size="sm" c="dimmed">
-//               Outstanding Balance:
-//             </Text>
-//             <Text
-//               size="sm"
-//               fw={500}
-//               c={displayData.outstandingBalance > 0 ? "red" : "green"}
-//             >
-//               <NumberFormatter
-//                 value={displayData.outstandingBalance}
-//                 prefix="₹"
-//                 thousandSeparator
-//               />
-//             </Text>
-//           </Group>
-//           <Divider />
-//           <Group justify="space-between">
-//             <Text fw={500} size="sm">
-//               Settlement Status:
-//             </Text>
-//             <Badge
-//               color={
-//                 displayData.refundAmount > 0
-//                   ? "green"
-//                   : displayData.refundAmount < 0
-//                   ? "red"
-//                   : "gray"
-//               }
-//               variant="light"
-//             >
-//               {displayData.status}
-//             </Badge>
-//           </Group>
-//           <Group justify="space-between">
-//             <Text fw={500} size="sm">
-//               {displayData.refundAmount > 0
-//                 ? "Refund Amount:"
-//                 : displayData.refundAmount < 0
-//                 ? "Amount Due:"
-//                 : "Settlement:"}
-//             </Text>
-//             <Text
-//               fw={600}
-//               size="sm"
-//               c={
-//                 displayData.refundAmount > 0
-//                   ? "green"
-//                   : displayData.refundAmount < 0
-//                   ? "red"
-//                   : "gray"
-//               }
-//             >
-//               <NumberFormatter
-//                 value={Math.abs(displayData.refundAmount)}
-//                 prefix="₹"
-//                 thousandSeparator
-//               />
-//             </Text>
-//           </Group>
-//         </Stack>
-//         <Divider />
-
-//         {/* Leave Date */}
-//         <MonthPickerInput
-//           label="Leave Month"
-//           placeholder="Select leave month and year"
-//           value={
-//             leaveDate && leaveDate instanceof Date
-//               ? leaveDate.toISOString().slice(0, 7)
-//               : null
-//           }
-//           onChange={(value: string | null) => {
-//             if (value) {
-//               // Convert string (YYYY-MM) to Date object
-//               const [year, month] = value.split("-");
-//               const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-//               setLeaveDate(date);
-//             } else {
-//               setLeaveDate(new Date());
-//             }
-//           }}
-//           required
-//           description="Month when the member will vacate"
-//         />
-
-//         {/* Action Buttons */}
-//         <Group justify="flex-end" gap="sm">
-//           <Button variant="subtle" onClick={handleCancel}>
-//             Cancel
-//           </Button>
-//           <Button
-//             color="orange"
-//             onClick={handleDeactivationClick}
-//             loading={deactivating}
-//           >
-//             Deactivate Member
-//           </Button>
-//         </Group>
-//       </Stack>
-//     </SharedModal>
-//   );
-// };
+          {/* Action Buttons */}
+          <Group justify="flex-end" gap="sm" mt="xl">
+            <Button variant="white" onClick={onClose}>
+              {isSaving ? 'Close' : 'Cancel'}
+            </Button>
+            <Button
+              color="red.7"
+              onClick={handleConfirmDeactivation}
+              disabled={isSaving || !leaveDate}
+              loading={isSaving}>
+              Deactivate
+            </Button>
+          </Group>
+        </Stack>
+      )}
+    </Modal>
+  );
+};

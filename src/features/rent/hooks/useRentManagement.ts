@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useEffectEvent } from 'react';
 import type { Member } from '../../../shared/types/firestore-types';
 import { fetchMembers, type MemberFilters } from '../../../data/services/membersService';
-import type { Tab } from '../../admin/tab-navigation/hooks/useTabNavigation';
 
 /**
  * Custom hook for rent management data using FirestoreService with real-time updates
@@ -11,7 +10,6 @@ export const useRentManagement = () => {
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [filters, setFilters] = useState<MemberFilters>({ reload: false, isActive: 'active' });
-
   const [wifiMembers, setWifiMembers] = useState<Member[]>([]);
   const [totalOutstanding, setTotalOutstanding] = useState<number>(0);
 
@@ -63,7 +61,7 @@ export const useRentManagement = () => {
   // Actions
   const actions = {
     handleRefetch,
-    setFilters,
+    setFilters
   };
 
   return {
@@ -72,6 +70,6 @@ export const useRentManagement = () => {
     totalOutstanding,
     isLoading,
     error,
-    actions,
+    actions
   } as const;
 };

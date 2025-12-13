@@ -94,6 +94,7 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 1600,
     advanceDeposit: 1600,
     currentRent: 1600,
+    note: '',
     currentMonthRent: {
       id: '2025-07',
       generatedAt: createMockTimestamp('2025-07-01'),
@@ -106,7 +107,7 @@ export const mockMembers: MemberWithRentHistory[] = [
       amountPaid: 0,
       currentOutstanding: 1967,
       outstandingNote: '',
-      status: 'Due',
+      status: 'Due'
     },
     totalAgreedDeposit: 4800,
     isActive: true,
@@ -123,15 +124,15 @@ export const mockMembers: MemberWithRentHistory[] = [
         previousOutstanding: 0,
         expenses: [
           { amount: 100, description: 'Common area cleaning' },
-          { amount: 50, description: 'Maintenance' },
+          { amount: 50, description: 'Maintenance' }
         ],
         totalCharges: 2047,
         amountPaid: 2047,
         currentOutstanding: 0,
         outstandingNote: '',
-        status: 'Paid',
-      },
-    ],
+        status: 'Paid'
+      }
+    ]
   },
   {
     id: 'member-2',
@@ -146,6 +147,7 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 3200,
     advanceDeposit: 3200,
     currentRent: 3200,
+    note: '',
     currentMonthRent: {
       id: '2025-07',
       generatedAt: createMockTimestamp('2025-07-01'),
@@ -158,7 +160,7 @@ export const mockMembers: MemberWithRentHistory[] = [
       amountPaid: 3627,
       currentOutstanding: 0,
       outstandingNote: '',
-      status: 'Paid',
+      status: 'Paid'
     },
     totalAgreedDeposit: 8000,
     isActive: true,
@@ -178,9 +180,9 @@ export const mockMembers: MemberWithRentHistory[] = [
         amountPaid: 3757,
         currentOutstanding: 0,
         outstandingNote: '',
-        status: 'Paid',
-      },
-    ],
+        status: 'Paid'
+      }
+    ]
   },
   {
     id: 'member-3',
@@ -195,6 +197,7 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 1500,
     advanceDeposit: 1500,
     currentRent: 1500,
+    note: '',
     currentMonthRent: {
       id: '2025-07',
       generatedAt: createMockTimestamp('2025-07-01'),
@@ -207,7 +210,7 @@ export const mockMembers: MemberWithRentHistory[] = [
       amountPaid: 1780,
       currentOutstanding: 1500,
       outstandingNote: 'Partial payment received',
-      status: 'Partial',
+      status: 'Partial'
     },
     totalAgreedDeposit: 4600,
     isActive: true,
@@ -227,9 +230,9 @@ export const mockMembers: MemberWithRentHistory[] = [
         amountPaid: 300,
         currentOutstanding: 1500,
         outstandingNote: 'Partial payment only',
-        status: 'Partial',
-      },
-    ],
+        status: 'Partial'
+      }
+    ]
   },
   {
     id: 'member-4',
@@ -244,6 +247,7 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 2400,
     advanceDeposit: 2400,
     currentRent: 2400,
+    note: `11-12-2025 — Edited\r\n- Bed Type changed from Special\r\n- Amount Paid changed from 6400\r\n- Phone changed from 84567 89012\r\n- Name changed from Alice Johnson`,
     currentMonthRent: {
       id: '2025-07',
       generatedAt: createMockTimestamp('2025-07-01'),
@@ -256,7 +260,7 @@ export const mockMembers: MemberWithRentHistory[] = [
       amountPaid: 3000,
       currentOutstanding: -13,
       outstandingNote: '',
-      status: 'Overpaid',
+      status: 'Overpaid'
     },
     totalAgreedDeposit: 6400,
 
@@ -277,9 +281,9 @@ export const mockMembers: MemberWithRentHistory[] = [
         amountPaid: 2777,
         currentOutstanding: 0,
         outstandingNote: '',
-        status: 'Paid',
-      },
-    ],
+        status: 'Paid'
+      }
+    ]
   },
   {
     id: 'member-5',
@@ -294,6 +298,7 @@ export const mockMembers: MemberWithRentHistory[] = [
     rentAtJoining: 3000,
     advanceDeposit: 3000,
     currentRent: 3000,
+    note: '',
     currentMonthRent: {
       id: '2025-06',
       generatedAt: createMockTimestamp('2025-06-01'),
@@ -306,7 +311,7 @@ export const mockMembers: MemberWithRentHistory[] = [
       amountPaid: 3387,
       currentOutstanding: 0,
       outstandingNote: 'Final month payment before leaving',
-      status: 'Paid',
+      status: 'Paid'
     },
     totalAgreedDeposit: 7600,
 
@@ -327,10 +332,10 @@ export const mockMembers: MemberWithRentHistory[] = [
         amountPaid: 3477,
         currentOutstanding: 0,
         outstandingNote: '',
-        status: 'Paid',
-      },
-    ],
-  },
+        status: 'Paid'
+      }
+    ]
+  }
 ];
 
 // Mock Electric Bills Data

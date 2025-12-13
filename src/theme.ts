@@ -6,7 +6,6 @@ import {
   createTheme,
   DEFAULT_THEME,
   Input,
-  Loader,
   LoadingOverlay,
   Menu,
   MenuItem,
@@ -18,12 +17,12 @@ import {
   rem,
   SegmentedControl,
   Select,
+  Switch,
   Textarea,
   TextInput,
-  type MantineColorsTuple,
+  type MantineColorsTuple
 } from '@mantine/core';
-import classes from './features/member-dashboard/containers/MemberDashboard.module.css';
-import { CssLoader } from './shared/custom-loader/CssLoader';
+import classesAccordion from './css-modules/Accordion.module.css';
 import { MonthPickerInput } from '@mantine/dates';
 
 const red: MantineColorsTuple = [
@@ -36,7 +35,7 @@ const red: MantineColorsTuple = [
   '#f21616',
   '#d8070b',
   '#c10007',
-  '#a90003',
+  '#a90003'
 ];
 
 const dark: MantineColorsTuple = [
@@ -49,105 +48,141 @@ const dark: MantineColorsTuple = [
   '#2e2e2e',
   '#242424',
   '#1f1f1f',
-  '#141414',
+  '#141414'
 ];
 export const theme = createTheme({
-  fontFamily: `Work Sans, ${DEFAULT_THEME.fontFamily}`,
+  fontFamily: `Noto Sans, ${DEFAULT_THEME.fontFamily}`,
   primaryColor: 'dark',
   defaultRadius: 'lg',
   colors: {
     red,
-    dark,
+    dark
+  },
+  fontSizes: {
+    xs: rem(12),
+    sm: rem(14),
+    md: rem(16),
+    lg: rem(18),
+    xl: rem(20)
+  },
+  headings: {
+    sizes: {
+      h1: {
+        fontSize: rem(32)
+      },
+      h2: {
+        fontSize: rem(28)
+      },
+      h3: {
+        fontSize: rem(24)
+      },
+      h4: {
+        fontSize: rem(20)
+      },
+      h5: {
+        fontSize: rem(16)
+      },
+      h6: {
+        fontSize: rem(12)
+      }
+    }
   },
   components: {
+    // Switch
+    Switch: Switch.extend({
+      styles: {
+        label: {
+          fontWeight: 500
+        }
+      }
+    }),
     // Select
     Select: Select.extend({
       defaultProps: {
         radius: 'md',
         rightSectionWidth: rem(30),
         withAlignedLabels: true,
-        comboboxProps: { shadow: 'md', transitionProps: { transition: 'fade-down', duration: 150 } },
-      },
+        comboboxProps: { shadow: 'md', transitionProps: { transition: 'fade-down', duration: 150 } }
+      }
     }),
     // Alert
     Alert: Alert.extend({
       styles: {
         icon: {
-          marginRight: rem(4),
-        },
-      },
+          marginRight: rem(4)
+        }
+      }
     }),
     // Text
     Text: {
       defaultProps: {
-        size: 'sm',
-      },
+        size: 'sm'
+      }
     },
     // Button
     Button: Button.extend({
       defaultProps: {
         radius: 'xl',
-        autoContrast: true,
-        fw: 500,
-      },
+        autoContrast: true
+      }
     }),
     // Loading Overlay
     LoadingOverlay: LoadingOverlay.extend({
       defaultProps: {
         overlayProps: {
-          blur: 3,
-        },
-      },
+          blur: 3
+        }
+      }
     }),
     // Modal
     Modal: Modal.extend({
       defaultProps: {
-        size: 'md',
+        size: 'sm',
         centered: true,
         overlayProps: {
-          blur: 3,
+          blur: 3
         },
-        transitionProps: { transition: 'scale', timingFunction: 'ease-in-out' },
+        transitionProps: { transition: 'pop', timingFunction: 'ease-out', duration: 150 },
         styles: {
           title: {
-            fontWeight: 700,
-          },
+            fontWeight: 700
+          }
         },
-        fs: 'sm',
-      },
+        fs: 'sm'
+      }
     }),
     // Inputs
     Input: Input.extend({
       defaultProps: {
-        radius: 'md',
-      },
+        radius: 'md'
+      }
     }),
     NumberInput: NumberInput.extend({
       defaultProps: {
-        radius: 'md',
-      },
+        radius: 'md'
+      }
     }),
     TextInput: TextInput.extend({
       defaultProps: {
-        radius: 'md',
-      },
+        radius: 'md'
+      }
     }),
     MultiSelect: MultiSelect.extend({
       defaultProps: {
-        radius: 'md',
-      },
+        radius: 'md'
+      }
     }),
     Textarea: Textarea.extend({
       defaultProps: {
         radius: 'md',
         autosize: true,
-        minRows: 3,
-      },
+        minRows: 3
+      }
     }),
     MonthPickerInput: MonthPickerInput.extend({
       defaultProps: {
-        radius: 'xl',
-      },
+        radius: 'xl'
+      }
     }),
 
     // Segmented Control
@@ -155,45 +190,62 @@ export const theme = createTheme({
       defaultProps: {
         radius: 'xl',
         size: 'md',
+        fullWidth: true,
         styles: {
           innerLabel: {
-            fontSize: 'var(--mantine-font-size-sm, rem(14))',
-          },
-        },
-      },
+            fontWeight: 700,
+            fontSize: 'var(--mantine-font-size-sm, rem(14))'
+          }
+        }
+      }
     }),
     // Menu
     Menu: Menu.extend({
       defaultProps: {
-        width: 220,
+        width: 200,
         radius: 'lg',
         shadow: 'md',
         withArrow: true,
         arrowPosition: 'center',
-        transitionProps: { transition: 'pop-top-right', duration: 150 },
-      },
+        position: 'left-start',
+        transitionProps: { transition: 'pop-top-right', duration: 150 }
+      }
     }),
     MenuItem: MenuItem.extend({
       defaultProps: {
         styles: {
           itemLabel: {
             paddingTop: rem(2.5),
-            paddingBottom: rem(2.5),
-          },
-        },
-      },
+            paddingBottom: rem(2.5)
+          }
+        }
+      }
     }),
     // Notification
     Notification: Notification.extend({
       defaultProps: {
-        radius: 'lg',
+        radius: 'xl',
+        withBorder: true
       },
+      styles: {
+        root: {
+          boxShadow: 'var(--mantine-shadow-sm)'
+        },
+        title: {
+          fontSize: 'var(--mantine-font-size-sm)',
+          fontWeight: 700
+        },
+        icon: {
+          width: '16px',
+          height: '16px'
+        }
+      }
     }),
     ActionIcon: ActionIcon.extend({
       defaultProps: {
         radius: 'xl',
-        size: rem(32),
-      },
+        size: rem(32)
+      }
     }),
     Accordion: Accordion.extend({
       defaultProps: {
@@ -201,19 +253,12 @@ export const theme = createTheme({
         radius: 'lg',
         chevronSize: 24,
         classNames: {
-          item: classes['accordion-item'],
-          control:classes['accordion-control'],
-          chevron: classes['accordion-chevron'],
-          label: classes['accordion-label'],
-        },
-      },
-    }),
-    //
-    Loader: Loader.extend({
-      defaultProps: {
-        loaders: { ...Loader.defaultLoaders, custom: CssLoader },
-        type: 'custom',
-      },
+          item: classesAccordion['accordion-item'],
+          control: classesAccordion['accordion-control'],
+          chevron: classesAccordion['accordion-chevron'],
+          label: classesAccordion['accordion-label']
+        }
+      }
     }),
     // Popover
     Popover: Popover.extend({
@@ -221,8 +266,8 @@ export const theme = createTheme({
         shadow: 'var(--mantine-shadow-md)',
         transitionProps: { transition: 'pop-top-right', duration: 150 },
         withArrow: true,
-        arrowPosition: 'center',
-      },
-    }),
-  },
+        arrowPosition: 'center'
+      }
+    })
+  }
 });

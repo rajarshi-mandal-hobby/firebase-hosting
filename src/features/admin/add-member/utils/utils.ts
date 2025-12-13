@@ -3,7 +3,7 @@ import type { GlobalSettings, Floor, BedType } from '../../../../data/shemas/Glo
 import type { Member } from '../../../../shared/types/firestore-types';
 import { formatPhoneNumber, getSafeDate, normalizePhoneInput, toNumber } from '../../../../shared/utils';
 import * as v from 'valibot';
-import type { MemberDetailsFormData } from '../components/MemberDetailsForm';
+import type { MemberDetailsFormData, MemberDetailsFormProps } from '../components/MemberDetailsForm';
 
 export const validatePositiveInteger = (value: number | string, baseMinAmount: number) => {
   const num = v.pipe(
@@ -54,7 +54,7 @@ export const calculateTotalDeposit = (
   advanceDeposit: number | string
 ): number => toNumber(rentAmount) + toNumber(securityDeposit) + toNumber(advanceDeposit);
 
-export const getInitialValues = (settings: GlobalSettings, member?: Member): MemberDetailsFormData => {
+export const getInitialValues = ({ settings, member, action }: MemberDetailsFormProps): MemberDetailsFormData => {
   const currentSettingsRent = member ? settings.bedRents[member.floor as Floor][member.bedType as BedType] : 0;
   if (currentSettingsRent === undefined) {
     throw new Error(`Invalid bed type ${member?.bedType} for floor ${member?.floor}`);
@@ -71,10 +71,10 @@ export const getInitialValues = (settings: GlobalSettings, member?: Member): Mem
         advanceDeposit: member.advanceDeposit,
         isOptedForWifi: member.optedForWifi,
         moveInDate: getSafeDate(member.moveInDate),
-        notes: '',
-        amountPaid: member.totalAgreedDeposit,
+        note: member.note!,
+        amountPaid: action === 'edit' ? member.totalAgreedDeposit : '',
         shouldForwardOutstanding: false,
-        outstandingAmount: 0,
+        outstandingAmount: 0
       }
     : {
         name: '',
@@ -87,10 +87,10 @@ export const getInitialValues = (settings: GlobalSettings, member?: Member): Mem
         advanceDeposit: '',
         isOptedForWifi: false,
         moveInDate: dayjs().format('YYYY-MM'),
-        notes: '',
+        note: '',
         amountPaid: '',
         shouldForwardOutstanding: false,
-        outstandingAmount: 0,
+        outstandingAmount: 0
       };
 };
 

@@ -1,27 +1,32 @@
-import { notifications } from '@mantine/notifications';
-import { CloseIcon, Loader, rem, type NotificationProps } from '@mantine/core';
-import React from 'react';
+import { notifications, type NotificationData } from '@mantine/notifications';
+import { CloseIcon, Loader, type NotificationProps } from '@mantine/core';
 import { IconCheck, IconDoneAll, IconInfo } from '../shared/icons';
 
-const AutoCloseTime = 3000; // 3 seconds
-
-const NotifyColor = {
-  success: 'green.6',
-  error: 'red.6',
-  info: 'blue.6',
-  loading: 'transparent',
-  doneAll: 'teal.6',
+// Configuration for notification types
+const NOTIFICATION_CONFIG = {
+  success: {
+    color: 'green',
+    icon: <IconCheck size={16} color="white" />
+  },
+  error: {
+    color: 'red',
+    icon: <CloseIcon size="16" color="white" />
+  },
+  info: {
+    color: 'indigo',
+    icon: <IconInfo size={16} color="white" />
+  },
+  loading: {
+    color: 'transparent',
+    icon: <Loader size={16} />
+  },
+  doneAll: {
+    color: 'green.8',
+    icon: <IconDoneAll size={16} color="white" />
+  }
 } as const;
 
-const NotifyIcons = {
-  success: <IconCheck size={16} color='white' />,
-  error: <CloseIcon size='16' color='white' />,
-  info: <IconInfo size={16} color='white' />,
-  loading: <Loader size={16} />,
-  doneAll: <IconDoneAll size={16} color='white' />,
-} as const;
-
-type NotifyType = keyof typeof NotifyColor;
+export type NotifyType = keyof typeof NOTIFICATION_CONFIG;
 
 type NotifyOptions = {
   message: string;
@@ -30,87 +35,104 @@ type NotifyOptions = {
   iconColor?: string;
 } & Omit<NotificationProps, 'color'>;
 
+const DEFAULT_AUTO_CLOSE = 2000;
+
+/**
+ * Displays a notification. If an `id` is provided, it updates the existing notification.
+ */
 export const notify = ({
   id,
   message,
   title,
   icon,
   iconColor,
-  autoClose = AutoCloseTime,
+  autoClose = DEFAULT_AUTO_CLOSE,
   type = 'success',
   ...props
 }: NotifyOptions): string => {
-  let color = iconColor || NotifyColor[type];
-  const iconD = icon || NotifyIcons[type];
-  let { height, width } = { height: rem(20), width: rem(20) };
+  const config = NOTIFICATION_CONFIG[type];
+  const color = iconColor || config.color;
+  const iconNode = icon || config.icon;
 
-  if (icon && React.isValidElement(icon) && icon.type === Loader) {
-    color = 'transparent';
-    height = '1em';
-    width = '1em';
-  }
+  const notificationProps: NotificationData = {
+    color,
+    title,
+    message,
+    icon: iconNode,
+    autoClose,
+    withCloseButton: type !== 'loading',
+    // Apply default class or styles if needed, but keeping it clean allows Theme control
+    ...props
+  };
 
-  // If id is provided, update existing notification
   if (id) {
     notifications.update({
       id,
-      color,
-      title,
-      message,
-      icon: iconD,
-      styles: {
-        icon: { height, width },
-      },
-      style: {
-        fontSize: rem(12),
-      },
-      ...props,
+      ...notificationProps
     });
     return id;
   }
 
-  // Otherwise, show a new notification
-  const notificationId = notifications.show({
-    color,
-    title,
-    message,
-    autoClose,
-    icon: iconD,
-    styles: {
-      icon: { height, width },
-    },
-    style: {
-      fontSize: rem(12),
-    },
-    ...props,
-  });
-  return notificationId;
+  return notifications.show(notificationProps);
 };
 
-export const notifyUpdate = (id: string, message: string, {iconColor, type}: {iconColor?: string, type?: NotifyType} = {}): string => {
+/**
+ * Updates an existing notification.
+ */
+export const notifyUpdate = (id: string, message: string, options: Partial<NotifyOptions> = {}): string => {
   return notify({
     id,
     message,
-    type: type || 'doneAll',
-    iconColor,
+    type: 'doneAll',
+    autoClose: 1500, // Shorter auto-close for updates by default
+    ...options
   });
 };
 
-export const notifySuccess = (message: string) => {
-  return notify({ message, type: 'success' });
-};
+export const notifySuccess = (message: string, options?: Partial<NotifyOptions>) =>
+  notify({ message, type: 'success', ...options });
 
-export const notifyError = (message: string) => {
-  return notify({ message, type: 'error' });
-};
+export const notifyError = (message: string, options?: Partial<NotifyOptions>) =>
+  notify({ message, type: 'error', ...options });
 
-export const notifyInfo = (message: string) => {
-  return notify({ message, type: 'info' });
-};
+export const notifyInfo = (message: string, options?: Partial<NotifyOptions>) =>
+  notify({ message, type: 'info', ...options });
 
-export const notifyLoading = (message: string) => {
-  return notify({
+export const notifyLoading = (message: string, options?: Partial<NotifyOptions>) =>
+  notify({
     message,
     type: 'loading',
+    autoClose: false,
+    ...options
   });
-};
+
+/**
+ * Wraps a promise with optimal loading, success, and error notifications.
+ */
+export async function notifyPromise<T>(
+  promise: Promise<T>,
+  {
+    loading,
+    success,
+    error
+  }: {
+    loading: string;
+    success: string | ((data: T) => string);
+    error: string | ((error: any) => string);
+  },
+  options?: Partial<NotifyOptions>
+): Promise<T> {
+  const id = notifyLoading(loading, { ...options });
+
+  try {
+    const result = await promise;
+    const successMessage = typeof success === 'function' ? success(result) : success;
+    notifyUpdate(id, successMessage, { type: 'success', ...options });
+    return result;
+  } catch (err: any) {
+    const errorMessage = typeof error === 'function' ? error(err) : error;
+    // For errors, we usually want to keep the notification a bit longer or let it stay until dismissed
+    notifyUpdate(id, errorMessage, { type: 'error', autoClose: 4000, ...options });
+    throw err;
+  }
+}

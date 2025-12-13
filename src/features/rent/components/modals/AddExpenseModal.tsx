@@ -1,32 +1,32 @@
-import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react';
 import {
+  Modal,
   Stack,
-  Text,
-  Button,
+  Title,
+  Paper,
+  Textarea,
+  Input,
   Group,
   ActionIcon,
-  Alert,
-  Textarea,
-  Modal,
-  Paper,
-  Input,
   CloseIcon,
-  Title,
-  LoadingOverlay,
-  rem,
+  Alert,
+  Button,
+  Text
 } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
-import { NumberInputWithCurrency } from '../../../../shared/components/NumberInputWithCurrency';
+import { useForm } from '@mantine/form';
+import type { notifications } from '@mantine/notifications';
+import { useState, useEffectEvent, useEffect, useCallback, useMemo, useTransition, useRef } from 'react';
+import { MyLoadingOverlay, NumberInputWithCurrency } from '../../../../shared/components';
+import { IconUndo, IconAdd } from '../../../../shared/icons';
 import type { Expense } from '../../../../shared/types/firestore-types';
 import { formatNumberIndianLocale, formatNumberWithOrdinal } from '../../../../shared/utils';
-import { useForm } from '@mantine/form';
-import { IconAdd, IconUndo } from '../../../../shared/icons';
+import { notifyLoading, notifyUpdate } from '../../../../utils/notifications';
 
 interface AddExpenseModalProps {
   opened: boolean;
+  memberName: string;
+  initialExpenses: Expense[];
   onClose: () => void;
-  memberName?: string;
-  initialExpenses?: Expense[];
+  onExitTransitionEnd: () => void;
 }
 
 type FormExpenses = {
@@ -36,18 +36,20 @@ type FormExpenses = {
   }[];
 };
 
-export function AddExpenseModal({ opened, onClose, memberName = '', initialExpenses = [] }: AddExpenseModalProps) {
-  const [loading, setLoading] = useState(false);
+export function AddExpenseModal({
+  opened,
+  memberName,
+  initialExpenses,
+  onClose,
+  onExitTransitionEnd
+}: AddExpenseModalProps) {
+  const [isSaving, startTransition] = useTransition();
+  const valueOnErrorRef = useRef<Map<string, FormExpenses[]>>(new Map());
 
   // ========== Form Setup ==========
   const form = useForm<FormExpenses>({
     initialValues: {
-      expenses: [
-        {
-          description: '',
-          amount: '',
-        },
-      ],
+      expenses: []
     },
     validate: {
       expenses: {
@@ -120,23 +122,31 @@ export function AddExpenseModal({ opened, onClose, memberName = '', initialExpen
           }
 
           return null;
-        },
-      },
+        }
+      }
     },
     transformValues: (values) => ({
       expenses: values.expenses.map((expense) => ({
         description: expense.description.trim(),
-        amount: Number(expense.amount),
-      })),
-    }),
+        amount: Number(expense.amount)
+      }))
+    })
   });
 
-  // ========== Effects ==========
+  const resetForm = () => {
+    form.setValues({ expenses: [] });
+    form.resetDirty();
+    valueOnErrorRef.current.delete(memberName);
+  };
+
   // Use useEffectEvent to avoid dependency issues
   const effectEvent = useEffectEvent(() => {
-    const mapped = initialExpenses.length ? [...initialExpenses] : [{ description: '', amount: '' }];
-
-    form.setValues({ expenses: mapped });
+    const hasErrors = valueOnErrorRef.current.has(memberName);
+    if (!opened || isSaving) return;
+    const expenses = hasErrors ? valueOnErrorRef.current.get(memberName) : initialExpenses;
+    form.setValues({ expenses: [...expenses] });
+    form.resetDirty();
+    console.log('Effect event triggered', form.getValues());
   });
 
   useEffect(() => {
@@ -144,7 +154,7 @@ export function AddExpenseModal({ opened, onClose, memberName = '', initialExpen
   }, [opened]);
 
   // ========== State Getters ==========
-  const currentExpenses = form.getValues().expenses;
+  const currentExpenses = form.values.expenses;
 
   const totalAmount = currentExpenses.reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
 
@@ -201,18 +211,18 @@ export function AddExpenseModal({ opened, onClose, memberName = '', initialExpen
   // ========== Actions ==========
   const addExpenseItem = (): void => {
     form.setValues({
-      expenses: [...currentExpenses, { description: '', amount: '' }],
+      expenses: [...currentExpenses, { description: '', amount: '' }]
     });
   };
 
   const removeExpenseItem = (index: number): void => {
     if (currentExpenses.length > 1) {
       form.setValues({
-        expenses: currentExpenses.filter((_, i) => i !== index),
+        expenses: currentExpenses.filter((_, i) => i !== index)
       });
     } else {
       form.setValues({
-        expenses: [{ description: '', amount: '' }],
+        expenses: [{ description: '', amount: '' }]
       });
     }
   };
@@ -233,54 +243,66 @@ export function AddExpenseModal({ opened, onClose, memberName = '', initialExpen
     updateExpenseItem(index, field, field === 'description' ? '' : '');
   };
 
-  const handleAddExpenses = async (): Promise<void> => {
-    setLoading(true);
-    try {
-      // Mock API call - replace with actual Firebase function call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+  const handleAddExpenses = () => {
+    const loadingNotificationId = notifyLoading(
+      `${isRemovedOrModified ? 'Updating' : 'Adding'} expenses for ${memberName.split(' ')[0]}`
+    );
+    startTransition(async () => {
+      try {
+        // Mock API call - replace with actual Firebase function call
+        await new Promise((resolve, reject) => setTimeout(resolve, 2500));
+        throw new Error('Failed to add expenses');
+        notifyUpdate(
+          loadingNotificationId,
+          `${currentExpenses.length} expense(s) ${isRemovedOrModified ? 'updated' : 'added'}.`,
+          { type: 'success' }
+        );
 
-      notifications.show({
-        title: 'Success',
-        message: `${currentExpenses.length} expense(s) totaling ${formatNumberIndianLocale(
-          totalAmount,
-          true
-        )} added for ${memberName}`,
-        color: 'green',
-      });
+        onClose();
+        resetForm();
+        valueOnErrorRef.current.delete(memberName);
+      } catch (error) {
+        valueOnErrorRef.current.set(memberName, { expenses: [...currentExpenses] });
+        notifyUpdate(
+          loadingNotificationId,
+          `Failed to ${isRemovedOrModified ? 'update' : 'add'} expenses: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          { type: 'error' }
+        );
+      }
+    });
+  };
 
-      onClose();
-      form.setValues({ expenses: [{ description: '', amount: '' }] });
-    } catch (error) {
-      console.error('Error adding expenses:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to add expenses. Please try again.',
-        color: 'red',
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleExitTransitionEnd = () => {
+    if (!isSaving) resetForm();
+    onExitTransitionEnd();
+    console.log('Exit transition end event triggered', form.getValues());
   };
 
   // ========== Render ==========
   console.log('🎨 Rendering AddExpenseModal');
 
   return (
-    <Modal opened={opened} onClose={onClose} title='Add Expense for:' centered pos='relative' onExitTransitionEnd={() => form.reset()}>
-      <LoadingOverlay visible={loading} />
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title="Add Expense for:"
+      centered
+      pos="relative"
+      onExitTransitionEnd={handleExitTransitionEnd}>
+      <MyLoadingOverlay visible={isSaving} />
       <form onSubmit={form.onSubmit(handleAddExpenses)}>
-        <Stack gap='lg'>
+        <Stack gap="lg">
           <Title order={4}>{memberName}</Title>
 
           {/* Expenses List */}
           {currentExpenses.map((expense, index) => (
-            <Paper key={index} withBorder p='md'>
+            <Paper key={index} withBorder p="md">
               {/* Description Input */}
               <Textarea
-                autoCapitalize='sentences'
+                autoCapitalize="sentences"
                 label={formatNumberWithOrdinal(index + 1) + ' Expense'}
-                mb='md'
-                placeholder='Repair, Maintenance...'
+                mb="md"
+                placeholder="Repair, Maintenance..."
                 minRows={1}
                 flex={2}
                 autosize
@@ -295,11 +317,11 @@ export function AddExpenseModal({ opened, onClose, memberName = '', initialExpen
               />
 
               {/* Amount Input & Actions */}
-              <Group align='flex-start' justify='space-between'>
+              <Group align="flex-start" justify="space-between">
                 <NumberInputWithCurrency
                   w={150}
-                  label='Amount'
-                  placeholder='Amount'
+                  label="Amount"
+                  placeholder="Amount"
                   hideControls
                   required={initialExpenses[index] ? false : true}
                   allowNegative
@@ -314,14 +336,14 @@ export function AddExpenseModal({ opened, onClose, memberName = '', initialExpen
                 />
 
                 {/* Action Buttons */}
-                <Group mt={28} wrap='nowrap'>
+                <Group mt={28} wrap="nowrap">
                   {/* Reset Button */}
                   {initialExpenses[index] && (
                     <ActionIcon
-                      aria-label='Reset Expense'
-                      color='gray.3'
+                      aria-label="Reset Expense"
+                      color="gray.3"
                       c={isExpenseModified(expense, index) ? 'var(--mantine-color-text)' : undefined}
-                      variant='outline'
+                      variant="outline"
                       disabled={!isExpenseModified(expense, index)}
                       size={30}
                       onClick={() => resetExpenses(index)}>
@@ -331,21 +353,21 @@ export function AddExpenseModal({ opened, onClose, memberName = '', initialExpen
 
                   {/* Remove Button */}
                   <ActionIcon
-                    aria-label='Remove Expense'
-                    color='red'
-                    variant='light'
+                    aria-label="Remove Expense"
+                    color="red"
+                    variant="light"
                     onClick={() => removeExpenseItem(index)}
                     disabled={currentExpenses.length === 1 && expense.description === '' && expense.amount === ''}
                     size={30}>
-                    <CloseIcon size='16' />
+                    <CloseIcon size="16" />
                   </ActionIcon>
 
                   {/* Add Button */}
                   <ActionIcon
-                    aria-label='Add Expense'
-                    color='gray.3'
+                    aria-label="Add Expense"
+                    color="gray.3"
                     c={isLastExpenseEntry(expense, index) ? undefined : 'var(--mantine-color-text)'}
-                    variant='outline'
+                    variant="outline"
                     onClick={addExpenseItem}
                     disabled={isLastExpenseEntry(expense, index)}
                     size={30}>
@@ -357,18 +379,13 @@ export function AddExpenseModal({ opened, onClose, memberName = '', initialExpen
           ))}
 
           {/* Summary Alert */}
-          <Alert
-            color='orange'
-            title='Expense Summary'
-            styles={{
-              title: { fontSize: rem(16) },
-            }}>
-            <Text size='sm'>
+          <Alert color="orange" title="Expense Summary">
+            <Text>
               Total: <strong>{formatNumberIndianLocale(totalAmount)}</strong>
             </Text>
             {/* Check if initialExpenses are removed */}
             {isRemoved && (
-              <Text size='sm' mt={4}>
+              <Text mt={4}>
                 You are about to remove {removedCount} existing expense
                 {removedCount > 1 ? 's' : ''}.
               </Text>
@@ -376,11 +393,11 @@ export function AddExpenseModal({ opened, onClose, memberName = '', initialExpen
           </Alert>
 
           {/* Footer Actions */}
-          <Group gap='sm' justify='flex-end'>
-            <Button variant='default' onClick={onClose} disabled={loading}>
+          <Group gap="sm" justify="flex-end">
+            <Button variant="transparent" onClick={onClose} disabled={isSaving}>
               Cancel
             </Button>
-            <Button type='submit' loading={loading} disabled={loading || !isRemovedOrModified}>
+            <Button type="submit" loading={isSaving} disabled={isSaving || !isRemovedOrModified}>
               {isRemovedOrModified ? 'Update Expenses' : 'Add expenses'}
             </Button>
           </Group>

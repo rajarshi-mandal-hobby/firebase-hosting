@@ -7,8 +7,11 @@ import type { Member } from '../../../shared/types/firestore-types';
 import { useLocation } from 'react-router-dom';
 import MemberDetailsForm from '../add-member/components/MemberDetailsForm';
 
-type MemberFormProps = {
+export type Action = 'edit' | 'add' | 'reactivate';
+
+export type MemberFormProps = {
   member?: Member;
+  action?: Action;
 };
 
 export const MemberFormPage = () => {
@@ -16,17 +19,22 @@ export const MemberFormPage = () => {
   const location = useLocation();
   const pathName = location.pathname;
   const memberFromState: Member | undefined = location.state?.member;
+  const action = location.state?.action;
+
+  console.log('🎨 Rendering MemberFormPage', memberFromState);
 
   return (
     <ErrorBoundary onRetry={() => setRefreshKey((prev) => prev + 1)} key={pathName}>
-      <FormPageHeader title={pathName.includes('edit') ? 'Edit Member' : 'Add Member'} key={refreshKey}>
-        <MemberFormContainer member={memberFromState} />
+      <FormPageHeader
+        title={action === 'edit' ? 'Edit Member' : action === 'reactivate' ? 'Reactivate Member' : 'Add Member'}
+        key={refreshKey}>
+        <MemberFormContainer member={memberFromState} action={action} />
       </FormPageHeader>
     </ErrorBoundary>
   );
 };
 
-function MemberFormContainer({ member }: MemberFormProps) {
+function MemberFormContainer({ member, action }: MemberFormProps) {
   const { settings, isLoading, error, actions } = useDefaultRents();
 
   if (error) {
@@ -34,7 +42,7 @@ function MemberFormContainer({ member }: MemberFormProps) {
   }
 
   if (settings && !isLoading && !error) {
-    return <MemberDetailsForm settings={settings} member={member} />;
+    return <MemberDetailsForm settings={settings} member={member} action={action || 'add'} />;
   }
 
   // For null and loading state

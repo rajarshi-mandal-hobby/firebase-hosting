@@ -27,21 +27,21 @@ import {
   IconClose,
   IconEditOff,
   IconMoneyBag,
+  IconNote,
   IconPayments,
   IconUndo,
   IconUniversalCurrency,
 } from '../../../../shared/icons';
 import { formatNumberIndianLocale, formatPhoneNumber, getSafeDate } from '../../../../shared/utils';
-import type { Member } from '../../../../shared/types/firestore-types';
 import { MyLoadingOverlay } from '../../../../shared/components/MyLoadingOverlay';
 import MemberFormConfirmationModal from './MemberFormConfirmationModal';
 import { useMemberDetailsForm } from '../hooks/useMemberDetailsForm';
 import { notifyError } from '../../../../utils/notifications';
+import type { MemberFormProps } from '../../pages/MemberFormPage';
 
 export type MemberDetailsFormProps = {
   settings: GlobalSettings;
-  member?: Member;
-};
+} & MemberFormProps;
 
 export type MemberDetailsFormData = {
   name: string;
@@ -54,13 +54,15 @@ export type MemberDetailsFormData = {
   advanceDeposit: number | string;
   isOptedForWifi: boolean;
   moveInDate: string;
-  notes: string;
+  note: string;
   amountPaid: number | string;
   shouldForwardOutstanding: boolean;
   outstandingAmount: number | string;
 };
 
-export default function MemberDetailsForm({ settings, member }: MemberDetailsFormProps) {
+const ICON_SIZE = 16;
+
+export default function MemberDetailsForm({ settings, member, action }: MemberDetailsFormProps) {
   const currentSettingsRent = member ? settings.bedRents[member.floor as Floor][member.bedType as BedType] : 0;
   if (currentSettingsRent === undefined) {
     throw new Error(`Invalid bed type ${member?.bedType} for floor ${member?.floor}`);
@@ -77,7 +79,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
     isButtonDisabled,
     summary,
     actions,
-  } = useMemberDetailsForm({ settings, member, currentSettingsRent });
+  } = useMemberDetailsForm({ settings, member, currentSettingsRent, action });
 
   console.log('Rendering MemberDetailsForm');
 
@@ -108,14 +110,14 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
         onSubmit={form.onSubmit(actions.onSave, () =>
           notifyError('Please fix the validation errors before submitting the form.')
         )}>
-        <Stack gap='sm'>
+        <Stack>
           {/* Personal Information */}
           <Title order={5}>Personal Information</Title>
           <TextInput
             label='Full Name'
             pattern='[A-Za-z\s]+'
             placeholder={member ? member.name : 'John Doe'}
-            rightSection={form.isDirty('name') ? member ? <IconUndo size={16} /> : <IconClose size={16} /> : null}
+            rightSection={form.isDirty('name') ? member ? <IconUndo size={ICON_SIZE} /> : <IconClose size={ICON_SIZE} /> : null}
             rightSectionProps={{
               onClick: () => (member ? form.setFieldValue('name', member.name) : form.setFieldValue('name', '')),
               style: { cursor: 'pointer' },
@@ -136,7 +138,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
                 member &&
                 form.isDirty('moveInDate') && (
                   <IconUndo
-                    size={16}
+                    size={ICON_SIZE}
                     onClick={() => form.setFieldValue('moveInDate', getSafeDate(member.moveInDate))}
                     style={{ cursor: 'pointer' }}
                   />
@@ -144,7 +146,8 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
               }
               required
               clearable={member || !form.isDirty('moveInDate') ? false : true}
-              leftSection={<IconCalendarMonth size={16} />}
+              leftSection={<IconCalendarMonth size={ICON_SIZE} />}
+              disabled={action === 'reactivate'}
               flex={1}
               miw={160}
               key={form.key('moveInDate')}
@@ -155,7 +158,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
               type='tel'
               placeholder='10-digit number'
               inputMode='numeric'
-              rightSection={form.isDirty('phone') ? member ? <IconUndo size={16} /> : <IconClose size={16} /> : null}
+              rightSection={form.isDirty('phone') ? member ? <IconUndo size={ICON_SIZE} /> : <IconClose size={ICON_SIZE} /> : null}
               rightSectionProps={{
                 onClick: () =>
                   member
@@ -164,7 +167,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
                 style: { cursor: 'pointer' },
               }}
               rightSectionWidth={34}
-              leftSection={<IconCall size={16} />}
+              leftSection={<IconCall size={ICON_SIZE} />}
               required
               flex={2}
               key={form.key('phone')}
@@ -200,7 +203,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
               leftSection={
                 member && form.isDirty('floor') ? (
                   <IconUndo
-                    size={16}
+                    size={ICON_SIZE}
                     onClick={() => {
                       form.setFieldValue('floor', member.floor);
                       form.setFieldValue('bedType', member.bedType);
@@ -208,7 +211,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
                     style={{ cursor: 'pointer' }}
                   />
                 ) : (
-                  <IconBed size={16} />
+                  <IconBed size={ICON_SIZE} />
                 )
               }
               data={[
@@ -226,7 +229,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
               leftSection={
                 member && form.isDirty('bedType') ? (
                   <IconUndo
-                    size={16}
+                    size={ICON_SIZE}
                     onClick={() => {
                       form.setFieldValue('floor', member.floor);
                       form.setFieldValue('bedType', member.bedType);
@@ -234,7 +237,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
                     style={{ cursor: 'pointer' }}
                   />
                 ) : (
-                  <IconBed size={16} />
+                  <IconBed size={ICON_SIZE} />
                 )
               }
               data={[
@@ -258,7 +261,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
               placeholder='Select bed type'
               required
               readOnly
-              rightSection={<IconEditOff size={16} />}
+              rightSection={<IconEditOff size={ICON_SIZE} />}
               rightSectionWidth={34}
               key={form.key('rentAmount')}
               {...form.getInputProps('rentAmount')}
@@ -266,7 +269,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
             <NumberInputWithCurrency
               label='Advance Deposit'
               placeholder={form.values.rentAmount.toString() || 'Enter advance deposit'}
-              rightSection={<IconEditOff size={16} />}
+              rightSection={<IconEditOff size={ICON_SIZE} />}
               rightSectionWidth={34}
               readOnly
               required
@@ -277,7 +280,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
               label='Security Deposit'
               placeholder={settings.securityDeposit.toString()}
               rightSection={
-                form.isDirty('securityDeposit') ? member ? <IconUndo size={16} /> : <IconClose size={16} /> : null
+                form.isDirty('securityDeposit') ? member ? <IconUndo size={ICON_SIZE} /> : <IconClose size={ICON_SIZE} /> : null
               }
               rightSectionProps={{
                 onClick: () =>
@@ -296,7 +299,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
               <NumberInputWithCurrency
                 label='Rent at Joining'
                 placeholder='Enter current rent'
-                rightSection={form.isDirty('rentAtJoining') ? <IconUndo size={16} /> : null}
+                rightSection={form.isDirty('rentAtJoining') ? <IconUndo size={ICON_SIZE} /> : null}
                 rightSectionProps={{
                   onClick: () => form.setFieldValue('rentAtJoining', member.rentAtJoining),
                   style: { cursor: 'pointer' },
@@ -346,8 +349,8 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
               label='Amount Paying Now'
               placeholder={summary.total.toString()}
               required
-              readOnly={!!member}
-              rightSection={member ? <IconEditOff size={16} /> : form.isDirty('amountPaid') && <IconClose size={16} />}
+              readOnly={!!member && action === 'edit'}
+              rightSection={member ? <IconEditOff size={ICON_SIZE} /> : form.isDirty('amountPaid') && <IconClose size={ICON_SIZE} />}
               rightSectionProps={{
                 onClick: () => !member && form.setFieldValue('amountPaid', ''),
                 style: { cursor: !member ? 'pointer' : 'default' },
@@ -374,17 +377,18 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
             />
           </VisuallyHidden>
           <Textarea
-            label='Notes (Optional)'
+            label={<Group gap='xs'><IconNote size={ICON_SIZE} /> <Text>Notes (Optional)</Text></Group>}
             placeholder='Any additional notes or remarks'
-            rightSection={form.isDirty('notes') ? member ? <IconUndo size={16} /> : <IconClose size={16} /> : null}
+            rightSection={form.isDirty('note') ? member ? <IconUndo size={ICON_SIZE} /> : <IconClose size={ICON_SIZE} /> : null}
             rightSectionProps={{
-              onClick: () => (member ? form.setFieldValue('notes', '') : form.setFieldValue('notes', '')),
+              onClick: () => (member ? form.setFieldValue('note', member.note) : form.setFieldValue('note', '')),
               style: { cursor: 'pointer' },
             }}
-            minRows={3}
+            maxRows={3}
+            resize='block'
             mt='md'
-            key={form.key('notes')}
-            {...form.getInputProps('notes')}
+            key={form.key('note')}
+            {...form.getInputProps('note')}
           />
 
           {/* Actions */}
@@ -402,6 +406,7 @@ export default function MemberDetailsForm({ settings, member }: MemberDetailsFor
       <MemberFormConfirmationModal
         opened={isConfirmModalOpen}
         actions={{ onClose: actions.onCloseConfirm, onConfirm: actions.onConfirm }}
+        note={actions.generateNote()}
         formValues={formValues}
         dirtyFields={member ? form.getDirty() : undefined}
       />

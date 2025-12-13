@@ -11,13 +11,15 @@ import {
   validateName,
   validatePhoneNumber,
   validatePositiveInteger,
-  validateSentence,
+  validateSentence
 } from '../utils/utils';
+import dayjs from 'dayjs';
 
 export const useMemberDetailsForm = ({
   settings,
   member,
   currentSettingsRent,
+  action
 }: MemberDetailsFormProps & { currentSettingsRent: number }) => {
   // Helper to calculate summary state
   const calculateSummary = (
@@ -32,18 +34,22 @@ export const useMemberDetailsForm = ({
 
     // Logic: If editing existing member, outstanding is based on agreed deposit.
     // If new member, it's based on current form totals.
-    const outstanding = values.amountPaid ? (member ? paid - member.totalAgreedDeposit : total - paid) : 0;
+    const outstanding = values.amountPaid
+      ? member && action === 'edit'
+        ? paid - member.totalAgreedDeposit
+        : total - paid
+      : 0;
 
     return {
       rentAmount: rent,
       securityDeposit: security,
       advanceDeposit: advance,
       total,
-      outstanding,
+      outstanding
     };
   };
 
-  const initialValues = getInitialValues(settings, member);
+  const initialValues = getInitialValues({ settings, member, action });
 
   // Single source of truth for the summary UI to avoid multiple re-renders
   const [summary, setSummary] = useState(() => calculateSummary(initialValues));
@@ -102,7 +108,7 @@ export const useMemberDetailsForm = ({
           const newSummary = calculateSummary(values);
           setSummary(newSummary);
 
-          if (member) form.setFieldValue('amountPaid', newSummary.total);
+          if (member && action === 'edit') form.setFieldValue('amountPaid', newSummary.total);
           // Sync calculated outstanding back to form for submission
           // We check equality to avoid infinite loops
           if (values.outstandingAmount !== newSummary.outstanding) {
@@ -124,11 +130,11 @@ export const useMemberDetailsForm = ({
         if (baseRent === undefined) return 'Invalid bed type for selected floor';
         return validatePositiveInteger(value, baseRent);
       },
-      notes: (value) => validateSentence(value),
+      note: (value) => validateSentence(value),
       amountPaid: (value) => {
         if (!!member && !value) return null;
         return validatePositiveInteger(value, 1000);
-      },
+      }
     },
     transformValues: (values) => ({
       ...values,
@@ -138,7 +144,7 @@ export const useMemberDetailsForm = ({
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' '),
       phone: normalizePhoneInput(values.phone),
-      notes: values.notes.trim(),
+      notes: values.note.trim()
     }),
     enhanceGetInputProps: (payload) => {
       if (payload.field === 'phone') {
@@ -149,12 +155,12 @@ export const useMemberDetailsForm = ({
             const formattedValue = formatPhoneNumber(event.currentTarget.value);
             payload.form.setFieldValue('phone', formattedValue);
             originalOnBlur?.(event);
-          },
+          }
         };
       }
 
       return {};
-    },
+    }
   });
 
   const isRentMismatch = member ? member.currentRent !== currentSettingsRent : false;
@@ -176,16 +182,43 @@ export const useMemberDetailsForm = ({
     setSummary(calculateSummary(initialValues));
   };
 
+  const generateNote = () => {
+    const previouNote = form.values.note;
+    const dateText = '# ' + dayjs().format('DD-MM-YYYY') + ' &mdash; ';
+    let note = previouNote ? `${previouNote}\r\n${dateText}` : dateText;
+    note += action === 'edit' ? 'Edited' : action === 'reactivate' ? 'Reactivated' : 'Added';
+
+    if (form.isDirty() && action !== 'add') {
+      Object.entries(form.getDirty()).forEach(([key, value]) => {
+        if (
+          value &&
+          key !== 'rentAmount' &&
+          key !== 'securityDeposit' &&
+          key !== 'advanceDeposit' &&
+          key !== 'shouldForwardOutstanding' &&
+          key !== 'outstandingAmount'
+        ) {
+          note += `\r\n- ${key
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^\w/g, (match) => match.toUpperCase())
+            .trim()} changed from ${form.getInitialValues()[key as keyof MemberDetailsFormData]}`;
+        }
+      });
+    }
+
+    return note;
+  };
+
   const actions = {
     onSave: (values: MemberDetailsFormData) => {
-    //   if (form.isValid()) {
-        setFormValues(values);
-        openConfirmModal();
-    
+      //   if (form.isValid()) {
+      setFormValues(values);
+      openConfirmModal();
     },
     onCloseConfirm: closeConfirmModal,
     onConfirm: handleConfirm,
     onHandleReset: handleFormReset,
+    generateNote
   };
 
   return {
@@ -198,6 +231,6 @@ export const useMemberDetailsForm = ({
     isSecurityDepositMismatch,
     shouldDisplayMismatchAlert,
     isButtonDisabled,
-    actions,
+    actions
   };
 };

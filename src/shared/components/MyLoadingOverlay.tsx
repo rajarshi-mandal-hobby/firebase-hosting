@@ -3,11 +3,10 @@ import { LoaderSleeping } from './LoaderSleeping';
 
 export const MyLoadingOverlay = LoadingOverlay.withProps({
   overlayProps: {
-    blur: 2,
+    blur: 2
   },
   loaderProps: {
-    children: <LoaderSleeping c='var(--mantine-color-text)' fz='md' />,
+    children: <LoaderSleeping c="var(--mantine-color-text)" fz="xs" />
   },
   zIndex: 100,
-  m: -5,
 });

@@ -1,5 +1,5 @@
 import { ThemeIcon } from '@mantine/core';
-import { IconCheck, IconDoneAll, IconLogout, IconPriorityHigh } from '../icons';
+import { IconCheck, IconDoneAll, IconPriorityHigh } from '../icons';
 import type { PaymentStatus } from '../types/firestore-types';
 import type { SVGProps } from 'react';
 
@@ -28,7 +28,7 @@ const StatusConfig: Record<PaymentStatus, StatusConfigEntry> = {
   },
   Partial: {
     icon: IconPriorityHigh,
-    color: 'orange',
+    color: 'orange.7',
     title: 'Partial Payment',
     message: 'You have made a partial payment. Please complete the remaining amount.',
   },

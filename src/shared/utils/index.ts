@@ -128,6 +128,14 @@ export const getSafeDate = (dateVal: any): string => {
   return dayjs(dateVal).format('YYYY-MM');
 };
 
+/**
+ * Safely retrieves a date string in 'MMM YYYY' format from various date representations.
+ * Handles Firestore Timestamps, serialized Timestamps, Date objects, and strings.
+ * @param dateVal - The date value to format.
+ * @returns The formatted date string in 'MMM YYYY' format.
+ */
+export const formatDate = (dateVal: any): string => dayjs(getSafeDate(dateVal)).format('MMM YYYY');
+
 /** Checks if a sentence contains at least one word with two or more letters.
  * @param sentence - The sentence to check.
  * @returns True if the sentence contains at least one word with two or more letters, false otherwise.

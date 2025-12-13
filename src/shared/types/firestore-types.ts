@@ -152,6 +152,7 @@ export interface Member {
   optedForWifi: boolean;
   leaveDate?: Timestamp;
   ttlExpiry?: Timestamp;
+  note: string;
 }
 
 /**
@@ -182,6 +183,7 @@ export const toMember = (data: any): Member => {
     optedForWifi: data.optedForWifi,
     leaveDate: data.leaveDate,
     ttlExpiry: data.ttlExpiry,
+    note: data.note,
   };
 };
 
@@ -327,14 +329,7 @@ export interface MemberDashboardData {
 /**
  * Settlement preview for member deactivation (section 6.5)
  */
-export interface SettlementPreview {
-  memberName: string;
-  totalAgreedDeposit: number;
-  outstandingBalance: number;
-  refundAmount: number; // Can be negative if member owes money
-  status: 'Refund Due' | 'Payment Due' | 'Settled';
-  leaveDate: string; // ISO date string
-}
+
 
 // ======================================
 // FORM AND VALIDATION TYPES

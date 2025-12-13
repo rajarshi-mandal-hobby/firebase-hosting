@@ -4,6 +4,8 @@ import { formatNumberIndianLocale, getStatusAlertConfig, StatusBadge } from '../
 import { IconUniversalCurrency, IconBulb, IconWifi, IconPayments, IconMoneyBag, IconNote, IconRupee } from '../icons';
 import type { ReactNode } from 'react';
 
+const ICON_SIZE = 14;
+
 type TableRowProps = {
   heading: string;
   value: any;
@@ -15,8 +17,8 @@ type TableRowProps = {
 const TableRow = ({ heading, value, Icon, hasExpenses = false, boldFont = false }: TableRowProps) => (
   <Table.Tr style={hasExpenses ? { borderBottom: 'none' } : undefined}>
     <Table.Th pl={0} fw={500} w={140}>
-      <Group wrap='nowrap' gap='xs'>
-        {typeof Icon === 'function' ? <Icon size={14} /> : Icon}
+      <Group wrap="nowrap" gap="xs">
+        {typeof Icon === 'function' ? <Icon size={ICON_SIZE} /> : Icon}
         {heading}
       </Group>
     </Table.Th>
@@ -37,23 +39,23 @@ export const RentDetailsList = ({ rentHistory }: RentDetailsListProps) => {
   const statusConfig = getStatusAlertConfig(rentHistory.status);
 
   return (
-    <Table layout='fixed' verticalSpacing='xs' fz='sm' key={rentHistory.id}>
+    <Table layout="fixed" verticalSpacing="xs" fz="sm" key={rentHistory.id}>
       <Table.Tbody>
-        <TableRow heading='Rent' value={formatNumberIndianLocale(rentHistory.rent)} Icon={IconUniversalCurrency} />
-        <TableRow heading='Electricity' value={formatNumberIndianLocale(rentHistory.electricity)} Icon={IconBulb} />
-        <TableRow heading='WiFi' value={formatNumberIndianLocale(rentHistory.wifi)} Icon={IconWifi} />
+        <TableRow heading="Rent" value={formatNumberIndianLocale(rentHistory.rent)} Icon={IconUniversalCurrency} />
+        <TableRow heading="Electricity" value={formatNumberIndianLocale(rentHistory.electricity)} Icon={IconBulb} />
+        <TableRow heading="WiFi" value={formatNumberIndianLocale(rentHistory.wifi)} Icon={IconWifi} />
 
         {rentHistory.expenses.length > 0 && (
           <>
             <TableRow
-              heading='Expenses'
+              heading="Expenses"
               value={formatNumberIndianLocale(expensesTotal)}
               Icon={IconUniversalCurrency}
               hasExpenses
             />
             <Table.Tr>
               <Table.Td colSpan={2} p={0}>
-                <List listStyleType='disc' mb='sm' spacing='xs' size='sm'>
+                <List listStyleType="disc" mb="sm" spacing="xs" size="sm">
                   {rentHistory.expenses.map((expense, idx) => (
                     <List.Item key={idx}>
                       {expense.description}: ₹{expense.amount}
@@ -66,24 +68,24 @@ export const RentDetailsList = ({ rentHistory }: RentDetailsListProps) => {
         )}
 
         <TableRow
-          heading='Total Charges'
+          heading="Total Charges"
           value={formatNumberIndianLocale(rentHistory.totalCharges)}
           Icon={IconPayments}
         />
-        <TableRow heading='Amount Paid' value={formatNumberIndianLocale(rentHistory.amountPaid)} Icon={IconMoneyBag} />
+        <TableRow heading="Amount Paid" value={formatNumberIndianLocale(rentHistory.amountPaid)} Icon={IconMoneyBag} />
         <TableRow
-          heading='Outstanding'
+          heading="Outstanding"
           value={formatNumberIndianLocale(rentHistory.currentOutstanding)}
           Icon={IconRupee}
           boldFont
         />
 
-        {rentHistory.outstandingNote && <TableRow heading='Note' value={rentHistory.outstandingNote} Icon={IconNote} />}
+        {rentHistory.outstandingNote && <TableRow heading="Note" value={rentHistory.outstandingNote} Icon={IconNote} />}
 
         <TableRow
-          heading='Status'
+          heading="Status"
           value={statusConfig.title}
-          Icon={<StatusBadge size={14} status={rentHistory.status} />}
+          Icon={<StatusBadge size={ICON_SIZE} status={rentHistory.status} />}
         />
       </Table.Tbody>
     </Table>
