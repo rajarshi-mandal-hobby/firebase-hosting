@@ -6,15 +6,15 @@
  */
 
 import { onCall } from 'firebase-functions/v2/https';
-import { getFirestore } from 'firebase-admin/firestore';
+
 import {
   validateAuth,
   validateRequiredFields,
   validateMemberId,
   validatePagination,
   createSuccessResponse,
-  handleFunctionError,
-} from './utils/validation';
+  handleFunctionError
+} from './utils/validation.js';
 import {
   Member,
   RentHistory,
@@ -24,10 +24,10 @@ import {
   GetRentHistoryRequest,
   CloudFunctionResponse,
   Floor,
-  BedType,
-} from './types/shared';
+  BedType
+} from './types/index.js';
 
-const db = getFirestore();
+import { db } from './index.js'; // Import shared db instance
 
 /**
  * Get all members (Admin only)
@@ -66,7 +66,7 @@ export const getMembers = onCall({ cors: true }, async (request): Promise<CloudF
     const snapshot = await query.get();
     let members = snapshot.docs.map((doc: any) => ({
       id: doc.id,
-      ...doc.data(),
+      ...doc.data()
     })) as Member[];
 
     // Apply search filter (client-side for simplicity)
@@ -121,7 +121,7 @@ export const getMember = onCall(
 
       const member = {
         id: memberDoc.id,
-        ...memberDoc.data(),
+        ...memberDoc.data()
       } as Member;
 
       // Get rent history if requested
@@ -136,7 +136,7 @@ export const getMember = onCall(
 
         rentHistory = historySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data(),
+          ...doc.data()
         })) as RentHistory[];
       }
 
@@ -222,7 +222,7 @@ export const getMemberRentHistory = onCall(
       const hasMore = docs.length > validLimit;
       const rentHistory = docs.slice(0, validLimit).map((doc) => ({
         id: doc.id,
-        ...doc.data(),
+        ...doc.data()
       })) as RentHistory[];
 
       const nextCursor = hasMore ? docs[validLimit - 1].id : undefined;
@@ -230,7 +230,7 @@ export const getMemberRentHistory = onCall(
       return createSuccessResponse('Rent history retrieved successfully', {
         rentHistory,
         hasMore,
-        nextCursor,
+        nextCursor
       });
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<{
@@ -307,7 +307,7 @@ export const getMyRentHistory = onCall(
       const hasMore = docs.length > validLimit;
       const rentHistory = docs.slice(0, validLimit).map((doc) => ({
         id: doc.id,
-        ...doc.data(),
+        ...doc.data()
       })) as RentHistory[];
 
       const nextCursor = hasMore ? docs[validLimit - 1].id : undefined;
@@ -315,7 +315,7 @@ export const getMyRentHistory = onCall(
       return createSuccessResponse('Rent history retrieved successfully', {
         rentHistory,
         hasMore,
-        nextCursor,
+        nextCursor
       });
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<{
@@ -374,15 +374,15 @@ export const linkMemberAccount = onCall(
       // Link the member account to Firebase UID
       if (!memberData.firebaseUid) {
         await memberDoc.ref.update({
-          firebaseUid: uid,
+          firebaseUid: uid
         });
 
-        memberData.firebaseUid = uid;
+        // memberData.firebaseUid = uid;
       }
 
       return createSuccessResponse('Member account linked successfully', {
         success: true,
-        member: { ...memberData, id: memberDoc.id },
+        member: { ...memberData, id: memberDoc.id }
       });
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<{
@@ -417,7 +417,7 @@ export const getMyProfile = onCall(
       const memberData = memberDoc.data() as Member;
 
       return createSuccessResponse('Member profile retrieved successfully', {
-        member: { ...memberData, id: memberDoc.id },
+        member: { ...memberData, id: memberDoc.id }
       });
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<{
@@ -476,7 +476,7 @@ export const getMemberDashboard = onCall(
         const currentMonthDoc = currentMonthSnapshot.docs[0];
         currentMonth = {
           id: currentMonthDoc.id,
-          ...currentMonthDoc.data(),
+          ...currentMonthDoc.data()
         } as RentHistory;
       }
 
@@ -488,14 +488,14 @@ export const getMemberDashboard = onCall(
         const settings = globalSettingsDoc.data() as any;
         globalSettings = {
           upiVpa: settings.upiVpa || settings.upiPhoneNumber, // Support both field names
-          payeeName: settings.payeeName || 'Admin', // Default payee name
+          payeeName: settings.payeeName || 'Admin' // Default payee name
         };
       }
 
       return createSuccessResponse('Member dashboard data retrieved successfully', {
         member: { ...memberData, id: memberDoc.id },
         currentMonth,
-        globalSettings,
+        globalSettings
       });
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<{
@@ -557,7 +557,7 @@ export const getMemberCurrentMonth = onCall(
         const currentMonthDoc = currentMonthSnapshot.docs[0];
         currentMonth = {
           id: currentMonthDoc.id,
-          ...currentMonthDoc.data(),
+          ...currentMonthDoc.data()
         } as RentHistory;
       }
 
@@ -569,13 +569,13 @@ export const getMemberCurrentMonth = onCall(
         const settings = globalSettingsDoc.data() as any;
         globalSettings = {
           upiVpa: settings.upiVpa || settings.upiPhoneNumber, // Support both field names
-          payeeName: settings.payeeName || 'Admin', // Default payee name
+          payeeName: settings.payeeName || 'Admin' // Default payee name
         };
       }
 
       return createSuccessResponse('Current month rent details retrieved successfully', {
         currentMonth,
-        globalSettings,
+        globalSettings
       });
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<{
@@ -637,12 +637,12 @@ export const getOtherActiveMembers = onCall(
             name: data.name,
             phone: data.phone,
             floor: data.floor,
-            bedType: data.bedType,
+            bedType: data.bedType
           };
         });
 
       return createSuccessResponse('Other active members retrieved successfully', {
-        members: otherMembers,
+        members: otherMembers
       });
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<{
@@ -653,145 +653,6 @@ export const getOtherActiveMembers = onCall(
           floor: Floor;
           bedType: BedType;
         }>;
-      }>;
-    }
-  }
-);
-
-/**
- * Deactivate member with settlement calculation (Admin only)
- * Handles atomic updates for member status and global counters
- */
-export const deactivateMember = onCall(
-  { cors: true },
-  async (
-    request
-  ): Promise<
-    CloudFunctionResponse<{
-      settlement: {
-        memberName: string;
-        totalAgreedDeposit: number;
-        outstandingBalance: number;
-        refundAmount: number;
-        status: 'Refund Due' | 'Payment Due' | 'Settled';
-        leaveDate: string;
-      };
-    }>
-  > => {
-    try {
-      const uid = validateAuth(request);
-
-      // Check if user is admin
-      const adminDoc = await db.collection('config').doc('admins').get();
-      if (!adminDoc.exists) {
-        throw new Error('Admin configuration not found');
-      }
-
-      const adminConfig = adminDoc.data() as AdminConfig;
-      const isAdmin = adminConfig.list.some((admin) => admin.uid === uid);
-
-      if (!isAdmin) {
-        throw new Error('Unauthorized: Admin access required');
-      }
-
-      const requestData = validateRequiredFields(request.data, ['memberId', 'leaveDate']) as {
-        memberId: string;
-        leaveDate: string; // ISO date string
-      };
-
-      if (!validateMemberId(requestData.memberId)) {
-        throw new Error('Invalid member ID');
-      }
-
-      // Get member document
-      const memberDoc = await db.collection('members').doc(requestData.memberId).get();
-
-      if (!memberDoc.exists) {
-        throw new Error('Member not found');
-      }
-
-      const memberData = memberDoc.data() as Member;
-
-      if (!memberData.isActive) {
-        throw new Error('Member is already inactive');
-      }
-
-      // Calculate settlement: refundAmount = totalAgreedDeposit - outstandingBalance
-      const refundAmount = memberData.totalAgreedDeposit - 0;
-
-      let status: 'Refund Due' | 'Payment Due' | 'Settled';
-      if (refundAmount > 0) {
-        status = 'Refund Due';
-      } else if (refundAmount < 0) {
-        status = 'Payment Due';
-      } else {
-        status = 'Settled';
-      }
-
-      const settlement = {
-        memberName: memberData.name,
-        totalAgreedDeposit: memberData.totalAgreedDeposit,
-        outstandingBalance: 0,
-        refundAmount,
-        status,
-        leaveDate: requestData.leaveDate,
-      };
-
-      // Get global settings for counter updates
-      const globalSettingsDoc = await db.collection('config').doc('globalSettings').get();
-      if (!globalSettingsDoc.exists) {
-        throw new Error('Global settings not found');
-      }
-
-      const globalSettings = globalSettingsDoc.data() as any;
-      const currentCounts = globalSettings.activememberCounts;
-
-      // Calculate new counter values
-      const newCounts = {
-        total: Math.max(0, currentCounts.total - 1),
-        byFloor: {
-          ...currentCounts.byFloor,
-          [memberData.floor]: Math.max(0, (currentCounts.byFloor[memberData.floor] || 0) - 1),
-        },
-        wifiOptedIn: memberData.optedForWifi ? Math.max(0, currentCounts.wifiOptedIn - 1) : currentCounts.wifiOptedIn,
-      };
-
-      // Set TTL expiry to 1 year from deactivation date
-      const leaveDate = new Date(requestData.leaveDate);
-      const ttlExpiry = new Date(leaveDate);
-      ttlExpiry.setFullYear(ttlExpiry.getFullYear() + 1);
-
-      // Use Firestore batch operations for atomicity
-      const batch = db.batch();
-
-      // Update member status
-      batch.update(memberDoc.ref, {
-        isActive: false,
-        leaveDate: leaveDate,
-        ttlExpiry: ttlExpiry,
-      });
-
-      // Update global member counters
-      batch.update(globalSettingsDoc.ref, {
-        activememberCounts: newCounts,
-      });
-
-      // Execute batch operation
-      await batch.commit();
-
-      return createSuccessResponse('Member deactivated successfully', {
-        settlement,
-      });
-    } catch (error) {
-      return handleFunctionError(error) as CloudFunctionResponse<{
-        settlement: {
-          memberName: string;
-          totalAgreedDeposit: number;
-          outstandingBalance: number;
-          refundAmount: number;
-          status: 'Refund Due' | 'Payment Due' | 'Settled';
-          leaveDate: string;
-        };
       }>;
     }
   }
@@ -838,11 +699,11 @@ export const updateFCMToken = onCall(
 
       // Update FCM token
       await memberDoc.ref.update({
-        fcmToken: requestData.fcmToken,
+        fcmToken: requestData.fcmToken
       });
 
       return createSuccessResponse('FCM token updated successfully', {
-        success: true,
+        success: true
       });
     } catch (error) {
       return handleFunctionError(error) as CloudFunctionResponse<{

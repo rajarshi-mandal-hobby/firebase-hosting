@@ -1,16 +1,16 @@
-import { Center, type CenterProps, type TextProps } from '@mantine/core';
-import { LoaderSleeping } from './LoaderSleeping';
+import { Center, type CenterProps, type TextProps } from "@mantine/core";
+import { LoaderSleeping } from "./LoaderSleeping";
 
 type LoadingBoxProps = {
-    mih?: number;
-    centerProps?: CenterProps;
-    textProps?: TextProps;
-}
+	centerProps?: CenterProps;
+	textProps?: TextProps;
+	message?: string;
+};
 
-export const LoadingBox = ({ mih = 300, centerProps, textProps }: LoadingBoxProps) => {
-  return (
-    <Center mih={mih} {...centerProps}>
-      <LoaderSleeping {...textProps} />
-    </Center>
-  );
+export const LoadingBox = ({ centerProps, textProps, message }: LoadingBoxProps) => {
+	return (
+		<Center my='xl' {...centerProps}>
+			<LoaderSleeping {...textProps} message={message} />
+		</Center>
+	);
 };

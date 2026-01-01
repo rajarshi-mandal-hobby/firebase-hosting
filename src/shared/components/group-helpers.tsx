@@ -16,7 +16,7 @@ type GroupIconProps = {
 
 export const GroupIcon = ({ children, ...props }: GroupIconProps) => {
   return (
-    <Group gap="xs" {...props}>
+    <Group gap="xs" wrap="nowrap" {...props}>
       {children}
     </Group>
   );

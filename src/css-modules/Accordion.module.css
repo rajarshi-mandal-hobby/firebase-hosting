@@ -10,10 +10,10 @@
   transition-timing-function: ease-out;
   /* Target child elements when item is active */
   :global(.mantine-ActionIcon-root) {
-    margin-inline-end: var(--mantine-spacing-md);
+    margin-inline-end: var(--mantine-spacing-sm);
     box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.2),
-      0 0 1px rgba(0, 0, 0, 0.5);
+      0 0 1px rgba(0, 0, 0, 0.1);
   }
   :global(.mantine-Center-root) {
     background-color: var(--mantine-color-gray-1);

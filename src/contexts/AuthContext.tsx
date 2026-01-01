@@ -1,7 +1,7 @@
 // src/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { signInWithPopup, signOut, onAuthStateChanged, type User } from 'firebase/auth'; // Import the User type
-import { auth, googleProvider } from '../../firebase';
+import { auth, googleProvider } from '../firebase';
 
 // 1. Define the shape of the context data
 interface AuthContextType {
@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     user,
     loading,
     signInWithGoogle,
-    logout,
+    logout
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,15 +1,7 @@
-import z from 'zod';
+import * as v from 'valibot';
 
-type ZodErrors<T> = z.ZodFlattenedError<T, string>;
-
-export type SaveResponse<T> =
-  | {
-      success: true;
-    }
-  | {
-      success: false;
-      errors: ZodErrors<T>;
-    };
-
-export * from './config';
-export * from './primitives';
+// Create a reusable base schema for number inputs that enforces a NUMBER output type
+export const NumberSchema = v.pipe(
+  v.number('Must be a number'), // Narrows the *inferred type* to strictly 'number'
+  v.integer('Must be an integer') // Final validation
+);

@@ -1,294 +1,287 @@
 import {
-  Box,
-  LoadingOverlay,
-  Stack,
-  Group,
-  Divider,
-  NumberInput,
-  Switch,
-  MultiSelect,
-  Textarea,
-  Input,
-  Button,
-  Text,
-  SegmentedControl,
-  Paper,
-  ThemeIcon,
-} from '@mantine/core';
-import { NumberInputWithCurrency } from '../../../shared/components/NumberInputWithCurrency';
-import type { GenerateBillsData } from './hooks/useGenerateBillsData';
-import { useGenerateBillsForm } from './hooks/useGenerateBillsForm';
-import { IconInfo } from '../../../shared/icons';
-import GenerateBillsConfirmModal from './GenerateBillsConfirmModal';
+	Box,
+	Stack,
+	Group,
+	Divider,
+	NumberInput,
+	Switch,
+	MultiSelect,
+	Textarea,
+	Text,
+	Button,
+	SegmentedControl,
+	Title,
+	ThemeIcon
+} from "@mantine/core";
+import { NumberInputWithCurrency } from "../../../shared/components/NumberInputWithCurrency";
+import type { GenerateBillsData } from "./hooks/useBillsData";
+import { useBillsForm } from "./hooks/useBillsForm";
+import { IconInfo, IconPerson, IconUniversalCurrency } from "../../../shared/icons";
+import { GenerateBillsConfirmModal } from "./GenerateBillsConfirmModal";
+import { FormClearButton, GroupIcon, MyLoadingOverlay } from "../../../shared/components";
+import type { Floor } from "../../../data/types";
 
-const GenerateBillsFormContent = ({
-  billingData,
-}: {
-  billingData: GenerateBillsData;
-}) => {
-  const {
-    form,
-    segmentedControlData,
-    derivedState,
-    isFetching,
-    memberOptions,
-    toggleFloorExpense,
-    handleFormSubmit,
-    modalActions,
-  } = useGenerateBillsForm(billingData);
+export const GenerateBillsFormContent = ({ billingData }: { billingData: GenerateBillsData }) => {
+	const {
+		form,
+		segmentedControlData,
+		derivedState,
+		toggleState,
+		isFetching,
+		memberOptions,
+		floorIdNameMap,
+		actions: { handleFormSubmit, toggleFloorExpense },
+		modalActions
+	} = useBillsForm(billingData);
 
-  console.log('🎨 Rendering GenerateBillsModal FormContent', form.errors);
+	console.log("🎨 Rendering GenerateBillsFormContent");
 
-  return (
-    <>
-      <form onSubmit={form.onSubmit(handleFormSubmit)}>
-        <Box pos='relative'>
-          <LoadingOverlay visible={isFetching} zIndex={10} overlayProps={{ radius: 'sm', blur: 2 }} />
+	return (
+		<>
+			<Box pos='relative'>
+				<MyLoadingOverlay visible={isFetching} />
+				<form onSubmit={form.onSubmit(handleFormSubmit)}>
+					<Stack gap='lg'>
+						<SegmentedControl
+							data={segmentedControlData}
+							value={form.values.selectedBillingMonth}
+							key={form.key("selectedBillingMonth")}
+							{...form.getInputProps("selectedBillingMonth")}
+						/>
 
-          <Stack gap='lg' align='stretch' justify='center'>
-            <SegmentedControl
-              data={segmentedControlData}
-              value={form.values.selectedBillingMonth}
-              key={form.key('selectedBillingMonth')}
-              {...form.getInputProps('selectedBillingMonth')}
-            />
+						<GroupIcon my='md'>
+							<IconInfo size={20} color={form.values.isUpdatingBills ? "orange" : "green.9"} />
+							<Title order={5}>
+								{form.values.isUpdatingBills ? "Updating previous bills" : "Generating new bills"}
+							</Title>
+						</GroupIcon>
 
-            <Paper withBorder p='sm' mt='xs'>
-              <Group gap='xs' align='center' justify='flex-start'>
-                <ThemeIcon variant='filled' color={form.values.isUpdatingBills ? 'orange.7' : 'green.7'} size={16}>
-                  <IconInfo size={12} />
-                </ThemeIcon>
-                <Text size='sm' fw={500}>
-                  {form.values.isUpdatingBills ? 'Update previous bills' : 'Generate new bills'}
-                </Text>
-              </Group>
-            </Paper>
+						<Divider label='Electricity Charges' />
 
-            <Divider
-              label='Electricity Charges'
-              labelPosition='left'
-              mt='sm'
-              styles={{
-                label: {
-                  fontSize: 'var(--mantine-font-size-sm)',
-                  fontWeight: 700,
-                  color: 'var(--mantine-color-gray-9)',
-                },
-              }}
-            />
+						<Stack gap='xs'>
+							<Group align='flex-start' justify='flex-start'>
+								<NumberInputWithCurrency
+									required
+									label='2nd Floor'
+									placeholder='1400'
+									flex={2}
+									inputWrapperOrder={["label", "input", "description", "error"]}
+									rightSection={<FormClearButton field='secondFloorElectricityBill' form={form} />}
+									key={form.key("secondFloorElectricityBill")}
+									{...form.getInputProps("secondFloorElectricityBill")}
+								/>
+								<NumberInput
+									required
+									label='Members'
+									placeholder='7'
+									flex={1}
+									allowNegative={false}
+									hideControls
+									key={form.key("activeMemberCounts.2nd")}
+									{...form.getInputProps("activeMemberCounts.2nd")}
+								/>
+							</Group>
 
-            <Group align='center' justify='center'>
-              <NumberInputWithCurrency
-                required
-                label='2nd Floor'
-                description={
-                  form.errors['secondFloorElectricityBill'] ? undefined : `₹${derivedState.floorBills['2nd']}/member`
-                }
-                placeholder='500'
-                flex={2}
-                inputWrapperOrder={['label', 'input', 'description', 'error']}
-                hideControls
-                key={form.key('secondFloorElectricityBill')}
-                {...form.getInputProps('secondFloorElectricityBill')}
-              />
-              <NumberInput
-                required
-                label='Members'
-                description={form.errors['activeMemberCounts.2nd'] ? undefined : 'On 2nd floor'}
-                placeholder='6'
-                flex={1}
-                allowNegative={false}
-                hideControls
-                inputWrapperOrder={['label', 'input', 'description', 'error']}
-                key={form.key('activeMemberCounts.2nd')}
-                {...form.getInputProps('activeMemberCounts.2nd')}
-              />
-            </Group>
+							<DisplayMembersByFloor
+								floor='2nd'
+								activeMemberIdsByFloor={floorIdNameMap}
+								billPerMember={derivedState.floorBills["2nd"]}
+							/>
+						</Stack>
 
-            <Group align='flex-end' justify='center'>
-              <NumberInputWithCurrency
-                required
-                label='3rd Floor'
-                description={
-                  form.errors['thirdFloorElectricityBill'] ? undefined : `₹${derivedState.floorBills['3rd']}/member`
-                }
-                placeholder='500'
-                flex={2}
-                allowNegative={false}
-                hideControls
-                inputWrapperOrder={['label', 'input', 'description', 'error']}
-                key={form.key('thirdFloorElectricityBill')}
-                {...form.getInputProps('thirdFloorElectricityBill')}
-              />
-              <NumberInput
-                required
-                label='Members'
-                description={form.errors['activeMemberCounts.3rd'] ? undefined : 'On 3rd floor'}
-                placeholder='6'
-                flex={1}
-                allowNegative={false}
-                hideControls
-                inputWrapperOrder={['label', 'input', 'description', 'error']}
-                key={form.key('activeMemberCounts.3rd')}
-                {...form.getInputProps('activeMemberCounts.3rd')}
-              />
-            </Group>
+						<Stack gap='xs'>
+							<Group align='flex-start' justify='flex-start'>
+								<NumberInputWithCurrency
+									required
+									label='3rd Floor'
+									placeholder='1200'
+									flex={2}
+									allowNegative={false}
+									hideControls
+									rightSection={<FormClearButton field='thirdFloorElectricityBill' form={form} />}
+									key={form.key("thirdFloorElectricityBill")}
+									{...form.getInputProps("thirdFloorElectricityBill")}
+								/>
+								<NumberInput
+									required
+									label='Members'
+									placeholder='6'
+									flex={1}
+									allowNegative={false}
+									hideControls
+									key={form.key("activeMemberCounts.3rd")}
+									{...form.getInputProps("activeMemberCounts.3rd")}
+								/>
+							</Group>
 
-            <Divider
-              label='WiFi Charges'
-              labelPosition='left'
-              mt='md'
-              styles={{
-                label: {
-                  fontSize: 'var(--mantine-font-size-sm)',
-                  fontWeight: 700,
-                  color: 'var(--mantine-color-gray-9)',
-                },
-              }}
-            />
+							<DisplayMembersByFloor
+								floor='3rd'
+								activeMemberIdsByFloor={floorIdNameMap}
+								billPerMember={derivedState.floorBills["3rd"]}
+							/>
+						</Stack>
 
-            <Group align='flex-start' justify='center'>
-              <MultiSelect
-                // required={!!form.values.wifiCharges.wifiMonthlyCharge}
-                label='WiFi Members'
-                data={memberOptions}
-                placeholder={form.values.wifiCharges.wifiMemberIds.length ? undefined : 'Select members'}
-                hidePickedOptions
-                maxDropdownHeight={200}
-                comboboxProps={{
-                  transitionProps: { transition: 'pop', duration: 200 },
-                  shadow: 'md',
-                }}
-                flex={2}
-                key={form.key('wifiCharges.wifiMemberIds')}
-                {...form.getInputProps('wifiCharges.wifiMemberIds')}
-              />
+						<Divider label='WiFi Charges' mt='lg' />
 
-              <NumberInputWithCurrency
-                // required={
-                //   form.errors['wifiCharges.wifiMonthlyCharge']
-                //     ? undefined
-                //     : !!form.values.wifiCharges.wifiMemberIds.length
-                // }
-                label='Amount'
-                placeholder='600'
-                description={`₹${derivedState.wifiChargesPerHead}/member`}
-                flex={1}
-                step={50}
-                hideControls
-                allowNegative={false}
-                inputWrapperOrder={['label', 'input', 'description', 'error']}
-                key={form.key('wifiCharges.wifiMonthlyCharge')}
-                {...form.getInputProps('wifiCharges.wifiMonthlyCharge')}
-              />
-            </Group>
+						<Stack gap='xs'>
+							<Group align='flex-start' justify='center'>
+								<MultiSelect
+									required={!!form.values.wifiCharges.wifiMonthlyCharge}
+									label='Members'
+									data={memberOptions}
+									placeholder={!form.values.wifiCharges.wifiMemberIds.length ? "Select members" : undefined}
+									flex={2}
+									key={form.key("wifiCharges.wifiMemberIds")}
+									{...form.getInputProps("wifiCharges.wifiMemberIds")}
+								/>
 
-            <Divider
-              label='Additional Charges'
-              labelPosition='left'
-              mt='lg'
-              styles={{
-                label: {
-                  fontSize: 'var(--mantine-font-size-sm)',
-                  fontWeight: 700,
-                  color: 'var(--mantine-color-gray-9)',
-                },
-              }}
-            />
+								<NumberInputWithCurrency
+									required={!!form.values.wifiCharges.wifiMemberIds.length}
+									label='Amount'
+									placeholder='600'
+									flex={1}
+									step={50}
+									hideControls
+									allowNegative={false}
+									key={form.key("wifiCharges.wifiMonthlyCharge")}
+									{...form.getInputProps("wifiCharges.wifiMonthlyCharge")}
+								/>
+							</Group>
+							<DisplayChargesPerHead chargesPerHead={derivedState.wifiChargesPerHead} />
+						</Stack>
 
-            <Switch
-              label='Add All Members on 2nd Floor'
-              checked={derivedState.toggleState['2nd']}
-              onChange={(event) => toggleFloorExpense('2nd', event.currentTarget.checked)}
-            />
-            <Switch
-              label='Add All Members on 3rd Floor'
-              checked={derivedState.toggleState['3rd']}
-              onChange={(event) => toggleFloorExpense('3rd', event.currentTarget.checked)}
-            />
+						<Divider label='Additional Charges' mt='lg' />
 
-            <Group align='flex-start' justify='center'>
-              <MultiSelect
-                required={!!form.values.additionalExpenses.addExpenseAmount}
-                label='Select Members'
-                data={memberOptions} // ✅ Use merged options
-                placeholder={form.values.additionalExpenses.addExpenseMemberIds.length ? undefined : 'Select members'}
-                hidePickedOptions
-                maxDropdownHeight={200}
-                comboboxProps={{
-                  transitionProps: { transition: 'pop', duration: 200 },
-                  shadow: 'md',
-                }}
-                flex={2}
-                key={form.key('additionalExpenses.addExpenseMemberIds')}
-                {...form.getInputProps('additionalExpenses.addExpenseMemberIds')}
-              />
-              <NumberInputWithCurrency
-                required={
-                  form.errors['additionalExpenses.addExpenseAmount']
-                    ? undefined
-                    : !!form.values.additionalExpenses.addExpenseMemberIds.length
-                }
-                label='Amount'
-                description={`₹${derivedState.additionalChargesPerHead}/member`}
-                placeholder='100'
-                allowNegative={true}
-                hideControls
-                flex={1}
-                inputWrapperOrder={['label', 'input', 'description', 'error']}
-                key={form.key('additionalExpenses.addExpenseAmount')}
-                {...form.getInputProps('additionalExpenses.addExpenseAmount')}
-              />
-            </Group>
+						<Switch
+							label={`Select all ${form.values.activeMemberCounts["2nd"]} members on 2nd floor`}
+							checked={toggleState["2nd"]}
+							onChange={(event) => toggleFloorExpense("2nd", event.currentTarget.checked)}
+						/>
+						<Switch
+							label={`Select all ${form.values.activeMemberCounts["3rd"]} members on 3rd floor`}
+							checked={toggleState["3rd"]}
+							onChange={(event) => toggleFloorExpense("3rd", event.currentTarget.checked)}
+						/>
 
-            <Textarea
-              required={
-                !!form.values.additionalExpenses.addExpenseMemberIds.length ||
-                !!form.values.additionalExpenses.addExpenseAmount
-              }
-              label='Description'
-              placeholder='Enter expense description'
-              disabled={
-                !form.values.additionalExpenses.addExpenseMemberIds.length &&
-                !form.values.additionalExpenses.addExpenseAmount
-              }
-              autosize
-              minRows={1}
-              rightSection={
-                form.values.additionalExpenses.addExpenseDescription ? (
-                  <Input.ClearButton
-                    onClick={() => form.setFieldValue('additionalExpenses.addExpenseDescription', undefined)}
-                  />
-                ) : undefined
-              }
-              rightSectionPointerEvents='auto'
-              key={form.key('additionalExpenses.addExpenseDescription')}
-              {...form.getInputProps('additionalExpenses.addExpenseDescription')}
-            />
+						<Stack gap='xs'>
+							<Group align='flex-start' justify='center'>
+								<MultiSelect
+									required={!!form.values.additionalExpenses.addExpenseAmount}
+									label='Members'
+									data={memberOptions}
+									placeholder={
+										!form.values.additionalExpenses.addExpenseMemberIds.length ? "Select members" : undefined
+									}
+									flex={2}
+									key={form.key("additionalExpenses.addExpenseMemberIds")}
+									{...form.getInputProps("additionalExpenses.addExpenseMemberIds")}
+								/>
+								<NumberInputWithCurrency
+									required={!!form.values.additionalExpenses.addExpenseMemberIds.length}
+									label='Amount'
+									placeholder='100'
+									allowNegative={true}
+									hideControls
+									flex={1}
+									key={form.key("additionalExpenses.addExpenseAmount")}
+									{...form.getInputProps("additionalExpenses.addExpenseAmount")}
+								/>
+							</Group>
+							<DisplayChargesPerHead chargesPerHead={derivedState.additionalChargesPerHead} />
+						</Stack>
 
-            <Group justify='space-between' align='center' mt='md'>
-              <Group justify='flex-end'>
-                <Button variant='transparent' disabled={!form.isDirty()} onClick={form.reset}>
-                  Reset
-                </Button>
-                <Button type='submit' disabled={!form.isDirty() || isFetching}>
-                  {form.values.isUpdatingBills ? 'Update' : 'Generate'}
-                </Button>
-              </Group>
-            </Group>
-          </Stack>
-        </Box>
-      </form>
+						<Textarea
+							required={
+								!!form.values.additionalExpenses.addExpenseMemberIds.length ||
+								!!form.values.additionalExpenses.addExpenseAmount
+							}
+							label='Description'
+							placeholder='Enter expense description'
+							disabled={
+								!form.values.additionalExpenses.addExpenseMemberIds.length &&
+								!form.values.additionalExpenses.addExpenseAmount
+							}
+							autosize
+							minRows={1}
+							rightSection={<FormClearButton field='additionalExpenses.addExpenseDescription' form={form} />}
+							rightSectionPointerEvents='auto'
+							key={form.key("additionalExpenses.addExpenseDescription")}
+							{...form.getInputProps("additionalExpenses.addExpenseDescription")}
+						/>
 
-      {/* Confirmation modal */}
-      <GenerateBillsConfirmModal
-        opened={modalActions.confirmModalOpened}
-        close={modalActions.closeConfirmModal}
-        formData={modalActions.submittedFormData}
-        onConfirm={modalActions.handleConfirm}
-      />
-    </>
-  );
+						<Group justify='flex-end' align='center' mt='xl'>
+							<Group justify='flex-end'>
+								<Button variant='default' disabled={!form.isDirty()} onClick={form.reset}>
+									Reset
+								</Button>
+								<Button type='submit' disabled={!form.isDirty() || isFetching}>
+									{form.values.isUpdatingBills ? "Update" : "Generate"}
+								</Button>
+							</Group>
+						</Group>
+					</Stack>
+				</form>
+			</Box>
+
+			{/* Confirmation modal */}
+			<GenerateBillsConfirmModal
+				opened={modalActions.confirmModalOpened}
+				close={modalActions.closeConfirmModal}
+				formData={modalActions.submittedFormData}
+				onConfirm={modalActions.handleConfirm}
+			/>
+		</>
+	);
 };
 
-export default GenerateBillsFormContent;
+interface GroupIconProps {
+	children: React.ReactNode;
+	Icon: any;
+}
+
+function DisplayIcons({ children, Icon }: GroupIconProps) {
+	const sizeThemeIcon = 20;
+	const iconSize = sizeThemeIcon - 6;
+	return (
+		<GroupIcon>
+			<ThemeIcon size={sizeThemeIcon} variant='filled' color='violet.0'>
+				<Icon size={iconSize} color='violet.9' />
+			</ThemeIcon>
+			{children}
+		</GroupIcon>
+	);
+}
+
+interface DisplayMemberByFloorProps {
+	floor: Floor;
+	activeMemberIdsByFloor: Record<Floor, Record<string, string>>;
+	billPerMember: number;
+}
+
+function DisplayMembersByFloor({ floor, activeMemberIdsByFloor, billPerMember }: DisplayMemberByFloorProps) {
+	return (
+		<DisplayIcons Icon={IconPerson}>
+			<Text fz='xs' c='dimmed'>
+				{Object.values(activeMemberIdsByFloor[floor])
+					.map((name) => name.split(" ")[0])
+					.join(", ")}
+				{" — "}
+				<span style={{ fontWeight: 700 }}>{billPerMember.toIndianLocale() + "/member"}</span>
+			</Text>
+		</DisplayIcons>
+	);
+}
+
+interface DisplayChargesPerHeadProps {
+	chargesPerHead: number;
+}
+
+function DisplayChargesPerHead({ chargesPerHead }: DisplayChargesPerHeadProps) {
+	return (
+		<DisplayIcons Icon={IconUniversalCurrency}>
+			<Text fz='xs' fw={700} c='dimmed'>
+				{chargesPerHead.toIndianLocale()}/member
+			</Text>
+		</DisplayIcons>
+	);
+}

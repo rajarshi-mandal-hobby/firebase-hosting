@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot, type DocumentData, type DocumentReference } from 'firebase/firestore';
-import { db } from '../../../firebase';
-
+import { db } from '../../firebase';
 
 interface UseDocOptions {
   fallbackMs?: number;
-  optimistic?: boolean;          // show pending local writes
-  endLoadingOnCache?: boolean;   // stop spinner after showing cache
-  shallowCompare?: boolean;      // avoid re-render if data structurally same (shallow)
+  optimistic?: boolean; // show pending local writes
+  endLoadingOnCache?: boolean; // stop spinner after showing cache
+  shallowCompare?: boolean; // avoid re-render if data structurally same (shallow)
 }
 
 function shallowEqual(a: any, b: any) {
   if (a === b) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
-  const ka = Object.keys(a), kb = Object.keys(b);
+  const ka = Object.keys(a),
+    kb = Object.keys(b);
   if (ka.length !== kb.length) return false;
   for (const k of ka) if (a[k] !== b[k]) return false;
   return true;
@@ -22,12 +22,7 @@ function shallowEqual(a: any, b: any) {
 export function useDocCacheFirst<T extends DocumentData>(
   pathOrRef: string | DocumentReference<T>,
   docId?: string,
-  {
-    fallbackMs = 1500,
-    optimistic = false,
-    endLoadingOnCache = false,
-    shallowCompare = false,
-  }: UseDocOptions = {}
+  { fallbackMs = 1500, optimistic = false, endLoadingOnCache = false, shallowCompare = false }: UseDocOptions = {}
 ) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,7 +64,7 @@ export function useDocCacheFirst<T extends DocumentData>(
     const unsubscribe = onSnapshot(
       ref,
       { includeMetadataChanges: true },
-      snap => {
+      (snap) => {
         if (v !== version.current) return; // stale listener
         const exists = snap.exists();
         const fromCache = snap.metadata.fromCache;
@@ -79,8 +74,8 @@ export function useDocCacheFirst<T extends DocumentData>(
 
         const emit = () => {
           if (shallowCompare && shallowEqual(lastDataRef.current, currentData)) return;
-            lastDataRef.current = currentData;
-            setData(currentData);
+          lastDataRef.current = currentData;
+          setData(currentData);
         };
 
         if (!hasServer.current) {
@@ -106,7 +101,7 @@ export function useDocCacheFirst<T extends DocumentData>(
           emit(); // confirmed cache update (e.g., local write resolved)
         }
       },
-      err => {
+      (err) => {
         if (v !== version.current) return;
         setError(err instanceof Error ? err : new Error(String(err)));
         setLoading(false);

@@ -1,0 +1,5 @@
+.label {
+   font-size: var(--mantine-font-size-md);
+   font-weight: 300;
+   color: var(--mantine-color-gray-9);
+}

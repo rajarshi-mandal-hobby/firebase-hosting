@@ -10,10 +10,9 @@
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "preview": "vite preview",
     "emulators": "firebase emulators:start",
-    "wait:emulators": "wait-on tcp:8080",
-    "wait:dev": "wait-on http://localhost:5173",
     "emulators:kill": "powershell -ExecutionPolicy Bypass -File ./emulators-kill.ps1",
-    "emulators:seed": "vite-node emulators-seed.ts"
+    "emulators:seed": "vite-node emulators-seed.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@mantine/core": "^8.3.10",
@@ -22,29 +21,30 @@
     "@mantine/hooks": "^8.3.10",
     "@mantine/notifications": "^8.3.10",
     "dayjs": "^1.11.19",
-    "firebase": "^12.6.0",
-    "firebase-functions": "^7.0.1",
+    "firebase": "^12.7.0",
+    "firebase-functions": "^7.0.2",
     "mantine-form-valibot-resolver": "^3.0.1",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "react-router-dom": "^7.10.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-router-dom": "^7.11.0",
     "valibot": "^1.2.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
+    "@eslint/js": "^9.39.2",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
-    "eslint": "^9.39.1",
+    "baseline-browser-mapping": "^2.9.11",
+    "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.5.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "8.49.0",
-    "vite": "^7.2.7",
+    "typescript-eslint": "8.51.0",
+    "vite": "^7.3.0",
     "vite-node": "^5.2.0",
-    "vitest": "^4.0.15"
+    "vitest": "^4.0.16"
   }
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Member } from '../../../shared/types/firestore-types';
 import { fetchMembers } from '../../../data/services/membersService';
-import type { Floor } from '../../../data/shemas/GlobalSettings';
+import type { Floor } from '../../../data/types/GlobalSettings';
 
 export type AccountStatusFilter = 'all' | 'active' | 'inactive';
 

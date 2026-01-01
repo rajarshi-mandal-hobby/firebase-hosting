@@ -1,111 +1,14 @@
 import type { Timestamp } from 'firebase/firestore';
-import type { Floor, BedType } from '../../data/shemas/GlobalSettings';
+import type { Floor, BedType, Member, RentHistory } from '../../data/types';
 
 // ======================================
 // CONSTANTS AND ENUMS
 // ======================================
 
 /**
- * Available floors as defined in the schema
- */
-// export const FLOORS = ['2nd', '3rd'] as const;
-// export type Floor = (typeof FLOORS)[number];
-
-// /**
-//  * Available bed types per floor
-//  */
-// export const BED_TYPES = {
-//   '2nd': ['Bed', 'Room', 'Special Room'],
-//   '3rd': ['Bed', 'Room'],
-// } as const;
-
-// export type BedTypeFor2nd = (typeof BED_TYPES)['2nd'][number];
-// export type BedTypeFor3rd = (typeof BED_TYPES)['3rd'][number];
-// export type BedType = BedTypeFor2nd | BedTypeFor3rd;
-
-/**
  * Admin roles as defined in schema
  */
 export type AdminRole = 'primary' | 'secondary';
-
-/**
- * Collection names for type safety
- */
-export const COLLECTIONS = {
-  CONFIG: 'config',
-  MEMBERS: 'members',
-  ELECTRIC_BILLS: 'electricBills',
-} as const;
-
-/**
- * Config document IDs
- */
-export const CONFIG_DOCS = {
-  GLOBAL_SETTINGS: 'globalSettings',
-  ADMINS: 'admins',
-} as const;
-
-// ======================================
-// CONFIGURATION TYPES
-// ======================================
-
-/**
- * Global application settings stored in Firestore
- * Collection: config / Document: globalSettings
- */
-export interface GlobalSettingsType {
-  floors: Floor[];
-  bedTypes: {
-    '2nd': {
-      Bed: number;
-      Room: number;
-      Special: number;
-    };
-    '3rd': {
-      Bed: number;
-      Room: number;
-    };
-  };
-  securityDeposit: number;
-  wifiMonthlyCharge: number;
-  upiVpa: string;
-  activememberCounts: {
-    total: number;
-    byFloor: {
-      [K in Floor]: number;
-    };
-    wifiOptedIn: number;
-  };
-  currentBillingMonth?: Timestamp;
-  nextBillingMonth?: Timestamp;
-}
-
-// export interface GlobalSettings {
-//   floors: Floor[];
-//   bedTypes: {
-//     '2nd': {
-//       Bed: number;
-//       Room: number;
-//       Special: number;
-//     };
-//     '3rd': {
-//       Bed: number;
-//       Room: number;
-//     };
-//   };
-//   securityDeposit: number;
-//   wifiMonthlyCharge: number;
-//   upiVpa: string;
-//   activememberCounts: {
-//     total: number;
-//     byFloor: {
-//       [K in Floor]: number;
-//     };
-//     wifiOptedIn: number;
-//   };
-//   currentBillingMonth?: Timestamp;
-//   nextBillingMonth?: Timestamp;
-// }
 
 /**
  * Admin user configuration
@@ -133,27 +36,27 @@ export interface AdminConfig {
  * Base member interface for Firestore documents
  * Collection: members
  */
-export interface Member {
-  id: string; // Firestore document ID
-  name: string;
-  phone: string;
-  firebaseUid?: string;
-  fcmToken?: string;
-  floor: Floor;
-  bedType: BedType;
-  moveInDate: Timestamp;
-  securityDeposit: number;
-  rentAtJoining: number;
-  advanceDeposit: number;
-  currentRent: number;
-  currentMonthRent: RentHistory; // Optional embedded current month rent
-  totalAgreedDeposit: number;
-  isActive: boolean;
-  optedForWifi: boolean;
-  leaveDate?: Timestamp;
-  ttlExpiry?: Timestamp;
-  note: string;
-}
+// export interface Member {
+//   id: string; // Firestore document ID
+//   name: string;
+//   phone: string;
+//   firebaseUid?: string;
+//   fcmToken?: string;
+//   floor: Floor;
+//   bedType: BedType;
+//   moveInDate: Timestamp;
+//   securityDeposit: number;
+//   rentAtJoining: number;
+//   advanceDeposit: number;
+//   currentRent: number;
+//   currentMonthRent: RentHistory; // Optional embedded current month rent
+//   totalAgreedDeposit: number;
+//   isActive: boolean;
+//   optedForWifi: boolean;
+//   leaveDate?: Timestamp;
+//   ttlExpiry?: Timestamp;
+//   note: string;
+// }
 
 /**
  * Expense item for rent calculations
@@ -183,7 +86,7 @@ export const toMember = (data: any): Member => {
     optedForWifi: data.optedForWifi,
     leaveDate: data.leaveDate,
     ttlExpiry: data.ttlExpiry,
-    note: data.note,
+    note: data.note
   };
 };
 
@@ -199,56 +102,11 @@ export type PaymentStatus = 'Due' | 'Paid' | 'Partial' | 'Overpaid';
 export type GeneralStatus = PaymentStatus | 'active' | 'inactive';
 
 /**
- * Rent history record for a specific month
- * Subcollection: members/{memberId}/rentHistory
- */
-export interface RentHistory {
-  id: string; // YYYY-MM
-  generatedAt: Timestamp;
-  rent: number;
-  electricity: number;
-  wifi: number;
-  previousOutstanding: number;
-  expenses: Expense[];
-  totalCharges: number;
-  amountPaid: number;
-  currentOutstanding: number;
-  outstandingNote?: string;
-  status: PaymentStatus;
-}
-
-/**
  * Utility type for member with embedded rent history.
  * Useful for API responses that include both member data and their complete rent history.
  */
 export interface MemberWithRentHistory extends Member {
   rentHistory: RentHistory[];
-}
-
-// ======================================
-// BILLING TYPES
-// ======================================
-
-/**
- * Electric bill for a specific month
- * Collection: electricBills
- */
-export interface ElectricBill {
-  id: string; // YYYY-MM
-  billingMonth: Timestamp;
-  generatedAt: Timestamp;
-  lastUpdated: Timestamp;
-  floorCosts: Record<Floor, { bill: number; totalMembers: number }>;
-  expenses: {
-    members: string[];
-    amount: number;
-    description: string;
-  };
-  wifiCharges: {
-    members: string[];
-    amount: number;
-  };
-  memberMap: { [key: string]: string }; // memberId to memberName mapping
 }
 
 // ======================================
@@ -329,7 +187,6 @@ export interface MemberDashboardData {
 /**
  * Settlement preview for member deactivation (section 6.5)
  */
-
 
 // ======================================
 // FORM AND VALIDATION TYPES
@@ -481,5 +338,5 @@ export const createError = <T extends ApplicationError>(type: T['code'], message
     code: type,
     message,
     details,
-    timestamp: new Date(),
-  } as T);
+    timestamp: new Date()
+  }) as T;

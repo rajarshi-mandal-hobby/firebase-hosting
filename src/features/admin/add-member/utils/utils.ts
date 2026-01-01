@@ -1,9 +1,8 @@
 import dayjs from 'dayjs';
-import type { GlobalSettings, Floor, BedType } from '../../../../data/shemas/GlobalSettings';
-import type { Member } from '../../../../shared/types/firestore-types';
+import type { Floor, BedType } from '../../../../data/types';
 import { formatPhoneNumber, getSafeDate, normalizePhoneInput, toNumber } from '../../../../shared/utils';
+import type { MemberDetailsFormProps, MemberDetailsFormData } from '../components/MemberDetailsForm';
 import * as v from 'valibot';
-import type { MemberDetailsFormData, MemberDetailsFormProps } from '../components/MemberDetailsForm';
 
 export const validatePositiveInteger = (value: number | string, baseMinAmount: number) => {
   const num = v.pipe(
@@ -54,8 +53,8 @@ export const calculateTotalDeposit = (
   advanceDeposit: number | string
 ): number => toNumber(rentAmount) + toNumber(securityDeposit) + toNumber(advanceDeposit);
 
-export const getInitialValues = ({ settings, member, action }: MemberDetailsFormProps): MemberDetailsFormData => {
-  const currentSettingsRent = member ? settings.bedRents[member.floor as Floor][member.bedType as BedType] : 0;
+export const getInitialValues = ({ defaultValues, member, action }: MemberDetailsFormProps): MemberDetailsFormData => {
+  const currentSettingsRent = member ? defaultValues.bedRents[member.floor as Floor][member.bedType as BedType] : 0;
   if (currentSettingsRent === undefined) {
     throw new Error(`Invalid bed type ${member?.bedType} for floor ${member?.floor}`);
   }
@@ -83,7 +82,7 @@ export const getInitialValues = ({ settings, member, action }: MemberDetailsForm
         bedType: null,
         rentAmount: '',
         rentAtJoining: '',
-        securityDeposit: settings.securityDeposit,
+        securityDeposit: defaultValues.securityDeposit,
         advanceDeposit: '',
         isOptedForWifi: false,
         moveInDate: dayjs().format('YYYY-MM'),

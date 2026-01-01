@@ -5,14 +5,14 @@
  * Run this script after starting the Firebase emulators to populate the database.
  */
 
-import { db } from '../../../firebase';
+import { db } from '../../firebase';
 import { doc, setDoc, writeBatch, Timestamp } from 'firebase/firestore';
 import {
   mockGlobalSettings,
   mockAdminConfig,
   mockMembers,
   mockRentHistoryByMember,
-  mockElectricBills,
+  mockElectricBills
 } from './mockData';
 
 /**
@@ -72,15 +72,15 @@ export const seedFirestoreEmulator = async () => {
 
     // 1. Seed Global Settings
     console.log('📝 Adding global settings...');
-    const globalSettingsRef = doc(db, 'config', 'globalSettings');
-    const cleanedGlobalSettings = convertTimestampsInObject(mockGlobalSettings);
-    batch.set(globalSettingsRef, cleanedGlobalSettings);
+    const defaultValuesRef = doc(db, 'defaults', 'values');
+    const cleanedDefaultValues = convertTimestampsInObject(mockGlobalSettings);
+    batch.set(defaultValuesRef, cleanedDefaultValues);
 
     // 2. Seed Admin Configuration
-    console.log('👤 Adding admin configuration...');
-    const adminConfigRef = doc(db, 'config', 'adminConfig');
-    const cleanedAdminConfig = convertTimestampsInObject(mockAdminConfig);
-    batch.set(adminConfigRef, cleanedAdminConfig);
+    // console.log('👤 Adding admin configuration...');
+    // const adminConfigRef = doc(db, 'config', 'adminConfig');
+    // const cleanedAdminConfig = convertTimestampsInObject(mockAdminConfig);
+    // batch.set(adminConfigRef, cleanedAdminConfig);
 
     // 3. Seed Members (excluding rentHistory as it goes in subcollection)
     console.log('👥 Adding members...');
@@ -106,7 +106,7 @@ export const seedFirestoreEmulator = async () => {
       const memberDocRef = doc(db, 'members', memberId);
       // Write all rent records to the subcollection (do not skip any)
       for (const rentRecord of rentHistoryRecords) {
-        const rentHistoryRef = doc(memberDocRef, 'rentHistory', rentRecord.id);
+        const rentHistoryRef = doc(memberDocRef, 'rent-history', rentRecord.id);
         const cleanedRentRecord = convertTimestampsInObject(rentRecord);
         await setDoc(rentHistoryRef, cleanedRentRecord);
         console.log(`  ✓ Added rent history for ${memberId} - ${rentRecord.id}`);
@@ -117,7 +117,7 @@ export const seedFirestoreEmulator = async () => {
     // 6. Seed Electric Bills (separate operations after main batch)
     console.log('⚡ Adding electric bills...');
     for (const bill of mockElectricBills) {
-      const billRef = doc(db, 'electricBills', bill.id);
+      const billRef = doc(db, 'electric-bills', bill.id);
       const cleanedBill = convertTimestampsInObject(bill);
       await setDoc(billRef, cleanedBill);
       console.log(`  ✓ Added electric bill for ${bill.id}`);

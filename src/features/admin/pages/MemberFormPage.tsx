@@ -3,11 +3,9 @@ import { ErrorBoundary, LoaderSleeping } from '../../../shared/components';
 import { ErrorContainer } from '../../../shared/components/ErrorContainer';
 import { useDefaultRents } from '../default-rents/hooks/useDefaultRents';
 import { FormPageHeader } from './shared-components/FormPageHeader';
-import type { Member } from '../../../shared/types/firestore-types';
 import { useLocation } from 'react-router-dom';
 import MemberDetailsForm from '../add-member/components/MemberDetailsForm';
-
-export type Action = 'edit' | 'add' | 'reactivate';
+import type { Member, Action } from '../../../data/types';
 
 export type MemberFormProps = {
   member?: Member;
@@ -35,14 +33,14 @@ export const MemberFormPage = () => {
 };
 
 function MemberFormContainer({ member, action }: MemberFormProps) {
-  const { settings, isLoading, error, actions } = useDefaultRents();
+  const { defaultValues, isLoading, error, actions } = useDefaultRents();
 
   if (error) {
     return <ErrorContainer error={error} onRetry={actions.handleRefresh} />;
   }
 
-  if (settings && !isLoading && !error) {
-    return <MemberDetailsForm settings={settings} member={member} action={action || 'add'} />;
+  if (defaultValues && !isLoading && !error) {
+    return <MemberDetailsForm defaultValues={defaultValues} member={member} action={action || 'add'} />;
   }
 
   // For null and loading state

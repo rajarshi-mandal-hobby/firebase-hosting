@@ -1,21 +1,15 @@
-/**
- * Validation Utilities for Cloud Functions
- *
- * This file contains validation functions and error handling utilities
- * used across all Cloud Functions.
- */
-
 import { https } from 'firebase-functions/v2';
-import { CloudFunctionResponse } from '../types/shared';
-
-
-
+import { CloudFunctionResponse } from '../types/index.js';
 
 /**
  * Custom error class for function-specific errors
  */
 export class ValidationError extends Error {
-  constructor(public code: string, message: string, public details?: unknown) {
+  constructor(
+    public code: string,
+    message: string,
+    public details?: unknown
+  ) {
     super(message);
     this.name = 'ValidationError';
   }
@@ -39,7 +33,7 @@ export function validateAuth(context: https.CallableRequest): string {
 /**
  * Validates that required fields are present in the request data
  */
-export function validateRequiredFields(data: unknown, requiredFields: string[]): Record<string, unknown> {
+export const validateRequiredFields = (data: unknown, requiredFields: string[]): Record<string, unknown> => {
   if (!data || typeof data !== 'object') {
     throw new ValidationError('invalid-argument', 'Request data must be an object');
   }
@@ -78,7 +72,7 @@ export function createSuccessResponse<T>(message: string, data?: T): CloudFuncti
   return {
     success: true,
     message,
-    data,
+    data
   };
 }
 
@@ -89,7 +83,7 @@ export function createErrorResponse(message: string, error?: string): CloudFunct
   return {
     success: false,
     message,
-    error,
+    error
   };
 }
 
@@ -113,10 +107,7 @@ export function handleFunctionError(error: unknown): CloudFunctionResponse {
 /**
  * Validates that a string is a valid member ID format
  */
-export function validateMemberId(memberId: string): boolean {
-  // Member IDs should be non-empty strings
-  return typeof memberId === 'string' && memberId.trim().length > 0;
-}
+export const validateMemberId = (memberId: string): boolean => typeof memberId === 'string' && memberId.trim().length > 0;
 
 /**
  * Validates pagination parameters
