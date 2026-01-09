@@ -21,7 +21,10 @@ import {
 	Switch,
 	Textarea,
 	TextInput,
-	type MantineColorsTuple
+	Text,
+	type MantineColorsTuple,
+	Title,
+	Collapse
 } from "@mantine/core";
 import classesAccordion from "./css-modules/Accordion.module.css";
 import { MonthPickerInput } from "@mantine/dates";
@@ -53,7 +56,7 @@ const dark: MantineColorsTuple = [
 	"#141414"
 ];
 export const theme = createTheme({
-	fontFamily: `Fira Sans, ${DEFAULT_THEME.fontFamily}`,
+	fontFamily: `Inter, ${DEFAULT_THEME.fontFamily}`,
 	primaryColor: "dark",
 	primaryShade: {
 		light: 6,
@@ -81,6 +84,13 @@ export const theme = createTheme({
 		}
 	},
 	components: {
+		// Collapse
+		Collapse: Collapse.extend({
+			defaultProps: {
+				transitionDuration: 150,
+				transitionTimingFunction: "ease-in-out"
+			}
+		}),
 		// Divider
 		Divider: Divider.extend({
 			defaultProps: {
@@ -109,20 +119,37 @@ export const theme = createTheme({
 			styles: {
 				icon: {
 					marginRight: rem(4)
+				},
+				title: {
+					fontWeight: 700,
+					fontSize: "var(--mantine-font-size-md)"
 				}
 			}
 		}),
 		// Text
-		Text: {
+		Text: Text.extend({
 			defaultProps: {
 				size: "sm"
+			},
+			styles: {
+				root: {
+					textWrapStyle: "pretty"
+				}
 			}
-		},
+		}),
+		Title: Title.extend({
+			styles: {
+				root: {
+					textWrapStyle: "balance"
+				}
+			}
+		}),
 		// Button
 		Button: Button.extend({
 			defaultProps: {
 				radius: "xl",
-				autoContrast: true
+				autoContrast: true,
+				fw: 500
 			}
 		}),
 		// Loading Overlay
@@ -243,15 +270,12 @@ export const theme = createTheme({
 			styles: {
 				root: {
 					boxShadow: "var(--mantine-shadow-xs)",
-					border: "1px solid var(--mantine-color-gray-0)"
+					border: "1px solid var(--mantine-color-gray-0)",
+					padding: "var(--mantine-spacing-sm)"
 				},
 				title: {
 					fontSize: "var(--mantine-font-size-sm)",
 					fontWeight: 700
-				},
-				icon: {
-					width: "16px",
-					height: "16px"
 				}
 			}
 		}),

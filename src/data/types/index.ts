@@ -1,7 +1,7 @@
 import type { Timestamp } from "firebase/firestore";
 import type { AdminConfig } from "../shemas/AdminConfig";
 
-export { ICON_SIZE } from "./constants";
+export * from "./constants";
 
 export type Action = "add" | "edit" | "reactivate";
 
@@ -103,7 +103,7 @@ export interface RentHistory {
 	amountPaid: number;
 	currentOutstanding: number;
 	status: PaymentStatus;
-	note?: string;
+	note: string;
 }
 
 export interface Expense {

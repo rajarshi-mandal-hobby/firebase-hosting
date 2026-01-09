@@ -1,4 +1,18 @@
-const arr1 =['a','b','c'];
-const arr2 =['a','b','c'];
+const a = [
+    {id: 1, name: "rajar"},
+    {id: 2, name: "rajar"},
+    {id: 3, name: "rajar"},
+];
 
-console.log(JSON.stringify(arr1) === JSON.stringify(arr2));
+const b = [
+    {id: 1, name: "rajar"},
+    {id: 2, name: "rajar"},
+    {id: 4, name: "rajar"},
+];
+
+// Merge and remove duplicates
+const resultMap = [...a, ...b].reduce((acc, item) => {
+   acc.set(item.id, item);
+   return acc;
+}, new Map());
+console.log(JSON.stringify([...resultMap.values()], null, 2));

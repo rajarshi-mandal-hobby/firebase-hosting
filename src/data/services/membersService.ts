@@ -7,13 +7,15 @@ import {
 	QuerySnapshot,
 	getDocsFromCache,
 	getDocsFromServer,
-	type DocumentData
+	type DocumentData,
+	onSnapshot
 } from "firebase/firestore";
 import { db, functions } from "../../firebase";
 import { simulateNetworkDelay, simulateRandomError } from "../utils/serviceUtils";
 import type { Floor, BedType, Member, Action } from "../types";
 import { httpsCallable } from "firebase/functions";
 import type { SaveResult } from "../shemas/formResults";
+import { useState, useSyncExternalStore } from "react";
 
 export type ActiveStatus = "active" | "inactive" | "all";
 
@@ -107,6 +109,77 @@ export const fetchMembers = async ({ reload, ...filters }: MemberFilters): Promi
 	return newPromise;
 };
 
+export type MemberStatus = "active" | "inactive" | "all";
+
+export const membersStore = {
+	data: { active: [], inactive: [], all: [] } as Record<string, Member[]>,
+	isLoading: true,
+	error: null as Error | null,
+	unsubscribe: null as (() => void) | null,
+	listeners: new Set<() => void>(),
+
+	subscribe(onStoreChange: () => void) {
+		this.listeners.add(onStoreChange);
+
+		// Prevents duplicate Firestore listeners [Singleton Gatekeeping]
+		if (!this.unsubscribe) {
+			const q = query(collection(db, "members"), orderBy("name", "asc"));
+
+			this.unsubscribe = onSnapshot(
+				q,
+				{ includeMetadataChanges: true }, // Necessary to detect when writes finish
+				(snapshot) => {
+					const allDocs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Member);
+
+					// Update pre-calculated lists for referential stability
+					this.data = {
+						all: allDocs,
+						active: allDocs.filter((m) => m.isActive),
+						inactive: allDocs.filter((m) => !m.isActive)
+					};
+					this.isLoading = false;
+					this.error = null;
+					this.notify();
+
+					// Smart Auto-Stop logic
+					const hasPending = snapshot.metadata.hasPendingWrites;
+					const isFromCache = snapshot.metadata.fromCache;
+
+					if (!hasPending && !isFromCache) {
+						this.internalUnsubscribe();
+					}
+				},
+				(err) => {
+					this.error = err;
+					this.isLoading = false;
+					this.notify();
+					this.internalUnsubscribe();
+				}
+			);
+		}
+
+		return () => {
+			this.listeners.delete(onStoreChange);
+			if (this.listeners.size === 0) this.internalUnsubscribe();
+		};
+	},
+
+	internalUnsubscribe() {
+		if (this.unsubscribe) {
+			this.unsubscribe();
+			this.unsubscribe = null;
+		}
+	},
+
+	notify() {
+		this.listeners.forEach((l) => l());
+	},
+
+	getSnapshot() {
+		return this.data; // Stable reference
+	}
+};
+
 export type MemberDetailsFormRequestData = {
 	id?: string;
 	name: string;
@@ -145,7 +218,23 @@ export const memberOperations = async (data: MemberDetailsFormRequestData): Prom
 };
 
 export const deactivateMember = async (memberId: string, leaveDate: string): Promise<boolean> => {
+	// Subscribing to the store to get the latest data
+	membersStore.subscribe(() => {});
 	const fn = httpsCallable(functions, "deactivateMember");
 	const res = await fn({ memberId, leaveDate });
 	return res.data as unknown as boolean;
 };
+
+export function useMembers(status: MemberStatus = "active") {
+	const storeData = useSyncExternalStore(
+		(onStoreChange) => membersStore.subscribe(onStoreChange),
+		() => membersStore.getSnapshot()
+	);
+
+	return {
+		members: storeData[status],
+		isLoading: membersStore.isLoading,
+		error: membersStore.error,
+		refresh: () => membersStore.subscribe(() => {}) // Restarts the single listener
+	};
+}

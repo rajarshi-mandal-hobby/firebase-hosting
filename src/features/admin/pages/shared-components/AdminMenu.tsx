@@ -2,40 +2,47 @@ import { Menu, ActionIcon } from "@mantine/core";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { IconMoreVertical, IconRupee, IconLogout } from "../../../../shared/icons";
+import { ACTION_BUTTON_SIZE, ACTION_ICON_SIZE, PATHS } from "../../../../data/types";
 
 export const AdminMenu = () => {
 	const { logout } = useAuth();
 	const location = useLocation();
 	const navigate = useNavigate();
 
-	const pathsToPage: { [key: string]: string } = {
-		"/add-member/": "Add Member",
-		"/generate-bills/": "Generate Bills",
-	};
+	const pathsToPage: Record<string, string> = {
+		[PATHS.ADD_MEMBER.path]: PATHS.ADD_MEMBER.name,
+		[PATHS.GENERATE_BILLS.path]: PATHS.GENERATE_BILLS.name
+	} as const;
+
+	const pathsToPageArray = Object.entries(pathsToPage);
+
+	// Navigate to home if not already on home
+	// Replace the current history entry if not already on home
+	const navigateToHome = (path: keyof typeof pathsToPage) =>
+		navigate(path, { replace: location.pathname !== PATHS.HOME.path });
 
 	return (
 		<Menu>
 			<Menu.Target>
-				<ActionIcon color='gray.1' variant='filled' size={32}>
-					<IconMoreVertical size={16} />
+				<ActionIcon color='gray.1' variant='filled' size={ACTION_BUTTON_SIZE}>
+					<IconMoreVertical size={ACTION_ICON_SIZE} />
 				</ActionIcon>
 			</Menu.Target>
 
 			<Menu.Dropdown>
-				{Object.entries(pathsToPage).map(([path, label]) => {
-					if (location.pathname === path) return null;
-					return (
-						<Menu.Item key={path} onClick={() => navigate(path, { replace: location.pathname !== '/' })}>
+				{pathsToPageArray
+					.filter(([path]) => location.pathname !== path)
+					.map(([path, label]) => (
+						<Menu.Item key={label} onClick={() => navigateToHome(path)}>
 							{label}
 						</Menu.Item>
-					);
-				})}
+					))}
 				<Menu.Divider />
-				{location.pathname !== "/default-rents" && (
+				{location.pathname !== PATHS.DEFAULT_RENTS.path && (
 					<Menu.Item
 						leftSection={<IconRupee size={14} />}
-						onClick={() => navigate("/default-rents", { replace: location.pathname !== "/" })}>
-						Default Rents
+						onClick={() => navigateToHome(PATHS.DEFAULT_RENTS.path)}>
+						{PATHS.DEFAULT_RENTS.name}
 					</Menu.Item>
 				)}
 				<Menu.Item color='red' onClick={logout} leftSection={<IconLogout size={14} />}>

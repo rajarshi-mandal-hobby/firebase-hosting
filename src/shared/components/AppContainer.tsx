@@ -8,7 +8,7 @@ type AppContainerProps = Omit<ContainerProps, "children"> & {
    children: ReactNode;
 };
 
-export const AppContainer = ({ children, ...props }: AppContainerProps) => {
+export function AppContainer({ children, ...props }: AppContainerProps) {
    const [resetKey, setResetKey] = useState(0);
 
    return (

@@ -1,49 +1,99 @@
 import { useForm } from "@mantine/form";
-import { useTransition, useState, useEffectEvent, useEffect } from "react";
-import type { PaymentStatus } from "../../../../../../data/types";
+import { useState, useEffectEvent, useEffect, type TransitionStartFunction } from "react";
+import type { Member, PaymentStatus } from "../../../../../../data/types";
 import {
 	getStatusColor,
 	getStatusTitle,
 	notifyLoading,
-	formatNumberIndianLocale,
 	notifyUpdate,
-	toNumber
+	toNumber,
+	notifyError
 } from "../../../../../../shared/utils";
+import { simulateNetworkDelay, simulateRandomError } from "../../../../../../data/utils/serviceUtils";
 
 type RecordPaymentFormData = {
-	amount: string | number;
-	paymentNote: string;
+	amountPaid: string | number;
+	note: string;
 };
 
 interface UseRecordPaymentModalProps {
 	opened: boolean;
-	totalCharges: number;
-	amountPaid: number;
-	paymentNote: string;
-	memberName: string;
+	member: Member | null;
 	onClose: () => void;
 	onExitTransitionEnd: () => void;
+	onModalWorking: TransitionStartFunction;
+	onError: (id: string) => void;
+	onSuccess: (id: string) => void;
 }
+
+const useFormErrorCache = <T>() => {
+	const [errorCache, setErrorCache] = useState<Map<string, T>>(new Map());
+
+	const hasErrorCache = (memberId?: string): boolean => {
+		if (!memberId) return false;
+		return errorCache.size > 0 && errorCache.has(memberId);
+	};
+
+	const removeErrorCache = (memberId: string) => {
+		setErrorCache((prev) => {
+			const prevMap = new Map(prev);
+			prevMap.delete(memberId);
+			return prevMap;
+		});
+	};
+
+	const addErrorCache = (memberId: string, values: T) => {
+		setErrorCache((prev) => {
+			const prevMap = new Map(prev);
+			prevMap.set(memberId, values);
+			return prevMap;
+		});
+	};
+
+	return {
+		errorCache,
+		removeErrorCache,
+		addErrorCache,
+		hasErrorCache
+	};
+};
 
 export const useRecordPaymentModal = ({
 	opened,
-	totalCharges,
-	amountPaid,
-	paymentNote,
-	memberName,
+	member,
 	onClose,
-	onExitTransitionEnd
+	onSuccess,
+	onError,
+	onExitTransitionEnd,
+	onModalWorking
 }: UseRecordPaymentModalProps) => {
-	const [isSaving, startTransition] = useTransition();
 	const [status, setStatus] = useState<PaymentStatus>("Due");
+	const { errorCache, removeErrorCache, addErrorCache, hasErrorCache } = useFormErrorCache<RecordPaymentFormData>();
+	const { totalCharges, amountPaid, note } = member?.currentMonthRent || {
+		totalCharges: 0,
+		amountPaid: 0,
+		note: ""
+	};
+	const hasError = hasErrorCache(member?.id);
+
+	const handleOnSuccess = (id: string) => {
+		removeErrorCache(id);
+		onSuccess(id);
+		onClose();
+	};
+
+	const handleError = (id: string, values: RecordPaymentFormData) => {
+		onError(id);
+		addErrorCache(id, values);
+	};
 
 	const form = useForm<RecordPaymentFormData>({
 		initialValues: {
-			amount: "",
-			paymentNote: ""
+			amountPaid: "",
+			note: ""
 		},
 		onValuesChange(values) {
-			const amount = toNumber(values.amount);
+			const amount = toNumber(values.amountPaid);
 
 			setStatus(() => {
 				if (amount === 0) {
@@ -59,16 +109,16 @@ export const useRecordPaymentModal = ({
 			});
 		},
 		validate: {
-			amount: (value) => {
+			amountPaid: (value) => {
 				if (value === "" || toNumber(value) < 0) {
 					return "Please enter a valid amount";
 				}
 				return null;
 			},
-			paymentNote: (value, values) => {
-				const amount = toNumber(values.amount);
-				if (amount > 0 && amount < totalCharges && !value.trim()) {
-					return "Payment note is required for partial payments";
+			note: (value, values) => {
+				const amount = toNumber(values.amountPaid);
+				if (amount > 0 && amount < totalCharges && !value) {
+					return "Note is required for partial payments";
 				}
 				return null;
 			}
@@ -76,18 +126,29 @@ export const useRecordPaymentModal = ({
 	});
 
 	const effectEvent = useEffectEvent(() => {
+		if (!member) return;
+		// If there's an error, we'll use the cached values
+		if (errorCache.has(member.id)) {
+			form.setValues(errorCache.get(member.id)!);
+			form.resetDirty({
+				amountPaid: member.currentMonthRent.amountPaid || "",
+				note: member.currentMonthRent.note
+			});
+			return;
+		}
+		// If there's no error, we'll use the current values
 		form.setValues({
-			amount: amountPaid || "",
-			paymentNote: paymentNote
+			amountPaid: amountPaid || "",
+			note
 		});
 		form.resetDirty();
 	});
 
 	useEffect(() => {
-		if (opened) effectEvent();
+		effectEvent();
 	}, [opened]);
 
-	const convertedAmount = toNumber(form.values.amount);
+	const convertedAmount = toNumber(form.values.amountPaid);
 	const newOutstanding = totalCharges - convertedAmount;
 	const isPaymentBelowOutstanding = convertedAmount > 0 && convertedAmount < totalCharges;
 
@@ -96,8 +157,8 @@ export const useRecordPaymentModal = ({
 
 	const handleExitTransitionEnd = () => {
 		form.setValues({
-			amount: "",
-			paymentNote: ""
+			amountPaid: "",
+			note: ""
 		});
 		form.resetDirty();
 		setStatus("Due");
@@ -105,23 +166,34 @@ export const useRecordPaymentModal = ({
 	};
 
 	const handleRecordPayment = () => {
-		const loadingNotification = notifyLoading(
-			`Recording payment of ${formatNumberIndianLocale(convertedAmount)} for ${memberName}`
-		);
-		startTransition(async () => {
+		if (!member) {
+			notifyError("Member not found");
+			return;
+		}
+
+		const actionDone = convertedAmount === 0 ? "Removing" : "Recording";
+		const message = actionDone + " payment for " + member.name;
+		const loadingNotification = notifyLoading(message);
+		onModalWorking(async () => {
 			try {
-				await new Promise((resolve) => setTimeout(resolve, 5000));
-				const message = convertedAmount === 0 ? "removed" : "recorded";
-				notifyUpdate(
-					loadingNotification,
-					`Payment of ${formatNumberIndianLocale(convertedAmount)} ${message} successfully for ${memberName}`,
-					{ type: "success" }
-				);
-				onClose(); // reset will happen via onExitTransitionEnd
-			} catch {
-				notifyUpdate(loadingNotification, "Failed to record payment. Please try again.", { type: "error" });
+				await simulateNetworkDelay(3000);
+				simulateRandomError();
+            throw new Error("Random error");
+
+				notifyUpdate(loadingNotification, message.replace("ing", "ed"), { type: "success" });
+				handleOnSuccess(member.id);
+			} catch (error) {
+				notifyUpdate(loadingNotification, (error as Error).message, { type: "error" });
+				handleError(member.id, form.values);
 			}
 		});
+	};
+
+	const resetForm = () => {
+		if (!member) return;
+		form.reset();
+		removeErrorCache(member.id);
+		onSuccess(member.id);
 	};
 
 	return {
@@ -129,13 +201,14 @@ export const useRecordPaymentModal = ({
 		status,
 		statusColor,
 		statusTitle,
-		isSaving,
 		convertedAmount,
 		newOutstanding,
 		isPaymentBelowOutstanding,
+		hasError,
 		actions: {
 			handleExitTransitionEnd,
-			handleRecordPayment
+			handleRecordPayment,
+			resetForm
 		}
 	};
 };

@@ -1,22 +1,21 @@
-import { useState, useEffect, useMemo } from 'react';
-import type { Member } from '../../../shared/types/firestore-types';
-import { fetchMembers } from '../../../data/services/membersService';
-import type { Floor } from '../../../data/types/GlobalSettings';
+import { useState, useEffect, useMemo, useEffectEvent } from "react";
+import { fetchMembers } from "../../../data/services/membersService";
+import type { Floor, Member } from "../../../data/types";
 
-export type AccountStatusFilter = 'all' | 'active' | 'inactive';
+export type AccountStatusFilter = "all" | "active" | "inactive";
 
 export type FiltersType = {
-  floor: Floor | 'All';
-  accountStatus: AccountStatusFilter;
-  optedForWifi: boolean;
-  latestInactiveMembers: boolean;
+	floor: Floor | "All";
+	accountStatus: AccountStatusFilter;
+	optedForWifi: boolean;
+	latestInactiveMembers: boolean;
 };
 
 export const defaultFilters: FiltersType = {
-  floor: 'All',
-  accountStatus: 'active',
-  optedForWifi: false,
-  latestInactiveMembers: false
+	floor: "All",
+	accountStatus: "active",
+	optedForWifi: false,
+	latestInactiveMembers: false
 };
 
 /**
@@ -24,204 +23,188 @@ export const defaultFilters: FiltersType = {
  * Handles fetching and merging of active and inactive members
  */
 export const useMembersManagement = () => {
-  // Data States
-  const [activeMembers, setActiveMembers] = useState<Member[]>([]);
-  const [inactiveMembers, setInactiveMembers] = useState<Member[]>([]);
-  const [membersCount, setMembersCount] = useState({
-    activeMembers: 0,
-    inactiveMembers: 0,
-    totalMembers: 0
-  });
-  const [isLoading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+	// Data States
+	const [activeMembers, setActiveMembers] = useState<Member[]>([]);
+	const [inactiveMembers, setInactiveMembers] = useState<Member[]>([]);
+	const [membersCount, setMembersCount] = useState({
+		activeMembers: 0,
+		inactiveMembers: 0,
+		totalMembers: 0
+	});
+	const [isLoading, setLoading] = useState(false);
+	const [error, setError] = useState<Error | null>(null);
 
-  // Search and filter states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [memberFilter, setMemberFilters] = useState<FiltersType>(defaultFilters);
-  const [opened, setOpened] = useState(false);
+	// Search and filter states
+	const [searchQuery, setSearchQuery] = useState("");
+	const [memberFilter, setMemberFilters] = useState<FiltersType>(defaultFilters);
+	const [opened, setOpened] = useState(false);
 
-  const isDefaultFilterState = JSON.stringify(memberFilter) === JSON.stringify(defaultFilters);
+	const isDefaultFilterState = JSON.stringify(memberFilter) === JSON.stringify(defaultFilters);
 
-  // Data Fetching Logic
-  useEffect(() => {
-    const loadData = async () => {
-      // 1. Fetch Active Members if needed
-      if (
-        (memberFilter.accountStatus === 'active' || memberFilter.accountStatus === 'all') &&
-        activeMembers.length === 0 &&
-        !isLoading
-      ) {
-        setLoading(true);
-        try {
-          const members = await fetchMembers({ reload: false, isActive: 'active' });
-          setActiveMembers(members);
-          setMembersCount((prev) => ({
-            ...prev,
-            activeMembers: members.length,
-            totalMembers: members.length + prev.inactiveMembers
-          }));
-        } catch (err) {
-          setError(err instanceof Error ? err : new Error('Unknown error'));
-        } finally {
-          setLoading(false);
-        }
-      }
+	const loadData = useEffectEvent(async () => {
+		// 1. Fetch Active Members if needed
+		if (
+			(memberFilter.accountStatus === "active" || memberFilter.accountStatus === "all") &&
+			activeMembers.length === 0 &&
+			!isLoading
+		) {
+			setLoading(true);
+			try {
+				const members = await fetchMembers({ reload: false, isActive: "active" });
+				setActiveMembers(members);
+				setMembersCount((prev) => ({
+					...prev,
+					activeMembers: members.length,
+					totalMembers: members.length + prev.inactiveMembers
+				}));
+			} catch (err) {
+				setError(err instanceof Error ? err : new Error("Unknown error"));
+			} finally {
+				setLoading(false);
+			}
+		}
 
-      // 2. Fetch Inactive Members if needed
-      const shouldFetchInactive =
-        (memberFilter.accountStatus === 'inactive' || memberFilter.accountStatus === 'all') &&
-        (inactiveMembers.length === 0 || memberFilter.latestInactiveMembers);
+		// 2. Fetch Inactive Members if needed
+		const shouldFetchInactive =
+			(memberFilter.accountStatus === "inactive" || memberFilter.accountStatus === "all") &&
+			(inactiveMembers.length === 0 || memberFilter.latestInactiveMembers);
 
-      if (shouldFetchInactive && !isLoading) {
-        // Prevent re-fetching if we already fetched inactive members and latestInactiveMembers is still true,
-        // unless we explicitly want to force reload.
-        // For simplicity: if latestInactiveMembers is TRUE, we always reload inactive members.
-        // BUT, this runs in useEffect, so we must be careful not to infinite loop.
-        // Dependencies are [memberFilter.accountStatus, memberFilter.latestInactiveMembers].
-        // If we setInactiveMembers, these do not change, so it won't loop.
+		if (shouldFetchInactive && !isLoading) {
+			setLoading(true);
+			try {
+				const members = await fetchMembers({
+					reload: memberFilter.latestInactiveMembers,
+					isActive: "inactive"
+				});
+				setInactiveMembers(members);
+				setMembersCount((prev) => ({
+					...prev,
+					inactiveMembers: members.length,
+					totalMembers: prev.activeMembers + members.length
+				}));
+			} catch (err) {
+				setError(err instanceof Error ? err : new Error("Unknown error"));
+			} finally {
+				setLoading(false);
+			}
+		}
+	});
 
-        // However, if we fetch, we might want to know if we already have data to avoid fetching again if not forced.
-        // But 'latestInactiveMembers' being true implies "I want the LATEST", so a fetch is appropriate when it *changes* to true.
-        // If it *stays* true, we don't want to loop.
+	// Data Fetching Logic
+	useEffect(() => {
+		loadData();
+	}, [memberFilter.accountStatus, memberFilter.latestInactiveMembers]);
 
-        // We can check if we already have inactive members. If we do, and latestInactiveMembers is true,
-        // we might have already fetched them.
-        // The original logic required an explicit "reload" when ticking the box.
+	// Independent refetch function
+	const refetch = async () => {
+		if (isLoading) return;
+		setLoading(true);
+		setError(null);
+		try {
+			// Refetch based on current view
+			if (memberFilter.accountStatus === "active" || memberFilter.accountStatus === "all") {
+				const members = await fetchMembers({ reload: true, isActive: "active" });
+				setActiveMembers(members);
+				setMembersCount((prev) => ({
+					...prev,
+					activeMembers: members.length,
+					totalMembers: members.length + prev.inactiveMembers
+				}));
+			}
+			if (memberFilter.accountStatus === "inactive" || memberFilter.accountStatus === "all") {
+				const members = await fetchMembers({ reload: true, isActive: "inactive" });
+				setInactiveMembers(members);
+				setMembersCount((prev) => ({
+					...prev,
+					inactiveMembers: members.length,
+					totalMembers: prev.activeMembers + members.length
+				}));
+			}
+		} catch (e) {
+			setError(e instanceof Error ? e : new Error("Refetch failed"));
+		} finally {
+			setLoading(false);
+		}
+	};
 
-        // Let's rely on the dependency array. It only runs when `memberFilter` changes.
-        setLoading(true);
-        try {
-          const members = await fetchMembers({
-            reload: memberFilter.latestInactiveMembers,
-            isActive: 'inactive'
-          });
-          setInactiveMembers(members);
-          setMembersCount((prev) => ({
-            ...prev,
-            inactiveMembers: members.length,
-            totalMembers: prev.activeMembers + members.length
-          }));
-        } catch (err) {
-          setError(err instanceof Error ? err : new Error('Unknown error'));
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
+	const filteredMembers = useMemo(() => {
+		// 1. Select the base dataset efficiently
+		let baseMembers: readonly Member[];
 
-    loadData();
-  }, [memberFilter.accountStatus, memberFilter.latestInactiveMembers]);
+		switch (memberFilter.accountStatus) {
+			case "active":
+				baseMembers = activeMembers;
+				break;
+			case "inactive":
+				baseMembers = inactiveMembers;
+				break;
+			case "all":
+				// Combine only when necessary
+				baseMembers = [...activeMembers, ...inactiveMembers];
+				break;
+			default:
+				baseMembers = activeMembers;
+		}
 
-  // Independent refetch function
-  const refetch = async () => {
-    if (isLoading) return;
-    setLoading(true);
-    setError(null);
-    try {
-      // Refetch based on current view
-      if (memberFilter.accountStatus === 'active' || memberFilter.accountStatus === 'all') {
-        const members = await fetchMembers({ reload: true, isActive: 'active' });
-        setActiveMembers(members);
-        setMembersCount((prev) => ({
-          ...prev,
-          activeMembers: members.length,
-          totalMembers: members.length + prev.inactiveMembers
-        }));
-      }
-      if (memberFilter.accountStatus === 'inactive' || memberFilter.accountStatus === 'all') {
-        const members = await fetchMembers({ reload: true, isActive: 'inactive' });
-        setInactiveMembers(members);
-        setMembersCount((prev) => ({
-          ...prev,
-          inactiveMembers: members.length,
-          totalMembers: prev.activeMembers + members.length
-        }));
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error('Refetch failed'));
-    } finally {
-      setLoading(false);
-    }
-  };
+		// 2. Normalize search query once outside the loop
+		const normalizedQuery = searchQuery.trim().toLowerCase();
 
-  const filteredMembers = useMemo(() => {
-    // 1. Select the base dataset efficiently
-    let baseMembers: readonly Member[];
+		// 3. Single-pass filtering
+		return baseMembers.filter((member) => {
+			// WiFi Check
+			if (memberFilter.optedForWifi && !member.optedForWifi) {
+				return false;
+			}
 
-    switch (memberFilter.accountStatus) {
-      case 'active':
-        baseMembers = activeMembers;
-        break;
-      case 'inactive':
-        baseMembers = inactiveMembers;
-        break;
-      case 'all':
-        // Combine only when necessary
-        baseMembers = [...activeMembers, ...inactiveMembers];
-        break;
-      default:
-        baseMembers = activeMembers;
-    }
+			// Floor Check
+			if (memberFilter.floor !== "All" && member.floor !== memberFilter.floor) {
+				return false;
+			}
 
-    // 2. Normalize search query once outside the loop
-    const normalizedQuery = searchQuery.trim().toLowerCase();
+			// Search Query Check
+			if (normalizedQuery) {
+				const nameMatch = member.name.toLowerCase().includes(normalizedQuery);
+				const phoneMatch = member.phone.includes(normalizedQuery);
+				if (!nameMatch && !phoneMatch) {
+					return false;
+				}
+			}
 
-    // 3. Single-pass filtering
-    return baseMembers.filter((member) => {
-      // WiFi Check
-      if (memberFilter.optedForWifi && !member.optedForWifi) {
-        return false;
-      }
+			return true;
+		});
+	}, [
+		activeMembers,
+		inactiveMembers,
+		memberFilter.accountStatus,
+		memberFilter.floor,
+		memberFilter.optedForWifi,
+		searchQuery
+	]);
 
-      // Floor Check
-      if (memberFilter.floor !== 'All' && member.floor !== memberFilter.floor) {
-        return false;
-      }
+	// Actions
+	const actions = {
+		setSearchQuery,
+		setMemberFilters,
+		setOpened,
+		refetch,
+		// Legacy support to keep component compatibility
+		handleInactiveMembers: (checked: boolean) =>
+			setMemberFilters((prev) => ({ ...prev, latestInactiveMembers: checked })),
+		handleRefetch: refetch
+	};
 
-      // Search Query Check
-      if (normalizedQuery) {
-        const nameMatch = member.name.toLowerCase().includes(normalizedQuery);
-        const phoneMatch = member.phone.includes(normalizedQuery);
-        if (!nameMatch && !phoneMatch) {
-          return false;
-        }
-      }
+	return {
+		filteredMembers,
+		membersCount,
+		isLoading,
+		error,
 
-      return true;
-    });
-  }, [
-    activeMembers,
-    inactiveMembers,
-    memberFilter.accountStatus,
-    memberFilter.floor,
-    memberFilter.optedForWifi,
-    searchQuery
-  ]);
+		// Filter State
+		searchQuery,
+		memberFilter,
+		opened,
+		isDefaultFilterState,
 
-  // Actions
-  const actions = {
-    setSearchQuery,
-    setMemberFilters,
-    setOpened,
-    refetch,
-    // Legacy support to keep component compatibility
-    handleInactiveMembers: (checked: boolean) =>
-      setMemberFilters((prev) => ({ ...prev, latestInactiveMembers: checked })),
-    handleRefetch: refetch
-  };
-
-  return {
-    filteredMembers,
-    membersCount,
-    isLoading,
-    error,
-
-    // Filter State
-    searchQuery,
-    memberFilter,
-    opened,
-    isDefaultFilterState,
-
-    actions
-  } as const;
+		actions
+	} as const;
 };

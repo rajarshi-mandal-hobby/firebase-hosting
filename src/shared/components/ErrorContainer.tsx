@@ -1,8 +1,14 @@
 import { Stack, Title, Paper, Button, Text } from "@mantine/core";
+import { GroupButtons } from ".";
 
-export const ErrorContainer = ({ error, onRetry }: { error: Error; onRetry?: () => void }) => {
+interface ErrorContainerProps {
+	error: Error;
+	onRetry?: () => void;
+}
+
+export const ErrorContainer = ({ error, onRetry }: ErrorContainerProps) => {
 	return (
-		<Stack gap='sm' style={{ wordBreak: "break-word" }}>
+		<Stack gap='sm' style={{ wordBreak: "break-word" }} my='xl'>
 			<Title order={2} ta='center' c='dimmed'>
 				{"╰（‵□′）╯"}
 			</Title>
@@ -11,16 +17,18 @@ export const ErrorContainer = ({ error, onRetry }: { error: Error; onRetry?: () 
 			</Title>
 			<Paper p='lg' withBorder>
 				<Text fw={500} mb='xs'>
-					Info: {error.name}
+					Info: {error.name ?? "Unknown"}
 				</Text>
 				<Text c='dimmed' mt='xs' component='pre' style={{ whiteSpace: "pre-wrap" }}>
-					{error.message}
+					{error.message ?? "Unknown"}
 				</Text>
-				{onRetry && (
-					<Button mt='lg' onClick={onRetry}>
-						Retry
+
+				<GroupButtons>
+					<Button variant='default' onClick={() => window.location.reload()}>
+						Reload
 					</Button>
-				)}
+					{onRetry && <Button onClick={onRetry}>Retry</Button>}
+				</GroupButtons>
 			</Paper>
 		</Stack>
 	);
