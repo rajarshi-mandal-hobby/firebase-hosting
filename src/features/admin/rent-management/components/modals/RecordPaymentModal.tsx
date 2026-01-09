@@ -17,18 +17,14 @@ import {
 	IconUniversalCurrency
 } from "../../../../../shared/icons";
 import { ICON_SIZE } from "../../../../../data/types/constants";
-import type { Member } from "../../../../../data/types";
-import type { TransitionStartFunction } from "react";
+import type { ModalActions } from "../../hooks/useRentManagement";
 
-interface RecordPaymentModalProps {
+export interface RecordPaymentModalProps {
 	opened: boolean;
-	member: Member | null;
-	isModalWorking: boolean;
-	onModalWorking: TransitionStartFunction;
 	onClose: () => void;
-	onExitTransitionEnd: () => void;
-	onError: (id: string) => void;
-	onSuccess: (id: string) => void;
+	onModalError: (id: string) => void;
+	onModalSuccess: (id: string) => void;
+	modalActions: ModalActions;
 }
 
 export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
@@ -44,28 +40,29 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 		actions
 	} = useRecordPaymentModal(props);
 
-	const { member, opened, onClose, isModalWorking } = props;
+	const { selectedMember, isModalWorking, workingMemberName } = props.modalActions;
+	const { opened, onClose } = props;
 
-	const memberName = member?.name || "";
-	const { totalCharges, amountPaid, note, currentOutstanding } = member?.currentMonthRent || {
+	const memberName = selectedMember?.name || "";
+	const { totalCharges, amountPaid, note, currentOutstanding } = selectedMember?.currentMonthRent || {
 		totalCharges: 0,
 		amountPaid: 0,
 		note: "",
 		currentOutstanding: 0
 	};
 
-	console.log("🎨 Rendering RecordPaymentModal", hasError);
+	console.log("🎨 Rendering RecordPaymentModal", workingMemberName);
 
 	return (
 		<Modal
 			opened={opened}
 			onClose={onClose}
-			onExitTransitionEnd={actions.handleExitTransitionEnd}
+			onExitTransitionEnd={actions.handleModalExitTransitionEnd}
 			title='Record Payment for:'
 			pos='relative'>
-			{member && (
+			{selectedMember && (
 				<>
-					<MyLoadingOverlay visible={isModalWorking} message={`Saving payment for ${memberName}...`} />
+					<MyLoadingOverlay visible={isModalWorking} message={`Saving payment for ${workingMemberName || memberName}...`} />
 
 					<form onSubmit={form.onSubmit(actions.handleRecordPayment)}>
 						<Stack gap='lg'>

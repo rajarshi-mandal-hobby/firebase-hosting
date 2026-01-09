@@ -1,4 +1,4 @@
-import { Accordion, Progress, Stack, Title, Center, Group, Menu, ActionIcon, Notification, Text } from "@mantine/core";
+import { Accordion, Progress, Stack, Title, Center, Group, Menu, ActionIcon, Text } from "@mantine/core";
 import { useMembers } from "../../../../data/services/membersService";
 import { ACTION_BUTTON_SIZE, ACTION_ICON_SIZE, ICON_SIZE, type Member } from "../../../../data/types";
 import {
@@ -19,25 +19,29 @@ import {
 } from "../../../../shared/icons";
 import { StatusBadge } from "../../../../shared/utils";
 import { useRentManagement } from "../hooks/useRentManagement";
-import { AddExpenseModal } from "./modals/AddExpenseModal";
 import { RecordPaymentModal } from "./modals/RecordPaymentModal";
+import type { ModalErrorProps, ModalType } from "../tab-navigation/hooks/useTabNavigation";
 
 interface RentManagementContentProps {
 	members: Member[];
-	addFailure: (type: ModalType, id: string) => void;
-	removeFailure: (type: ModalType, id: string) => void;
-	hasFailures: (memberId: string, type?: ModalType) => boolean;
+	onModalError: (props: ModalErrorProps) => void;
+	hasModalErrorForMember: (memberId: string, type?: ModalType) => boolean;
 }
 
-type ModalType = "recordPayment" | "addExpense";
+interface DisplayPriorityIconProps {
+	hasFailures: boolean;
+}
+const DisplayPriorityIcon = ({ hasFailures }: DisplayPriorityIconProps) => {
+	return hasFailures ? <IconExclamation size={ICON_SIZE} color='red' /> : null;
+};
 
-const RentManagementContent = ({ members, addFailure, removeFailure, hasFailures }: RentManagementContentProps) => {
+const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }: RentManagementContentProps) => {
 	const {
 		recordPaymentModal: { recordPaymentModalOpened, openRecordPayment, closeRecordPayment },
 		addExpenseModal: { addExpenseModalOpened, openAddExpense, closeAddExpense },
 		derivedRents,
-		memberActions: { selectedMember, setSelectedMember, handleShareRent },
-		modalActions: { isModalWorking, setIsModalWorking, handleExitTransitionEnd }
+		handleShareRent,
+		modalActions
 	} = useRentManagement({ members });
 
 	console.log("🎨 Rendering RentManagementContent");
@@ -87,7 +91,7 @@ const RentManagementContent = ({ members, addFailure, removeFailure, hasFailures
 											autoContrast
 											size={ACTION_BUTTON_SIZE}
 											bdrs={"0 var(--mantine-radius-md) var(--mantine-radius-md) 0"}
-											c={hasFailures(member.id) ? "red" : "var(--mantine-color-bright)"}>
+											c={hasModalErrorForMember(member.id) ? "red" : "var(--mantine-color-bright)"}>
 											<IconMoreVertical size={ACTION_ICON_SIZE} />
 										</ActionIcon>
 									</Menu.Target>
@@ -111,27 +115,17 @@ const RentManagementContent = ({ members, addFailure, removeFailure, hasFailures
 										<Menu.Item
 											leftSection={<IconUniversalCurrency size={ICON_SIZE} />}
 											rightSection={
-												hasFailures(member.id, "recordPayment") && (
-													<IconExclamation size={ICON_SIZE} color='red' />
-												)
+												<DisplayPriorityIcon hasFailures={hasModalErrorForMember(member.id, "recordPayment")} />
 											}
-											onClick={() => {
-												setSelectedMember(member);
-												openRecordPayment();
-											}}>
+											onClick={() => modalActions.handleModalOpen(member, openRecordPayment)}>
 											Record Payment
 										</Menu.Item>
 										<Menu.Item
 											leftSection={<IconMoneyBag size={ICON_SIZE} />}
 											rightSection={
-												hasFailures(member.id, "addExpense") && (
-													<IconExclamation size={ICON_SIZE} color='red' />
-												)
+												<DisplayPriorityIcon hasFailures={hasModalErrorForMember(member.id, "addExpense")} />
 											}
-											onClick={() => {
-												setSelectedMember(member);
-												openAddExpense();
-											}}>
+											onClick={() => modalActions.handleModalOpen(member, openAddExpense)}>
 											Add Expense
 										</Menu.Item>
 									</Menu.Dropdown>
@@ -148,36 +142,32 @@ const RentManagementContent = ({ members, addFailure, removeFailure, hasFailures
 			<RecordPaymentModal
 				opened={recordPaymentModalOpened}
 				onClose={closeRecordPayment}
-				onExitTransitionEnd={handleExitTransitionEnd}
-				isModalWorking={isModalWorking}
-				onModalWorking={setIsModalWorking}
-				onError={(id) => addFailure("recordPayment", id)}
-				onSuccess={(id) => removeFailure("recordPayment", id)}
-				member={selectedMember}
+				onModalError={(id) => onModalError({ isError: true, type: "recordPayment", memberId: id })}
+				onModalSuccess={(id) => onModalError({ isError: false, type: "recordPayment", memberId: id })}
+				modalActions={modalActions}
 			/>
 
-			<AddExpenseModal
+			{/* <AddExpenseModal
 				opened={addExpenseModalOpened}
 				onClose={closeAddExpense}
 				onExitTransitionEnd={handleExitTransitionEnd}
-				onModalWorking={setIsModalWorking}
+				onModalWorking={handleModalWork}
 				onError={(id) => addFailure("addExpense", id)}
 				onSuccess={(id) => removeFailure("addExpense", id)}
 				memberName={selectedMember?.name || ""}
 				memberId={selectedMember?.id || ""}
 				previousExpenses={selectedMember?.currentMonthRent.expenses || [{ amount: 0, description: "" }]}
-			/>
+			/> */}
 		</>
 	);
 };
 
 interface RentManagementProps {
-	addFailure: (type: ModalType, id: string) => void;
-	removeFailure: (type: ModalType, id: string) => void;
-	hasFailures: (memberId: string, type?: ModalType) => boolean;
+	hasModalErrorForMember: (memberId: string, type?: ModalType) => boolean;
+	onModalError: (props: ModalErrorProps) => void;
 }
 
-export function RentManagement({ addFailure, removeFailure, hasFailures }: RentManagementProps) {
+export function RentManagement({ hasModalErrorForMember, onModalError }: RentManagementProps) {
 	// const { members, isLoading, error, derivedRents, actions } = useRentManagement();
 	// Active members only
 	const { members, isLoading, error, refresh } = useMembers("active");
@@ -193,14 +183,7 @@ export function RentManagement({ addFailure, removeFailure, hasFailures }: RentM
 	}
 
 	if (members.length) {
-		return (
-			<RentManagementContent
-				members={members}
-				addFailure={addFailure}
-				removeFailure={removeFailure}
-				hasFailures={hasFailures}
-			/>
-		);
+		return <RentManagementContent members={members} onModalError={onModalError} hasModalErrorForMember={hasModalErrorForMember} />;
 	} else {
 		// For empty state
 		return <NothingToShow message='No members found. Why not add one first?' />;

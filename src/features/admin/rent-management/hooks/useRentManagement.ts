@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { useEffect, useEffectEvent, useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useState, useTransition, type TransitionFunction } from "react";
 import type { Member } from "../../../../data/types";
 import { notifyError } from "../../../../shared/utils";
 import { useDisclosure } from "@mantine/hooks";
@@ -14,15 +14,67 @@ export interface DerivedRents {
 	totalOutstandingPercentage: number;
 }
 
+export interface ModalActions {
+	selectedMember: Member | null;
+	workingMemberName: string | null;
+	isModalWorking: boolean;
+	handleModalOpen: (member: Member, openModalCallback: () => void) => void;
+	handleModalWork: (memberName: string, callback: TransitionFunction) => void;
+	handleExitTransitionEnd: () => void;
+}
+
+const useModalActions = (isModalOpen: boolean): ModalActions => {
+	const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+	const [workingMemberName, setWorkingMemberName] = useState<string | null>(null);
+	const [isModalWorking, startModalWork] = useTransition();
+
+	const handleModalOpen = (member: Member, openModalCallback: () => void) => {
+		setSelectedMember(member);
+		openModalCallback();
+	};
+
+	const handleModalWork = (memberName: string, callback: TransitionFunction) => {
+		setWorkingMemberName(memberName);
+		startModalWork(callback);
+	};
+
+	const handleExitTransitionEnd = () => {
+		if (isModalWorking) return;
+		setSelectedMember(null);
+		setWorkingMemberName(null);
+	};
+
+	const clearMemberAfterWrokEvent = useEffectEvent(() => {
+		if (!isModalWorking && !isModalOpen) {
+			setSelectedMember(null);
+			setWorkingMemberName(null);
+		}
+	});
+
+	useEffect(() => {
+		clearMemberAfterWrokEvent();
+	}, [isModalWorking]);
+
+	return {
+		selectedMember,
+		workingMemberName,
+		isModalWorking,
+		handleModalOpen,
+		handleModalWork,
+		handleExitTransitionEnd
+	};
+};
+
 /**
  * Custom hook for rent management data using FirestoreService with real-time updates
  */
 export const useRentManagement = ({ members }: { members: Member[] }) => {
 	const [recordPaymentModalOpened, { open: openRecordPayment, close: closeRecordPayment }] = useDisclosure(false);
 	const [addExpenseModalOpened, { open: openAddExpense, close: closeAddExpense }] = useDisclosure(false);
-	const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-	const [workingMemberName, setWorkingMemberName] = useState<string | null>(null);
-	const [isModalWorking, setIsModalWorking] = useTransition();
+	// const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+	// const [workingMemberName, setWorkingMemberName] = useState<string | null>(null);
+	// const [isModalWorking, startModalWork] = useTransition();
+	const modalActions = useModalActions(recordPaymentModalOpened || addExpenseModalOpened);
 
 	const derivedRents = members.reduce<DerivedRents>(
 		(sum, member) => {
@@ -75,19 +127,30 @@ export const useRentManagement = ({ members }: { members: Member[] }) => {
 		}
 	};
 
-	const handleExitTransitionEnd = () => {
-		if (isModalWorking) return;
-		setSelectedMember(null);
-	};
+	// const handleExitTransitionEnd = () => {
+	// 	if (isModalWorking) return;
+	// 	setSelectedMember(null);
+	// };
 
-	const clearMemberAfterWrokEvent = useEffectEvent(() => {
-		const isEitherModalOpen = recordPaymentModalOpened || addExpenseModalOpened;
-		if (!isModalWorking && !isEitherModalOpen) setSelectedMember(null);
-	});
+	// const clearMemberAfterWrokEvent = useEffectEvent(() => {
+	// 	const isEitherModalOpen = recordPaymentModalOpened || addExpenseModalOpened;
+	// 	if (!isModalWorking && !isEitherModalOpen) setSelectedMember(null);
+	// 	if (!isModalWorking) setWorkingMemberName(null);
+	// });
 
-	useEffect(() => {
-		clearMemberAfterWrokEvent();
-	}, [isModalWorking]);
+	// useEffect(() => {
+	// 	clearMemberAfterWrokEvent();
+	// }, [isModalWorking]);
+
+	// const handleModalWork = (memberName: string, callback: TransitionFunction) => {
+	// 	setWorkingMemberName(memberName);
+	// 	startModalWork(callback);
+	// };
+
+	// const handleModalOpen = (member: Member, openModalCallback: () => void) => {
+	// 	setSelectedMember(member);
+	// 	openModalCallback();
+	// };
 
 	return {
 		recordPaymentModal: {
@@ -101,15 +164,7 @@ export const useRentManagement = ({ members }: { members: Member[] }) => {
 			closeAddExpense
 		},
 		derivedRents,
-		memberActions: {
-			selectedMember,
-			setSelectedMember,
-			handleShareRent
-		},
-		modalActions: {
-			isModalWorking,
-			setIsModalWorking,
-			handleExitTransitionEnd
-		}
+		handleShareRent,
+		modalActions
 	};
 };

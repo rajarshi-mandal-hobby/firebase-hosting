@@ -1,68 +1,25 @@
 import { SegmentedControl, Alert, Collapse } from "@mantine/core";
-import { useState, startTransition, Activity } from "react";
+import { Activity } from "react";
 import { RentManagement } from "../components/RentManagement";
 import { MembersManagement } from "../../../members/components/MembersManagement";
 import { ICON_SIZE } from "../../../../data/types";
 import { IconExclamation } from "../../../../shared/icons";
-
-type Tab = "rent" | "members";
+import { useTabNavigation, type Tab } from "./hooks/useTabNavigation";
 
 const TAB_DATA: { label: string; value: Tab }[] = [
 	{ label: "Rent", value: "rent" },
 	{ label: "Members", value: "members" }
-];
-
-type ModalType = "recordPayment" | "addExpense";
+] as const;
 
 export function TabNavigation() {
-	const [activeTab, setActiveTab] = useState<Tab>("rent");
-	const [failedModalMap, setFailedModalMap] = useState<Map<ModalType, Set<string>>>(new Map());
-	
-	const addFailure = (type: ModalType, id: string) => {
-		setFailedModalMap((prev) => {
-			const next = new Map(prev);
-			// Use optional chaining and default to new Set
-			const updatedSet = new Set(next.get(type)).add(id);
-			return next.set(type, updatedSet);
-			});
-		};
+	const { activeTab, handleTabChange, modalErrors, setModalError, hasModalErrors, hasModalErrorForMember } = useTabNavigation();
 
-		const removeFailure = (type: ModalType, id: string) => {
-			setFailedModalMap((prev) => {
-				if (!prev.has(type)) return prev; // Optimization: skip update if type doesn't exist
-
-				const next = new Map(prev);
-				const updatedSet = new Set(next.get(type));
-				updatedSet.delete(id);
-
-				if (updatedSet.size === 0) {
-					next.delete(type);
-				} else {
-					next.set(type, updatedSet);
-				}
-				return next;
-			});
-		};
-
-		const hasFailures = (memberId: string, type?: ModalType) => {
-			if (type) return failedModalMap.get(type)?.has(memberId) ?? false;
-
-			// Use for...of on the Map directly instead of spreading into an array
-			for (const set of failedModalMap.values()) {
-				if (set.has(memberId)) return true;
-			}
-			return false;
-		};
-
+	console.log("🎨 Rendering TabNavigation");
 	return (
 		<>
-			<SegmentedControl
-				value={activeTab}
-				onChange={(value) => startTransition(() => setActiveTab(value as Tab))}
-				data={TAB_DATA}
-			/>
+			<SegmentedControl value={activeTab} onChange={handleTabChange} data={TAB_DATA} />
 
-			<Collapse in={failedModalMap.size > 0}>
+			<Collapse in={hasModalErrors}>
 				<Alert
 					color='red'
 					variant='outline'
@@ -70,16 +27,12 @@ export function TabNavigation() {
 					p='xs'
 					mt='lg'
 					icon={<IconExclamation size={ICON_SIZE} color='red' />}>
-					{failedModalMap.size} failed transaction{failedModalMap.size === 1 ? "" : "s"}. Please try again.
+					{modalErrors.size} failed transaction{modalErrors.size === 1 ? "" : "s"}. Please try again.
 				</Alert>
 			</Collapse>
 
 			<Activity mode={activeTab === "rent" ? "visible" : "hidden"}>
-				<RentManagement
-					addFailure={addFailure}
-					removeFailure={removeFailure}
-					hasFailures={hasFailures}
-				/>
+				<RentManagement hasModalErrorForMember={hasModalErrorForMember} onModalError={setModalError} />
 			</Activity>
 
 			<Activity mode={activeTab === "members" ? "visible" : "hidden"}>

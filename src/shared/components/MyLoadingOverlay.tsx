@@ -3,9 +3,14 @@ import { LoaderSleeping } from "./LoaderSleeping";
 
 const FactoryLoadingOverlay = LoadingOverlay.withProps({
 	overlayProps: {
-		blur: 2,
+		blur: 2
 	},
-	zIndex: 100
+	zIndex: 100,
+	transitionProps: {
+		duration: 150,
+		transition: "fade",
+		timingFunction: "ease-in-out"
+	}
 });
 
 interface NewLoadingOverlayProps extends LoadingOverlayProps {
@@ -13,5 +18,14 @@ interface NewLoadingOverlayProps extends LoadingOverlayProps {
 }
 
 export const MyLoadingOverlay = (props: NewLoadingOverlayProps) => (
-	<FactoryLoadingOverlay {...props} loaderProps={{ children: <Paper p='sm' shadow="xs"><LoaderSleeping message={props.message} /></Paper> }} />
+	<FactoryLoadingOverlay
+		loaderProps={{
+			children: (
+				<Paper p='sm' shadow='xs'>
+					<LoaderSleeping message={props.message} />
+				</Paper>
+			)
+		}}
+		{...props}
+	/>
 );
