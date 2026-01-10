@@ -1,5 +1,5 @@
 import { Stack, Text, Alert, Modal, Button, Divider, Title, TextInput, Paper, Collapse, Group } from "@mantine/core";
-import { StatusBadge } from "../../../../../shared/utils";
+import { formatNumberIndianLocale, StatusBadge } from "../../../../../shared/utils";
 import { NumberInputWithCurrency } from "../../../../../shared/components/NumberInputWithCurrency";
 import {
 	GroupSpaceApart,
@@ -18,12 +18,14 @@ import {
 } from "../../../../../shared/icons";
 import { ICON_SIZE } from "../../../../../data/types/constants";
 import type { ModalActions } from "../../hooks/useRentManagement";
+import type { ModalErrorProps } from "../../tab-navigation/hooks/useTabNavigation";
 
 export interface RecordPaymentModalProps {
 	opened: boolean;
 	onClose: () => void;
-	onModalError: (id: string) => void;
-	onModalSuccess: (id: string) => void;
+	// onModalError: (id: string) => void;
+	// onModalSuccess: (id: string) => void;
+	onModalError: <T>(props: ModalErrorProps<T>) => void;
 	modalActions: ModalActions;
 }
 
@@ -40,7 +42,7 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 		actions
 	} = useRecordPaymentModal(props);
 
-	const { selectedMember, isModalWorking, workingMemberName } = props.modalActions;
+	const { selectedMember, isModalWorking, workingMemberName, clearMemberAfterWork } = props.modalActions;
 	const { opened, onClose } = props;
 
 	const memberName = selectedMember?.name || "";
@@ -51,18 +53,21 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 		currentOutstanding: 0
 	};
 
-	console.log("🎨 Rendering RecordPaymentModal", workingMemberName);
+	const isButtonDisabled = isModalWorking || !form.isValid() || !form.isDirty() || !selectedMember;
+
+	console.log("🎨 Rendering RecordPaymentModal", selectedMember, workingMemberName);
 
 	return (
 		<Modal
 			opened={opened}
 			onClose={onClose}
-			onExitTransitionEnd={actions.handleModalExitTransitionEnd}
 			title='Record Payment for:'
 			pos='relative'>
-			{selectedMember && (
 				<>
-					<MyLoadingOverlay visible={isModalWorking} message={`Saving payment for ${workingMemberName || memberName}...`} />
+					<MyLoadingOverlay
+						visible={isModalWorking}
+						message={`Saving payment for ${workingMemberName || memberName}...`}
+					/>
 
 					<form onSubmit={form.onSubmit(actions.handleRecordPayment)}>
 						<Stack gap='lg'>
@@ -70,9 +75,9 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 
 							<Collapse in={hasError}>
 								<Alert color='red' p='xs' variant='outline' icon={<IconExclamation size={ICON_SIZE} />}>
-									<Group wrap="nowrap" grow preventGrowOverflow={false}>
-										<Text >Failed to save expenses. You can try again or reset the form to undo changes.</Text>
-										<Button size='xs' onClick={actions.resetForm} w={110}>
+									<Group wrap='nowrap' grow preventGrowOverflow={false}>
+										<Text>Failed to save expenses. You can try again or reset the form to undo changes.</Text>
+										<Button size='xs' onClick={actions.resetForm} w={110} autoFocus={false}>
 											Reset
 										</Button>
 									</Group>
@@ -91,11 +96,11 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 									{...form.getInputProps("amountPaid")}
 								/>
 								<datalist id='amount-suggestions'>
-									<option value={totalCharges.toIndianLocale()}>Outstanding Amount</option>
+									<option value={formatNumberIndianLocale(totalCharges)}>Outstanding Amount</option>
 									{amountPaid > 0 && (
 										<>
-											<option value={amountPaid.toIndianLocale()}>Paid Amount</option>
-											<option value={(0).toIndianLocale()}>Remove Payment</option>
+											<option value={formatNumberIndianLocale(amountPaid)}>Paid Amount</option>
+											<option value={formatNumberIndianLocale(0)}>Remove Payment</option>
 										</>
 									)}
 								</datalist>
@@ -124,7 +129,7 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 											<IconPayments size={ICON_SIZE} />
 											<Text>Total charges</Text>
 										</GroupIcon>
-										<Text fw={500}>{totalCharges.toIndianLocale()}</Text>
+										<Text fw={500}>{formatNumberIndianLocale(totalCharges)}</Text>
 									</GroupSpaceApart>
 
 									<GroupSpaceApart>
@@ -132,7 +137,7 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 											<IconMoneyBag size={ICON_SIZE} />
 											<Text>Previously paid</Text>
 										</GroupIcon>
-										<Text fw={500}>{amountPaid.toIndianLocale()}</Text>
+										<Text fw={500}>{formatNumberIndianLocale(amountPaid)}</Text>
 									</GroupSpaceApart>
 
 									<GroupSpaceApart>
@@ -140,7 +145,7 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 											<IconRupee size={ICON_SIZE} />
 											<Text>Current outstanding</Text>
 										</GroupIcon>
-										<Text fw={500}>{currentOutstanding.toIndianLocale()}</Text>
+										<Text fw={500}>{formatNumberIndianLocale(currentOutstanding)}</Text>
 									</GroupSpaceApart>
 
 									<Divider color={statusColor} />
@@ -151,7 +156,7 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 											<IconUniversalCurrency size={ICON_SIZE} />
 											<Text>This payment</Text>
 										</GroupIcon>
-										<Text fw={700}>{convertedAmount.toIndianLocale()}</Text>
+										<Text fw={700}>{formatNumberIndianLocale(convertedAmount)}</Text>
 									</GroupSpaceApart>
 
 									<GroupSpaceApart>
@@ -160,7 +165,7 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 											<Text>New outstanding</Text>
 										</GroupIcon>
 										<Text fw={700} c={statusColor}>
-											{newOutstanding.toIndianLocale()}
+											{formatNumberIndianLocale(newOutstanding)}
 										</Text>
 									</GroupSpaceApart>
 
@@ -181,16 +186,15 @@ export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
 									Cancel
 								</Button>
 								<Button
-									disabled={isModalWorking || !form.isValid() || !form.isDirty()}
+									disabled={isButtonDisabled}
 									type='submit'
 									leftSection={<StatusBadge size={16} status={status} />}>
-									Record {convertedAmount.toIndianLocale()}
+									Record {formatNumberIndianLocale(convertedAmount)}
 								</Button>
 							</GroupButtons>
 						</Stack>
 					</form>
 				</>
-			)}
 		</Modal>
 	);
 };

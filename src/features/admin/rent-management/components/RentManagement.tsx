@@ -24,7 +24,7 @@ import type { ModalErrorProps, ModalType } from "../tab-navigation/hooks/useTabN
 
 interface RentManagementContentProps {
 	members: Member[];
-	onModalError: (props: ModalErrorProps) => void;
+	onModalError: <T>(props: ModalErrorProps<T>) => void;
 	hasModalErrorForMember: (memberId: string, type?: ModalType) => boolean;
 }
 
@@ -59,8 +59,11 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 					<Progress.Section value={derivedRents.totalPaidPercentage} color='gray.4'>
 						<Progress.Label c='gray.7'>{derivedRents.totalPaid.toIndianLocale()}</Progress.Label>
 					</Progress.Section>
-					<Progress.Section value={derivedRents.totalOutstandingPercentage} color='red'>
-						<Progress.Label c='red.1'>{derivedRents.totalOutstanding.toIndianLocale()}</Progress.Label>
+					{/* <Progress.Section value={derivedRents.totalPartialPercentage} color='orange'>
+						<Progress.Label c='orange.1'>{derivedRents.totalPartial.toIndianLocale()}</Progress.Label>
+					</Progress.Section> */}
+					<Progress.Section value={derivedRents.totalOutstandingPercentage + derivedRents.totalPartialPercentage} color='red'>
+						<Progress.Label c='red.1'>{(derivedRents.totalOutstanding + derivedRents.totalPartial).toIndianLocale()}</Progress.Label>
 					</Progress.Section>
 				</Progress.Root>
 			</Stack>
@@ -115,7 +118,9 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 										<Menu.Item
 											leftSection={<IconUniversalCurrency size={ICON_SIZE} />}
 											rightSection={
-												<DisplayPriorityIcon hasFailures={hasModalErrorForMember(member.id, "recordPayment")} />
+												<DisplayPriorityIcon
+													hasFailures={hasModalErrorForMember(member.id, "recordPayment")}
+												/>
 											}
 											onClick={() => modalActions.handleModalOpen(member, openRecordPayment)}>
 											Record Payment
@@ -123,7 +128,9 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 										<Menu.Item
 											leftSection={<IconMoneyBag size={ICON_SIZE} />}
 											rightSection={
-												<DisplayPriorityIcon hasFailures={hasModalErrorForMember(member.id, "addExpense")} />
+												<DisplayPriorityIcon
+													hasFailures={hasModalErrorForMember(member.id, "addExpense")}
+												/>
 											}
 											onClick={() => modalActions.handleModalOpen(member, openAddExpense)}>
 											Add Expense
@@ -142,8 +149,9 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 			<RecordPaymentModal
 				opened={recordPaymentModalOpened}
 				onClose={closeRecordPayment}
-				onModalError={(id) => onModalError({ isError: true, type: "recordPayment", memberId: id })}
-				onModalSuccess={(id) => onModalError({ isError: false, type: "recordPayment", memberId: id })}
+				// onModalError={(id) => onModalError({ isError: true, type: "recordPayment", memberId: id })}
+				// onModalSuccess={(id) => onModalError({ isError: false, type: "recordPayment", memberId: id })}
+				onModalError={onModalError}
 				modalActions={modalActions}
 			/>
 
@@ -164,7 +172,7 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 
 interface RentManagementProps {
 	hasModalErrorForMember: (memberId: string, type?: ModalType) => boolean;
-	onModalError: (props: ModalErrorProps) => void;
+	onModalError: <T>(props: ModalErrorProps<T>) => void;
 }
 
 export function RentManagement({ hasModalErrorForMember, onModalError }: RentManagementProps) {

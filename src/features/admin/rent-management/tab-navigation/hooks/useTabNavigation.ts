@@ -2,28 +2,67 @@ import { startTransition, useMemo, useState } from "react";
 
 export type Tab = "rent" | "members";
 export type ModalType = "recordPayment" | "addExpense";
-export interface ModalErrorProps {
+export interface ModalErrorProps<T> {
 	isError: boolean;
 	type: ModalType;
 	memberId: string;
+    formValues: T;
 }
+
+ const useFormErrorCache = <T>() => {
+    const [errorCache, setErrorCache] = useState<Map<string, T>>(new Map());
+
+    const hasErrorCache = (memberId?: string): boolean => {
+        if (!memberId) return false;
+        return errorCache.size > 0 && errorCache.has(memberId);
+    };
+
+    const removeErrorCache = (memberId: string) => {
+        setErrorCache((prev) => {
+            const prevMap = new Map(prev);
+            prevMap.delete(memberId);
+            return prevMap;
+        });
+    };
+
+    const addErrorCache = (memberId: string, values: T) => {
+        setErrorCache((prev) => {
+            const prevMap = new Map(prev);
+            prevMap.set(memberId, values);
+            return prevMap;
+        });
+    };
+
+    return {
+        errorCache,
+        removeErrorCache,
+        addErrorCache,
+        hasErrorCache
+    };
+};
 
 export const useTabNavigation = () => {
 	const [activeTab, setActiveTab] = useState<Tab>("rent");
 	const [modalErrors, setModalErrors] = useState<Map<ModalType, Set<string>>>(new Map());
+	const formErrorCache = useFormErrorCache();
 
-	const setModalError = ({ isError, type, memberId }: ModalErrorProps) => {
+	const setModalError = <T>({ isError, type, memberId, formValues }: ModalErrorProps<T>) => {
 		console.log("setModalError", isError, type, memberId);
 		setModalErrors((prev) => {
-			const next = new Map(prev);
-			const updatedSet = new Set(next.get(type));
+			const updatedSet = new Set(prev.get(type));
 			if (isError) {
 				updatedSet.add(memberId);
+                formErrorCache.addErrorCache(memberId, formValues);
+				return new Map(prev).set(type, updatedSet);
+                
 			} else {
-				updatedSet.delete(memberId);
+				if (updatedSet.has(memberId)) {
+					updatedSet.delete(memberId);
+                    formErrorCache.removeErrorCache(memberId);
+					return new Map(prev).set(type, updatedSet);
+				}
+				return prev;
 			}
-			console.log("setModalError", next);
-			return next.set(type, updatedSet);
 		});
 	};
 

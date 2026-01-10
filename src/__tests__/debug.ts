@@ -1,1 +1,4 @@
-console.log(Math.random() < 0.2);
+import { formatNumberIndianLocale } from "../shared/utils";
+
+const num = 0;
+console.log(formatNumberIndianLocale(num));

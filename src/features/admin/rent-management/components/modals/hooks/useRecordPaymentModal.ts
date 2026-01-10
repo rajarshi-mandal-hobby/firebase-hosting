@@ -1,5 +1,5 @@
 import { useForm } from "@mantine/form";
-import { useState, useEffectEvent, useEffect } from "react";
+import { useState, useEffectEvent, useEffect, useRef } from "react";
 import type { PaymentStatus } from "../../../../../../data/types";
 import {
 	getStatusColor,
@@ -21,12 +21,14 @@ type RecordPaymentFormData = {
 export const useRecordPaymentModal = ({
 	opened,
 	onClose,
-	onModalSuccess,
+	// onModalSuccess,
+	// onModalError,
 	onModalError,
-	modalActions: { workingMemberName, selectedMember, handleModalWork, handleExitTransitionEnd }
+	modalActions: { isModalWorking, workingMemberName, selectedMember, handleModalWork }
 }: RecordPaymentModalProps) => {
 	const [status, setStatus] = useState<PaymentStatus>("Due");
 	const { errorCache, removeErrorCache, addErrorCache, hasErrorCache } = useFormErrorCache<RecordPaymentFormData>();
+	const isSuccessRef = useRef(false);
 	const { totalCharges, amountPaid, note } = selectedMember?.currentMonthRent || {
 		totalCharges: 0,
 		amountPaid: 0,
@@ -34,23 +36,16 @@ export const useRecordPaymentModal = ({
 	};
 	const hasError = hasErrorCache(selectedMember?.id);
 
-	console.log("useRecordPaymentModal", workingMemberName, selectedMember?.name);
-
 	const handleOnSuccess = async (id: string) => {
-		removeErrorCache(id);
-		onModalSuccess(id);
-
-		console.log("handleOnSuccess", id, workingMemberName);
-		if (workingMemberName === selectedMember?.name) {
-			await simulateNetworkDelay(500);
-			onClose();
-		}
+		// removeErrorCache(id);
+		// onModalSuccess(id);
+		onModalError<RecordPaymentFormData>({memberId: id, formValues: form.values, type: "recordPayment", isError: false });
 	};
 
 	const handleError = (id: string, values: RecordPaymentFormData) => {
-		console.log("handleError", id);
-		onModalError(id);
-		addErrorCache(id, values);
+		// onModalError(id);
+		// addErrorCache(id, values);
+		onModalError<RecordPaymentFormData>({memberId: id, formValues: values, type: "recordPayment", isError: true });
 	};
 
 	const form = useForm<RecordPaymentFormData>({
@@ -91,10 +86,11 @@ export const useRecordPaymentModal = ({
 		}
 	});
 
-	const effectEvent = useEffectEvent(() => {
+	// This event is used to set the form values when the modal is opened
+	const setFormValuesEvent = useEffectEvent(() => {
 		if (!selectedMember || !opened) return;
-		console.log("effectEvent called");
-
+		// Reset the success flag
+		isSuccessRef.current = false;
 		// If there's an error, we'll use the cached values
 		if (errorCache.has(selectedMember.id)) {
 			form.setValues(errorCache.get(selectedMember.id)!);
@@ -113,8 +109,24 @@ export const useRecordPaymentModal = ({
 	});
 
 	useEffect(() => {
-		effectEvent();
+		setFormValuesEvent();
 	}, [opened]);
+
+	// Use useEffect to close the modal if it is open for the same working member
+	// isModalWorking is the key to run the useEffect
+	useEffect(() => {
+		// Guard clause
+		if (!opened || !isSuccessRef.current || workingMemberName !== selectedMember?.name) return;
+		// Set a timeout of 250ms to close the modal
+		const timeoutId = setTimeout(() => {
+			console.log("useEffect called to close modal");
+			if (opened && isSuccessRef.current && workingMemberName === selectedMember?.name) {
+				onClose();
+			}
+		}, 250);
+		// Always clear the timeout
+		return () => clearTimeout(timeoutId);
+	}, [onClose, opened, selectedMember, workingMemberName, isModalWorking]);
 
 	const convertedAmount = toNumber(form.values.amountPaid);
 	const newOutstanding = totalCharges - convertedAmount;
@@ -122,17 +134,6 @@ export const useRecordPaymentModal = ({
 
 	const statusColor = getStatusColor(status);
 	const statusTitle = getStatusTitle(status);
-
-	const handleModalExitTransitionEnd = () => {
-		console.log("handleModalExitTransitionEnd called");
-		form.setValues({
-			amountPaid: "",
-			note: ""
-		});
-		form.resetDirty();
-		setStatus("Due");
-		handleExitTransitionEnd();
-	};
 
 	const handleRecordPayment = () => {
 		if (!selectedMember) {
@@ -149,13 +150,15 @@ export const useRecordPaymentModal = ({
 			try {
 				await simulateNetworkDelay(3000);
 				simulateRandomError();
-				// throw new Error("Random error");
+				throw new Error("Random error");
 
 				notifyUpdate(loadingNotification, message.replace("ing", "ed"), { type: "success" });
 				handleOnSuccess(memberId);
+				isSuccessRef.current = true;
 			} catch (error) {
 				notifyUpdate(loadingNotification, (error as Error).message, { type: "error" });
 				handleError(memberId, form.values);
+				isSuccessRef.current = false;
 			}
 		});
 	};
@@ -177,7 +180,6 @@ export const useRecordPaymentModal = ({
 		isPaymentBelowOutstanding,
 		hasError,
 		actions: {
-			handleModalExitTransitionEnd,
 			handleRecordPayment,
 			resetForm
 		}
