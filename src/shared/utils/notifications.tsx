@@ -83,7 +83,7 @@ export const notifyUpdate = (id: string, message: string, options: Partial<Notif
 		id,
 		message,
 		type: "doneAll",
-		autoClose: options.type === "error" ? 3000 : DEFAULT_AUTO_CLOSE,
+		autoClose: DEFAULT_AUTO_CLOSE,
 		...options
 	});
 };
@@ -92,7 +92,7 @@ export const notifySuccess = (message: string, options?: Partial<NotifyOptions>)
 	notify({ message, type: "success", ...options });
 
 export const notifyError = (message: string, options?: Partial<NotifyOptions>) =>
-	notify({ message, type: "error", ...options });
+	notify({ message, type: "error", autoClose: 3000, ...options });
 
 export const notifyInfo = (message: string, options?: Partial<NotifyOptions>) =>
 	notify({ message, type: "info", ...options });
@@ -104,34 +104,3 @@ export const notifyLoading = (message: string, options?: Partial<NotifyOptions>)
 		autoClose: false,
 		...options
 	});
-
-/**
- * Wraps a promise with optimal loading, success, and error notifications.
- */
-export async function notifyPromise<T>(
-	promise: Promise<T>,
-	{
-		loading,
-		success,
-		error
-	}: {
-		loading: string;
-		success: string | ((data: T) => string);
-		error: string | ((error: any) => string);
-	},
-	options?: Partial<NotifyOptions>
-): Promise<T> {
-	const id = notifyLoading(loading, { ...options });
-
-	try {
-		const result = await promise;
-		const successMessage = typeof success === "function" ? success(result) : success;
-		notifyUpdate(id, successMessage, { type: "success", ...options });
-		return result;
-	} catch (err: any) {
-		const errorMessage = typeof error === "function" ? error(err) : error;
-		// For errors, we usually want to keep the notification a bit longer or let it stay until dismissed
-		notifyUpdate(id, errorMessage, { type: "error", autoClose: 4000, ...options });
-		throw err;
-	}
-}

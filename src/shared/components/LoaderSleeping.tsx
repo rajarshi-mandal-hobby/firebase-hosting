@@ -1,12 +1,12 @@
 import { type TextProps, type TitleOrder, Stack, Text, Title } from "@mantine/core";
 import classes from "../../css-modules/Loader.module.css";
 
-type LoaderSleepingProps = TextProps & { message?: string };
+type LoaderSleepingProps = TextProps & { name?: string };
 
 export const LoaderSleeping = ({
    size = "sm",
    c = "gray.7",
-   message = "Getting things ready...",
+   name,
    ...props
 }: LoaderSleepingProps) => {
    let titleOrder: TitleOrder = 4;
@@ -28,14 +28,19 @@ export const LoaderSleeping = ({
          titleOrder = 4;
    }
 
+   const message = `Getting things ready...`;
+
    return (
       <Stack align='center' justify='center' gap='xs'>
          <Title order={titleOrder} c={c} className={classes["loader-sleeping"]}>
             <span className={classes.face}>(￣o￣). z Z</span>
          </Title>
-         <Text fw={700} size={size} c={c} {...props}>
-            {message}
-         </Text>
+         <Stack align='center' justify='center' gap={0}>
+            <Text fw={700} size={size} c={c} {...props}>
+               {message}
+            </Text>
+            {name && <Text fw={700} size={size} c={c} {...props}>{name}</Text>}
+         </Stack>
       </Stack>
    );
 };

@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
 import { useEffect, useEffectEvent, useState, useTransition, type TransitionFunction } from "react";
 import type { Member } from "../../../../data/types";
-import { formatNumberIndianLocale, notifyError } from "../../../../shared/utils";
+import { toIndianLocale, notifyError } from "../../../../shared/utils";
 import { useDisclosure } from "@mantine/hooks";
+import { useModalActions } from "../../tab-navigation/hooks/useModalActions";
 
 export type MessagesPlatform = "whatsapp" | "share";
 
@@ -16,65 +17,12 @@ export interface DerivedRents {
 	totalOutstandingPercentage: number;
 }
 
-export interface ModalActions {
-	selectedMember: Member | null;
-	workingMemberName: string | null;
-	isModalWorking: boolean;
-	handleModalOpen: (member: Member, openModalCallback: () => void) => void;
-	handleModalWork: (memberName: string, callback: TransitionFunction) => void;
-	clearMemberAfterWork: () => void;
-}
-
-const useModalActions = (isModalOpen: boolean): ModalActions => {
-	const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-	const [workingMemberName, setWorkingMemberName] = useState<string | null>(null);
-	const [isModalWorking, startModalWork] = useTransition();
-
-	const handleModalOpen = (member: Member, openModalCallback: () => void) => {
-		setSelectedMember(member);
-		openModalCallback();
-	};
-
-	const handleModalWork = (memberName: string, callback: TransitionFunction) => {
-		setWorkingMemberName(memberName);
-		startModalWork(callback);
-	};
-
-	const clearMemberAfterWork = () => {
-		if (isModalWorking) return;
-		if (selectedMember) setSelectedMember(null);
-		if (workingMemberName) setWorkingMemberName(null);
-	};
-
-	// Clear member only when modal is not open and has finished working
-	const clearMemberAfterWrokEvent = useEffectEvent(() => {
-		if (!isModalWorking && !isModalOpen) clearMemberAfterWork();
-		console.log("clearMemberAfterWorkEvent called", selectedMember?.name, workingMemberName);
-	});
-
-	useEffect(() => {
-		clearMemberAfterWrokEvent();
-	}, [isModalWorking, isModalOpen]);
-
-	return {
-		selectedMember,
-		workingMemberName,
-		isModalWorking,
-		handleModalOpen,
-		handleModalWork,
-		clearMemberAfterWork
-	};
-};
-
 /**
  * Custom hook for rent management data using FirestoreService with real-time updates
  */
 export const useRentManagement = ({ members }: { members: Member[] }) => {
 	const [recordPaymentModalOpened, { open: openRecordPayment, close: closeRecordPayment }] = useDisclosure(false);
 	const [addExpenseModalOpened, { open: openAddExpense, close: closeAddExpense }] = useDisclosure(false);
-	// const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-	// const [workingMemberName, setWorkingMemberName] = useState<string | null>(null);
-	// const [isModalWorking, startModalWork] = useTransition();
 	const modalActions = useModalActions(recordPaymentModalOpened || addExpenseModalOpened);
 
 	const derivedRents = members.reduce<DerivedRents>(
@@ -107,16 +55,16 @@ export const useRentManagement = ({ members }: { members: Member[] }) => {
 		const greeting = `Hi ${member.name.split(" ")[0]}`;
 		const rentMonth = dayjs(member.currentMonthRent.id).format("MMMM YYYY");
 		const rentStatus = member.currentMonthRent.currentOutstanding > 0 ? "is due" : "has been paid";
-		let message = `${greeting}, the rent of amount *${formatNumberIndianLocale(member.currentMonthRent.totalCharges)}* for *${rentMonth}* ${rentStatus}.`;
+		let message = `${greeting}, the rent of amount *${toIndianLocale(member.currentMonthRent.totalCharges)}* for *${rentMonth}* ${rentStatus}.`;
 		message += `\r\n*Details:*`;
-		message += `\r\n- Rent: ${formatNumberIndianLocale(member.currentMonthRent.rent)}`;
-		message += `\r\n- Electricity: ${formatNumberIndianLocale(member.currentMonthRent.electricity)}`;
-		message += `\r\n- Wi-Fi: ${formatNumberIndianLocale(member.currentMonthRent.wifi)}`;
+		message += `\r\n- Rent: ${toIndianLocale(member.currentMonthRent.rent)}`;
+		message += `\r\n- Electricity: ${toIndianLocale(member.currentMonthRent.electricity)}`;
+		message += `\r\n- Wi-Fi: ${toIndianLocale(member.currentMonthRent.wifi)}`;
 		if (member.currentMonthRent.previousOutstanding > 0) {
-			message += `\r\n- Previous Outstanding: ${formatNumberIndianLocale(member.currentMonthRent.previousOutstanding)}`;
+			message += `\r\n- Previous Outstanding: ${toIndianLocale(member.currentMonthRent.previousOutstanding)}`;
 		}
 		if (member.currentMonthRent.expenses.length > 0) {
-			message += `\r\n- Expenses: ${member.currentMonthRent.expenses.map(({ amount, description }) => `${description}: ${formatNumberIndianLocale(amount)}`).join(", ")}`;
+			message += `\r\n- Expenses: ${member.currentMonthRent.expenses.map(({ amount, description }) => `${description}: ${toIndianLocale(amount)}`).join(", ")}`;
 		}
 		message += `\r\nPlease make the payment within 10th of this month.`;
 		if (platform === "whatsapp") {

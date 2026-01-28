@@ -1,7 +1,8 @@
 import { useForm } from "@mantine/form";
-import { useTransition, useState, startTransition, useEffectEvent, useEffect } from "react";
+import { useState, startTransition, useEffectEvent, useEffect } from "react";
 import { simulateNetworkDelay } from "../../../../../../data/utils/serviceUtils";
 import { notifyLoading, notifyUpdate, toNumber } from "../../../../../../shared/utils";
+import type { AddExpenseModalProps } from "../AddExpenseModal";
 
 interface FormExpenses {
 	expenses: {
@@ -15,36 +16,20 @@ export const useAddExpenseModal = ({
 	memberId,
 	previousExpenses,
 	opened,
-	onSuccess,
 	onClose,
-	onError,
-	onModalWorking
-}: {
-	memberName: string;
-	memberId: string;
-	previousExpenses: FormExpenses["expenses"];
-	opened: boolean;
-	onSuccess: (memberId: string) => void;
-	onClose: () => void;
-	onError: (error: string) => void;
-	onModalWorking: (working: boolean) => void;
-}) => {
-	const [isSaving, startSaving] = useTransition();
+	isModalWorking,
+	handleModalWork,
+	hasErrorCacheForMember,
+	getModalError,
+	setModalError,
+	clearModalError
+}: AddExpenseModalProps) => {
 	const [refreshKey, setRefreshKey] = useState(0);
 	const [totalAmount, setTotalAmount] = useState(0);
-	const [expenseFormCache, setExpenseFormCache] = useState<Map<string, FormExpenses["expenses"]>>(new Map());
-	const [previousExpensesCache, setPreviousExpensesCache] = useState<FormExpenses["expenses"]>(previousExpenses);
+	// Required to reset form values
+	const [previousExpensesCache, setPreviousExpensesCache] = useState<FormExpenses["expenses"]>([]);
 	const hasPreviousExpenses = previousExpenses.length > 0;
-	const hasError = expenseFormCache.has(memberId) ?? false;
-
-	const clearCache = () => {
-		setExpenseFormCache((prev) => {
-			const newMap = new Map(prev);
-			newMap.delete(memberId);
-			return newMap;
-		});
-		onSuccess(memberId);
-	};
+	const hasError = hasErrorCacheForMember(memberId, ["addExpense"]);
 
 	// ========== Form Setup ==========
 	const form = useForm<FormExpenses>({
@@ -149,13 +134,16 @@ export const useAddExpenseModal = ({
 
 	// Use useEffectEvent to avoid dependency issues
 	const addDefaultFormValuesEvent = useEffectEvent(() => {
-		if (!opened || isSaving) return;
+		if (!opened || isModalWorking) return;
+		const formValues = hasPreviousExpenses ? previousExpenses : [{ description: "", amount: "" }];
+		setPreviousExpensesCache(formValues);
 		if (hasError) {
-			form.setValues({ expenses: expenseFormCache.get(memberId) });
+			form.setValues(getModalError<FormExpenses>(memberId, "addExpense"));
+			form.resetDirty({ expenses: formValues });
 			return;
 		}
-		setPreviousExpensesCache(previousExpenses);
-		form.setValues({ expenses: hasPreviousExpenses ? previousExpenses : [{ description: "", amount: "" }] });
+
+		form.setValues({ expenses: formValues });
 		form.resetDirty();
 	});
 
@@ -175,8 +163,8 @@ export const useAddExpenseModal = ({
 				if (!current) {
 					return count + 1;
 				}
-				const descEmpty = current.description.trim() !== previousExpenses[index].description.trim();
-				const amountEmpty = current.amount.toString().trim() !== previousExpenses[index].amount.toString().trim();
+				const descEmpty = current.description.trim() === "";
+				const amountEmpty = current.amount.toString().trim() === "";
 
 				// Both fields empty -> treated as "removed"
 				if (descEmpty && amountEmpty) {
@@ -186,7 +174,6 @@ export const useAddExpenseModal = ({
 				return count;
 			}, 0)
 		:	0;
-    console.log("removedCount", removedCount);
 
 	const isRemoved = removedCount > 0;
 
@@ -218,7 +205,7 @@ export const useAddExpenseModal = ({
 			setPreviousExpensesCache((prev) => prev.filter((_, i) => i !== 0));
 			setRefreshKey((prev) => prev + 1);
 		}
-		clearCache();
+		form.clearErrors();
 	};
 
 	const resetExpenses = (index: number): void => {
@@ -226,18 +213,16 @@ export const useAddExpenseModal = ({
 		if (!original) return;
 
 		form.replaceListItem("expenses", index, original);
-		clearCache();
+		setRefreshKey((prev) => prev + 1);
+		form.clearErrors();
 	};
 
 	const handleOnSubmit = async (values: FormExpenses) => {
-		onModalWorking(true);
-		console.log("Expenses: ", values);
-
 		const loadingNotificationId = notifyLoading(
 			`${isRemovedOrModified ? "Updating" : "Adding"} expenses for ${memberName.split(" ")[0]}`
 		);
 
-		startSaving(async () => {
+		handleModalWork(memberName, async () => {
 			try {
 				// Mock API call - replace with actual Firebase function call
 				await simulateNetworkDelay(3000);
@@ -250,46 +235,36 @@ export const useAddExpenseModal = ({
 				);
 
 				// On success, we clear the cache
-				clearCache();
 				onClose();
 			} catch (error) {
-				// On error, save current state to cache
-				setExpenseFormCache((prev) => {
-					const newMap = new Map(prev);
-					newMap.set(memberId, [...currentExpenses]);
-					return newMap;
-				});
-				onError(memberId);
-
+				setModalError(memberId, memberName, "addExpense", values);
 				notifyUpdate(loadingNotificationId, (error as Error).message, { type: "error" });
-			} finally {
-				onModalWorking(false);
 			}
 		});
 	};
 
-    const resetRemoved = () => {
-        // Get the previous values and filter out the previous expenses
-        const prevValues = form.getValues().expenses;
-        const initialValues = form.getInitialValues().expenses;
-        const resultMap = [...initialValues, ...prevValues].reduce((acc, item) => {
-            if (item.amount === "" && item.description === "") return acc;
-            acc.set(item.amount, item);
-            return acc;
-        }, new Map<FormExpenses["expenses"][number]["amount"], FormExpenses["expenses"][number]>());
-        const filteredValues = [...resultMap.values()]
-        
-        form.setValues({ expenses: filteredValues });
-        setPreviousExpensesCache(previousExpenses);
-        setRefreshKey((prev) => prev + 1);
-    }
+	const resetRemoved = () => {
+		// Get the previous values and filter out the previous expenses
+		const prevValues = form.getValues().expenses;
+		const initialValues = form.getInitialValues().expenses;
+		const resultMap = [...initialValues, ...prevValues].reduce((acc, item) => {
+			if (item.amount === "" && item.description === "") return acc;
+			acc.set(item.amount, item);
+			return acc;
+		}, new Map<FormExpenses["expenses"][number]["amount"], FormExpenses["expenses"][number]>());
+		const filteredValues = [...resultMap.values()];
 
-    const resetForm = () => {
-        form.reset();
-        setPreviousExpensesCache(previousExpenses);
-        clearCache();
-        setRefreshKey((prev) => prev + 1);
-    }
+		form.setValues({ expenses: filteredValues });
+		setPreviousExpensesCache(previousExpenses);
+		setRefreshKey((prev) => prev + 1);
+	};
+
+	const resetForm = () => {
+		form.reset();
+		setPreviousExpensesCache(previousExpenses);
+		setRefreshKey((prev) => prev + 1);
+		clearModalError(memberId, 'addExpense');
+	};
 
 	const actions = {
 		handleOnSubmit,
@@ -298,7 +273,7 @@ export const useAddExpenseModal = ({
 		addExpenseItem,
 		isLastExpenseEntry,
 		resetRemoved,
-        resetForm
+		resetForm
 	};
 
 	return {
@@ -308,7 +283,6 @@ export const useAddExpenseModal = ({
 		previousExpensesCache,
 		removedCount,
 		refreshKey,
-		isSaving,
 		isRemoved,
 		isRemovedOrModified,
 		hasError,

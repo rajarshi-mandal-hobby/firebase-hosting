@@ -3,7 +3,7 @@ import { Text, Stack, Title } from "@mantine/core";
 import { AdminMenu } from "./shared-components";
 import { useAuth } from "../../../contexts/AuthContext";
 import { GroupIcon, GroupSpaceApart, LoadingBox, MyAvatar } from "../../../shared/components";
-import { TabNavigation } from "../rent-management/tab-navigation/TabNavigation";
+import { TabNavigation } from "../tab-navigation/TabNavigation";
 
 export const AdminDashboard = () => {
 	const { user, loading } = useAuth();

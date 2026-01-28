@@ -11,7 +11,6 @@ import {
 } from "../../../../../../shared/utils";
 import { simulateNetworkDelay, simulateRandomError } from "../../../../../../data/utils/serviceUtils";
 import type { RecordPaymentModalProps } from "../RecordPaymentModal";
-import { useFormErrorCache } from "./useFormErrorCache";
 
 type RecordPaymentFormData = {
 	amountPaid: string | number;
@@ -21,32 +20,20 @@ type RecordPaymentFormData = {
 export const useRecordPaymentModal = ({
 	opened,
 	onClose,
-	// onModalSuccess,
-	// onModalError,
-	onModalError,
-	modalActions: { isModalWorking, workingMemberName, selectedMember, handleModalWork }
+	modalActions: { isModalWorking, workingMemberName, selectedMember, handleModalWork },
+	setModalError,
+	clearModalError,
+	getModalError,
+	hasErrorCacheForMember
 }: RecordPaymentModalProps) => {
 	const [status, setStatus] = useState<PaymentStatus>("Due");
-	const { errorCache, removeErrorCache, addErrorCache, hasErrorCache } = useFormErrorCache<RecordPaymentFormData>();
 	const isSuccessRef = useRef(false);
 	const { totalCharges, amountPaid, note } = selectedMember?.currentMonthRent || {
 		totalCharges: 0,
 		amountPaid: 0,
 		note: ""
 	};
-	const hasError = hasErrorCache(selectedMember?.id);
-
-	const handleOnSuccess = async (id: string) => {
-		// removeErrorCache(id);
-		// onModalSuccess(id);
-		onModalError<RecordPaymentFormData>({memberId: id, formValues: form.values, type: "recordPayment", isError: false });
-	};
-
-	const handleError = (id: string, values: RecordPaymentFormData) => {
-		// onModalError(id);
-		// addErrorCache(id, values);
-		onModalError<RecordPaymentFormData>({memberId: id, formValues: values, type: "recordPayment", isError: true });
-	};
+	const hasError = hasErrorCacheForMember(selectedMember?.id ?? "", ["recordPayment"]);
 
 	const form = useForm<RecordPaymentFormData>({
 		initialValues: {
@@ -92,11 +79,12 @@ export const useRecordPaymentModal = ({
 		// Reset the success flag
 		isSuccessRef.current = false;
 		// If there's an error, we'll use the cached values
-		if (errorCache.has(selectedMember.id)) {
-			form.setValues(errorCache.get(selectedMember.id)!);
+		if (hasError) {
+			const cachedValues = getModalError<RecordPaymentFormData>(selectedMember.id, "recordPayment");
+			form.setValues(cachedValues);
 			form.resetDirty({
 				amountPaid: selectedMember.currentMonthRent.amountPaid || "",
-				note: selectedMember.currentMonthRent.note
+				note: selectedMember.currentMonthRent.note ?? ""
 			});
 			return;
 		}
@@ -135,7 +123,7 @@ export const useRecordPaymentModal = ({
 	const statusColor = getStatusColor(status);
 	const statusTitle = getStatusTitle(status);
 
-	const handleRecordPayment = () => {
+	const handleRecordPayment = (values: RecordPaymentFormData) => {
 		if (!selectedMember) {
 			notifyError("Member not found");
 			return;
@@ -153,11 +141,11 @@ export const useRecordPaymentModal = ({
 				throw new Error("Random error");
 
 				notifyUpdate(loadingNotification, message.replace("ing", "ed"), { type: "success" });
-				handleOnSuccess(memberId);
 				isSuccessRef.current = true;
+				clearModalError(memberId, "recordPayment");
 			} catch (error) {
 				notifyUpdate(loadingNotification, (error as Error).message, { type: "error" });
-				handleError(memberId, form.values);
+				setModalError(memberId, memberName, "recordPayment", values);
 				isSuccessRef.current = false;
 			}
 		});
@@ -166,8 +154,7 @@ export const useRecordPaymentModal = ({
 	const resetForm = () => {
 		if (!selectedMember) return;
 		form.reset();
-		removeErrorCache(selectedMember.id);
-		onModalSuccess(selectedMember.id);
+		clearModalError(selectedMember.id, "recordPayment");
 	};
 
 	return {

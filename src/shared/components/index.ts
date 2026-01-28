@@ -14,6 +14,8 @@ export * from './group-helpers';
 export * from './NumberInputWithCurrency';
 export * from './FormClearButton';
 export * from './MyAlert';
+export * from './MemberActionModal';
+
 
 
 

@@ -24,7 +24,8 @@ import {
 	Text,
 	type MantineColorsTuple,
 	Title,
-	Collapse
+	Collapse,
+	rgba
 } from "@mantine/core";
 import classesAccordion from "./css-modules/Accordion.module.css";
 import { MonthPickerInput } from "@mantine/dates";
@@ -116,14 +117,16 @@ export const theme = createTheme({
 		}),
 		// Alert
 		Alert: Alert.extend({
-			styles: {
-				icon: {
-					marginRight: rem(4)
-				},
-				title: {
-					fontWeight: 700,
-					fontSize: "var(--mantine-font-size-md)"
-				}
+			styles: (theme, props) => {
+				return {
+					icon: {
+						marginRight: rem(4)
+					},
+					title: {
+						fontWeight: 700,
+						fontSize: "var(--mantine-font-size-md)"
+					}
+				};
 			}
 		}),
 		// Text

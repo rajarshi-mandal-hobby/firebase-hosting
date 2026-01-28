@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { lazy, type ComponentType } from "react";
 
 export * from "./notifications";
 export * from "./statusUtils";
@@ -8,13 +9,13 @@ export * from "./statusUtils";
  * This is useful for scenarios where you want to create a partial version of a complex object type.
  */
 export type DeepPartial<T> = {
-   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+	[P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
 export const toNumber = (value: string | number): number => {
-   if (typeof value === "number") return value;
-   const num = Number(value);
-   return isNaN(num) ? 0 : num;
+	if (typeof value === "number") return value;
+	const num = Number(value);
+	return isNaN(num) ? 0 : num;
 };
 
 /**
@@ -23,34 +24,35 @@ export const toNumber = (value: string | number): number => {
  * @param isCurrency - Whether to format as currency (default: true)
  * @returns Formatted number string
  */
-export const formatNumberIndianLocale = (number: number | string, isCurrency = true): string => {
-   // Check if the number has a decimal part using Math.floor()
-   const num = toNumber(number);
-   const hasDecimal = num % 1 !== 0;
+export const toIndianLocale = (number: number | string, isCurrency = true): string => {
+	// Check if the number has a decimal part using Math.floor()
+	const num = toNumber(number);
+	const hasDecimal = num % 1 !== 0;
 
-   // Define base options for currency formatting
-   const numberFormatOptions: Intl.NumberFormatOptions | undefined = isCurrency
-      ? {
-           style: "currency",
-           currency: "INR",
-           currencyDisplay: "symbol",
-           minimumFractionDigits: hasDecimal ? 2 : 0,
-           maximumFractionDigits: hasDecimal ? 2 : 0
-        }
-      : undefined;
+	// Define base options for currency formatting
+	const numberFormatOptions: Intl.NumberFormatOptions | undefined =
+		isCurrency ?
+			{
+				style: "currency",
+				currency: "INR",
+				currencyDisplay: "symbol",
+				minimumFractionDigits: hasDecimal ? 2 : 0,
+				maximumFractionDigits: hasDecimal ? 2 : 0
+			}
+		:	undefined;
 
-   // Create and use the formatter
-   const formatter = new Intl.NumberFormat("en-IN", numberFormatOptions);
-   return formatter.format(num);
+	// Create and use the formatter
+	const formatter = new Intl.NumberFormat("en-IN", numberFormatOptions);
+	return formatter.format(num);
 };
 
 // == Ordinal Suffix Formatting ==
 const enOrdinalRules = new Intl.PluralRules("en-US", { type: "ordinal" });
 const suffixes = new Map([
-   ["one", "st"],
-   ["two", "nd"],
-   ["few", "rd"],
-   ["other", "th"]
+	["one", "st"],
+	["two", "nd"],
+	["few", "rd"],
+	["other", "th"]
 ]);
 
 /**
@@ -59,9 +61,9 @@ const suffixes = new Map([
  * @returns The formatted number with its ordinal suffix.
  */
 export const formatNumberWithOrdinal = (n: number) => {
-   const rule = enOrdinalRules.select(n);
-   const suffix = suffixes.get(rule);
-   return `${n}${suffix}`;
+	const rule = enOrdinalRules.select(n);
+	const suffix = suffixes.get(rule);
+	return `${n}${suffix}`;
 };
 
 /**
@@ -70,8 +72,8 @@ export const formatNumberWithOrdinal = (n: number) => {
  * @returns The normalized phone number as a string.
  */
 export const normalizePhoneInput = (value: number | string): string => {
-   const phoneStr = String(value).replace(/\D/g, "").slice(-10);
-   return phoneStr;
+	const phoneStr = String(value).replace(/\D/g, "").slice(-10);
+	return phoneStr;
 };
 
 /** Formats a phone number by inserting a space after every 5 digits.
@@ -79,20 +81,25 @@ export const normalizePhoneInput = (value: number | string): string => {
  * @returns The formatted phone number as a string.
  */
 export const formatPhoneNumber = (inputValue: any) => {
-   // 1. Remove all non-numeric characters (enforce numbers only) AND remove spaces
-   const noSpacesOrLetters = normalizePhoneInput(inputValue);
+	// 1. Remove all non-numeric characters (enforce numbers only) AND remove spaces
+	const noSpacesOrLetters = normalizePhoneInput(inputValue);
 
-   // 2. Insert a space after every 5 digits using regex
-   const formatted = noSpacesOrLetters.replace(/(\d{5})/g, "$1 ").trim();
+	// 2. Insert a space after every 5 digits using regex
+	const formatted = noSpacesOrLetters.replace(/(\d{5})/g, "$1 ").trim();
 
-   return formatted;
+	return formatted;
 };
 
 /** Formats a phone number for display by adding the country code prefix.
  * @param value - The phone number input as a string or number.
  * @returns The formatted phone number with country code as a string.
  */
-export const displayPhoneNumber = (value: number | string) => `+91 ${formatPhoneNumber(value)}`;
+export const displayPhoneNumber = (value: number | string) => {
+	const phoneString = String(value);
+	return phoneString.startsWith("+91") ?
+			phoneString.replace(/(\d{2})(\d{5})/g, "$1 $2 ")
+		:	`+91 ${formatPhoneNumber(value)}`;
+};
 
 /**
  * Safely retrieves a date string in 'YYYY-MM' format from various date representations.
@@ -101,20 +108,20 @@ export const displayPhoneNumber = (value: number | string) => `+91 ${formatPhone
  * @returns The formatted date string in 'YYYY-MM' format.
  */
 export const getSafeDate = (dateVal: any): string => {
-   if (!dateVal) return dayjs().format("YYYY-MM");
+	if (!dateVal) return dayjs().format("YYYY-MM");
 
-   // If it's a real Firestore Timestamp
-   if (typeof dateVal.toDate === "function") {
-      return dayjs(dateVal.toDate()).format("YYYY-MM");
-   }
+	// If it's a real Firestore Timestamp
+	if (typeof dateVal.toDate === "function") {
+		return dayjs(dateVal.toDate()).format("YYYY-MM");
+	}
 
-   // If it's a serialized Timestamp (from Router state)
-   if (dateVal.seconds) {
-      return dayjs.unix(dateVal.seconds).format("YYYY-MM");
-   }
+	// If it's a serialized Timestamp (from Router state)
+	if (dateVal.seconds) {
+		return dayjs.unix(dateVal.seconds).format("YYYY-MM");
+	}
 
-   // Fallback for strings or Date objects
-   return dayjs(dateVal).format("YYYY-MM");
+	// Fallback for strings or Date objects
+	return dayjs(dateVal).format("YYYY-MM");
 };
 
 /**
@@ -130,6 +137,23 @@ export const formatDate = (dateVal: any): string => dayjs(getSafeDate(dateVal)).
  * @returns True if the sentence contains at least one word with two or more letters, false otherwise.
  */
 export const hasTwoLetterWord = (sentence: string): boolean => {
-   const words = sentence.split(/\s+/).filter(Boolean); // Split by whitespace and remove empty strings
-   return words.some((word) => word.length >= 2); // Check if any word has a length >= 2
+	const words = sentence.split(/\s+/).filter(Boolean); // Split by whitespace and remove empty strings
+	return words.some((word) => word.length >= 2); // Check if any word has a length >= 2
 };
+
+/**
+ * A helper to lazy load named exports with full TypeScript support.
+ * @param factory A function that returns a dynamic import promise.
+ * @param name The name of the export to load.
+ */
+export function lazyImport<
+	T extends Record<string, any>,
+	K extends keyof T
+>(
+	factory: () => Promise<T>,
+	name: K
+): ComponentType<any> {
+	return lazy(() =>
+		factory().then((module) => ({ default: module[name] }))
+	);
+}

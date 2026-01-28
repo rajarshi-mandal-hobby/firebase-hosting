@@ -1,104 +1,79 @@
-import { useState, useTransition } from "react";
-import { Stack, Text, Group, Button, Alert, TextInput, Modal } from "@mantine/core";
+import { TextInput, Alert } from "@mantine/core";
+import { ALT_TEXT } from "../../../../data/types";
+import { MemberActionModal } from "../../../../shared/components";
 import { IconClose } from "../../../../shared/icons";
 import { displayPhoneNumber } from "../../../../shared/utils";
-import { notifyError, notifySuccess } from "../../../../shared/utils/notifications";
-import type { MemberActionModalProps } from "../index";
+import { useDeleteMemberModal } from "./hooks/useDeleteMemberModal";
 
-export const DeleteMemberModal = ({ opened, onClose, member, onExitTransitionEnd }: MemberActionModalProps) => {
-   const [isDeleting, startDeleting] = useTransition();
-   const [confirmationText, setConfirmationText] = useState("");
+interface DeleteMemberModalProps {
+    opened: boolean;
+    onClose: () => void;
+}
 
-   const handleDelete = async () => {
-      if (!member || confirmationText !== "DELETE" || isDeleting) {
-         return;
-      }
+export const DeleteMemberModal = ({ opened, onClose }: DeleteMemberModalProps) => {
 
-      try {
-         startDeleting(async () => {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            setConfirmationText("");
-            onClose();
-            notifySuccess("Member deleted successfully");
-         });
-      } catch (error) {
-         console.error("Error deleting member:", error);
-         // Error notification is handled by the AppContext
-         notifyError(error instanceof Error ? error.message : "Something went wrong");
-      }
-   };
+    const {
+        selectedMember,
+        isModalWorking,
+        workingMemberName,
+        isSuccess,
+        errorMemberName,
+        hasErrors,
+        hasError,
+        handleErrorReset,
+        handleDelete,
+        confirmationText,
+        deleteError,
+        setConfirmationTextHandler
+    } = useDeleteMemberModal(opened, onClose);
 
-   const handleDeleteClick = () => {
-      void handleDelete();
-   };
+    console.log("Rendering Delete Member Modal");
 
-   if (!member) return null;
-
-   return (
-      <Modal
-         opened={opened}
-         onClose={onClose}
-         title='Permanent Deletion'
-         size='sm'
-         onExitTransitionEnd={onExitTransitionEnd}>
-         <Stack gap='lg'>
-            {/* Member Info */}
-            <Stack gap={2}>
-               <Text fw={500} size='lg'>
-                  {member.name}
-               </Text>
-               <Text>{displayPhoneNumber(member.phone)}</Text>
-            </Stack>
-
-            {/* DELETE Confirmation Input */}
-            <Stack gap={5}>
-               <Text>Are you sure you want to permanently delete this member?</Text>
-               <TextInput
-                  description={
-                     !confirmationText
-                        ? "Type DELETE to confirm permanent deletion"
-                        : confirmationText === "DELETE"
-                          ? "Are you sure?"
-                          : null
-                  }
-                  value={confirmationText}
-                  onChange={(event) => setConfirmationText(event.currentTarget.value)}
-                  error={confirmationText && confirmationText !== "DELETE" ? 'Must type "DELETE" exactly' : null}
-                  inputWrapperOrder={["label", "input", "description", "error"]}
-                  rightSection={confirmationText && <IconClose />}
-                  rightSectionProps={{
-                     onClick: () => setConfirmationText("")
-                  }}
-                  required
-               />
-            </Stack>
+    return (
+        <MemberActionModal
+            opened={opened}
+            onClose={onClose}
+            modalTitle='Delete Member'
+            isModalWorking={isModalWorking}
+            workingMemberName={workingMemberName}
+            selectedMemberName={selectedMember?.name || null}
+            memberDescription={displayPhoneNumber(selectedMember?.phone || "0000000000")}
+            isSuccess={isSuccess}
+            alertOnErrorProps={{
+                errorMemberName: errorMemberName ?? ALT_TEXT,
+                modalType: "deleteMember",
+                hasGlobalErrors: hasErrors,
+                hasErrorForMember: hasError,
+                resetCallback: () => handleErrorReset()
+            }}
+            actionButtonProps={{
+                handleConfirmAction: handleDelete,
+                disabled: isModalWorking || !!deleteError,
+                buttonText: "Delete",
+                buttonProps: {
+                    color: "red"
+                }
+            }}>
+            <TextInput
+                label='Permanently delete this member?'
+                description={
+                    !deleteError && confirmationText !== "DELETE" ? "Type DELETE to confirm permanent deletion"
+                        : confirmationText === "DELETE" ?
+                            "Are you sure?"
+                            : null
+                }
+                value={confirmationText}
+                onChange={(event) => setConfirmationTextHandler(event.currentTarget.value)}
+                error={deleteError}
+                inputWrapperOrder={["label", "input", "description", "error"]}
+                rightSection={confirmationText && <IconClose onClick={() => setConfirmationTextHandler("")} />}
+                required
+            />
 
             {/* Warning Alert */}
             <Alert color='red' title='Warning'>
-               <Text>
-                  This action will permanently delete the member and all associated data. This action cannot be undone.
-               </Text>
+                This action will permanently delete this member and all associated data. This action cannot be undone.
             </Alert>
-
-            {/* Action Buttons */}
-            <Group justify='flex-end' gap='sm'>
-               <Button
-                  variant='white'
-                  onClick={() => {
-                     setConfirmationText("");
-                     onClose();
-                  }}>
-                  Cancel
-               </Button>
-               <Button
-                  color='red'
-                  onClick={handleDeleteClick}
-                  loading={isDeleting}
-                  disabled={confirmationText !== "DELETE" || isDeleting}>
-                  Delete Permanently
-               </Button>
-            </Group>
-         </Stack>
-      </Modal>
-   );
+        </MemberActionModal>
+    );
 };

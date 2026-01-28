@@ -103,7 +103,7 @@ export interface RentHistory {
 	amountPaid: number;
 	currentOutstanding: number;
 	status: PaymentStatus;
-	note: string;
+	note?: string;
 }
 
 export interface Expense {

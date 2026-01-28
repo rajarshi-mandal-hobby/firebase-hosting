@@ -12,7 +12,7 @@ export type MemberFormProps = {
   action?: Action;
 };
 
-export const MemberFormPage = () => {
+export function MemberFormPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const location = useLocation();
   const pathName = location.pathname;

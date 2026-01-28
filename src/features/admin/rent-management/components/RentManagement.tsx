@@ -17,25 +17,18 @@ import {
 	IconMoneyBag,
 	IconExclamation
 } from "../../../../shared/icons";
-import { StatusBadge } from "../../../../shared/utils";
+import { toIndianLocale, StatusBadge } from "../../../../shared/utils";
 import { useRentManagement } from "../hooks/useRentManagement";
 import { RecordPaymentModal } from "./modals/RecordPaymentModal";
-import type { ModalErrorProps, ModalType } from "../tab-navigation/hooks/useTabNavigation";
+import type { UseErrorCache } from "../../tab-navigation/hooks/useErrorCache";
+import { AddExpenseModal } from "./modals/AddExpenseModal";
+import { DisplayPriorityIcon } from "./shared/DisplayPriorityIcon";
 
-interface RentManagementContentProps {
+interface RentManagementContentProps extends UseErrorCache {
 	members: Member[];
-	onModalError: <T>(props: ModalErrorProps<T>) => void;
-	hasModalErrorForMember: (memberId: string, type?: ModalType) => boolean;
 }
 
-interface DisplayPriorityIconProps {
-	hasFailures: boolean;
-}
-const DisplayPriorityIcon = ({ hasFailures }: DisplayPriorityIconProps) => {
-	return hasFailures ? <IconExclamation size={ICON_SIZE} color='red' /> : null;
-};
-
-const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }: RentManagementContentProps) => {
+const RentManagementContent = ({ members, ...errorCacheOptions }: RentManagementContentProps) => {
 	const {
 		recordPaymentModal: { recordPaymentModalOpened, openRecordPayment, closeRecordPayment },
 		addExpenseModal: { addExpenseModalOpened, openAddExpense, closeAddExpense },
@@ -43,6 +36,8 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 		handleShareRent,
 		modalActions
 	} = useRentManagement({ members });
+
+	const { hasErrorCacheForMember } = errorCacheOptions;
 
 	console.log("🎨 Rendering RentManagementContent");
 
@@ -52,18 +47,22 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 				<GroupIcon>
 					<StatusBadge status={derivedRents.totalOutstanding > 0 ? "Due" : "Paid"} size={16} />
 					<Title order={4} c='dimmed' fw={300}>
-						Total Rent: {derivedRents.totalRent.toIndianLocale()}
+						Total Rent: {toIndianLocale(derivedRents.totalRent)}
 					</Title>
 				</GroupIcon>
 				<Progress.Root size='xl'>
 					<Progress.Section value={derivedRents.totalPaidPercentage} color='gray.4'>
-						<Progress.Label c='gray.7'>{derivedRents.totalPaid.toIndianLocale()}</Progress.Label>
+						<Progress.Label c='gray.7'>{toIndianLocale(derivedRents.totalPaid)}</Progress.Label>
 					</Progress.Section>
 					{/* <Progress.Section value={derivedRents.totalPartialPercentage} color='orange'>
 						<Progress.Label c='orange.1'>{derivedRents.totalPartial.toIndianLocale()}</Progress.Label>
 					</Progress.Section> */}
-					<Progress.Section value={derivedRents.totalOutstandingPercentage + derivedRents.totalPartialPercentage} color='red'>
-						<Progress.Label c='red.1'>{(derivedRents.totalOutstanding + derivedRents.totalPartial).toIndianLocale()}</Progress.Label>
+					<Progress.Section
+						value={derivedRents.totalOutstandingPercentage + derivedRents.totalPartialPercentage}
+						color='red'>
+						<Progress.Label c='red.1'>
+							{toIndianLocale(derivedRents.totalOutstanding + derivedRents.totalPartial)}
+						</Progress.Label>
 					</Progress.Section>
 				</Progress.Root>
 			</Stack>
@@ -81,7 +80,7 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 												{member.name}
 											</Title>
 											<GroupIcon>
-												<Text fw={500}>{member.currentMonthRent.currentOutstanding.toIndianLocale()}</Text>
+												<Text fw={500}>{toIndianLocale(member.currentMonthRent.currentOutstanding)}</Text>
 												<StatusBadge status={member.currentMonthRent.status} size={14} />
 											</GroupIcon>
 										</Stack>
@@ -94,7 +93,11 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 											autoContrast
 											size={ACTION_BUTTON_SIZE}
 											bdrs={"0 var(--mantine-radius-md) var(--mantine-radius-md) 0"}
-											c={hasModalErrorForMember(member.id) ? "red" : "var(--mantine-color-bright)"}>
+											c={
+												hasErrorCacheForMember(member.id, ["recordPayment", "addExpense"]) ? "red" : (
+													"var(--mantine-color-bright)"
+												)
+											}>
 											<IconMoreVertical size={ACTION_ICON_SIZE} />
 										</ActionIcon>
 									</Menu.Target>
@@ -119,7 +122,7 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 											leftSection={<IconUniversalCurrency size={ICON_SIZE} />}
 											rightSection={
 												<DisplayPriorityIcon
-													hasFailures={hasModalErrorForMember(member.id, "recordPayment")}
+													hasFailures={hasErrorCacheForMember(member.id, ["recordPayment"])}
 												/>
 											}
 											onClick={() => modalActions.handleModalOpen(member, openRecordPayment)}>
@@ -129,7 +132,7 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 											leftSection={<IconMoneyBag size={ICON_SIZE} />}
 											rightSection={
 												<DisplayPriorityIcon
-													hasFailures={hasModalErrorForMember(member.id, "addExpense")}
+													hasFailures={hasErrorCacheForMember(member.id, ["addExpense"])}
 												/>
 											}
 											onClick={() => modalActions.handleModalOpen(member, openAddExpense)}>
@@ -149,34 +152,24 @@ const RentManagementContent = ({ members, onModalError, hasModalErrorForMember }
 			<RecordPaymentModal
 				opened={recordPaymentModalOpened}
 				onClose={closeRecordPayment}
-				// onModalError={(id) => onModalError({ isError: true, type: "recordPayment", memberId: id })}
-				// onModalSuccess={(id) => onModalError({ isError: false, type: "recordPayment", memberId: id })}
-				onModalError={onModalError}
 				modalActions={modalActions}
+				{...errorCacheOptions}
 			/>
 
-			{/* <AddExpenseModal
+			<AddExpenseModal
 				opened={addExpenseModalOpened}
 				onClose={closeAddExpense}
-				onExitTransitionEnd={handleExitTransitionEnd}
-				onModalWorking={handleModalWork}
-				onError={(id) => addFailure("addExpense", id)}
-				onSuccess={(id) => removeFailure("addExpense", id)}
-				memberName={selectedMember?.name || ""}
-				memberId={selectedMember?.id || ""}
-				previousExpenses={selectedMember?.currentMonthRent.expenses || [{ amount: 0, description: "" }]}
-			/> */}
+				memberId={modalActions.selectedMember?.id || ""}
+				memberName={modalActions.selectedMember?.name || ""}
+				previousExpenses={modalActions.selectedMember?.currentMonthRent.expenses || []}
+				{...modalActions}
+				{...errorCacheOptions}
+			/>
 		</>
 	);
 };
 
-interface RentManagementProps {
-	hasModalErrorForMember: (memberId: string, type?: ModalType) => boolean;
-	onModalError: <T>(props: ModalErrorProps<T>) => void;
-}
-
-export function RentManagement({ hasModalErrorForMember, onModalError }: RentManagementProps) {
-	// const { members, isLoading, error, derivedRents, actions } = useRentManagement();
+export function RentManagement(useErrorOptions: UseErrorCache) {
 	// Active members only
 	const { members, isLoading, error, refresh } = useMembers("active");
 
@@ -191,7 +184,7 @@ export function RentManagement({ hasModalErrorForMember, onModalError }: RentMan
 	}
 
 	if (members.length) {
-		return <RentManagementContent members={members} onModalError={onModalError} hasModalErrorForMember={hasModalErrorForMember} />;
+		return <RentManagementContent members={members} {...useErrorOptions} />;
 	} else {
 		// For empty state
 		return <NothingToShow message='No members found. Why not add one first?' />;

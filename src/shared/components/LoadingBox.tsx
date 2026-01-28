@@ -10,7 +10,7 @@ type LoadingBoxProps = {
 export const LoadingBox = ({ centerProps, textProps, message }: LoadingBoxProps) => {
 	return (
 		<Center my='xl' {...centerProps}>
-			<LoaderSleeping {...textProps} message={message} />
+			<LoaderSleeping {...textProps} name={message} />
 		</Center>
 	);
 };

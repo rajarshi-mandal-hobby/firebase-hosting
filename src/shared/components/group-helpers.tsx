@@ -16,7 +16,7 @@ export const GroupIcon = ({ children, ...props }: GroupProps) => {
 
 export const GroupButtons = ({ children, ...props }: GroupProps) => {
   return (
-    <Group justify="flex-end" mt="lg" {...props}>
+    <Group justify="flex-end" mt="xl" {...props}>
       {children}
     </Group>
   );

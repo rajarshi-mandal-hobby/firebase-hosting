@@ -1,4 +1,8 @@
-import { formatNumberIndianLocale } from "../shared/utils";
+const num = '2026-01-06'
 
-const num = 0;
-console.log(formatNumberIndianLocale(num));
+
+
+// Add space after +91, then add space after every 5 digits
+const regex = /^(\d{4})-(\d{2})$/;  
+console.log(regex.test(num))
+

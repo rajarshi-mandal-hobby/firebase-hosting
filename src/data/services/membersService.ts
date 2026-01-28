@@ -8,7 +8,8 @@ import {
 	getDocsFromCache,
 	getDocsFromServer,
 	type DocumentData,
-	onSnapshot
+	onSnapshot,
+	type Unsubscribe
 } from "firebase/firestore";
 import { db, functions } from "../../firebase";
 import { simulateNetworkDelay, simulateRandomError } from "../utils/serviceUtils";
@@ -112,41 +113,58 @@ export const fetchMembers = async ({ reload, ...filters }: MemberFilters): Promi
 export type MemberStatus = "active" | "inactive" | "all";
 
 export const membersStore = {
-	data: { active: [], inactive: [], all: [] } as Record<string, Member[]>,
+	data: { active: [], inactive: [], all: [] } as Record<MemberStatus, Member[]>,
 	isLoading: true,
 	error: null as Error | null,
-	unsubscribe: null as (() => void) | null,
+	unsubscribe: ((): void => {}) as Unsubscribe | null,
 	listeners: new Set<() => void>(),
 
 	subscribe(onStoreChange: () => void) {
 		this.listeners.add(onStoreChange);
 
-		// Prevents duplicate Firestore listeners [Singleton Gatekeeping]
 		if (!this.unsubscribe) {
 			const q = query(collection(db, "members"), orderBy("name", "asc"));
 
+			// onSnapshot returns an Unsubscribe type
 			this.unsubscribe = onSnapshot(
 				q,
-				{ includeMetadataChanges: true }, // Necessary to detect when writes finish
+				{ includeMetadataChanges: true },
 				(snapshot) => {
-					const allDocs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Member);
-
-					// Update pre-calculated lists for referential stability
-					this.data = {
-						all: allDocs,
-						active: allDocs.filter((m) => m.isActive),
-						inactive: allDocs.filter((m) => !m.isActive)
-					};
-					this.isLoading = false;
 					this.error = null;
-					this.notify();
 
-					// Smart Auto-Stop logic
-					const hasPending = snapshot.metadata.hasPendingWrites;
 					const isFromCache = snapshot.metadata.fromCache;
+					const hasPendingWrites = snapshot.metadata.hasPendingWrites;
+					const allDocs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Member);
+					const activeDocs = [] as Member[];
+					const inactiveDocs = [] as Member[];
 
-					if (!hasPending && !isFromCache) {
+					allDocs.forEach((doc) => {
+						if (doc.isActive) {
+							activeDocs.push(doc);
+						} else {
+							inactiveDocs.push(doc);
+						}
+					});
+
+					// Build the data object
+					const nextData = {
+						all: allDocs,
+						active: activeDocs,
+						inactive: inactiveDocs
+					};
+
+					if (JSON.stringify(this.data.all) === JSON.stringify(nextData.all) && !this.isLoading) {
+						return;
+					}
+
+					this.data = nextData;
+					this.isLoading = false;
+
+					if (!isFromCache && !hasPendingWrites) {
+						this.notify();
 						this.internalUnsubscribe();
+					} else if (isFromCache) {
+						this.notify();
 					}
 				},
 				(err) => {
@@ -176,9 +194,30 @@ export const membersStore = {
 	},
 
 	getSnapshot() {
-		return this.data; // Stable reference
+		return this.data;
+	},
+
+	forceRefresh() {
+		this.internalUnsubscribe();
+		this.isLoading = true;
+		this.error = null;
+		this.notify();
 	}
 };
+
+export function useMembers(status: MemberStatus = "active") {
+	const storeData = useSyncExternalStore(
+		membersStore.subscribe.bind(membersStore),
+		membersStore.getSnapshot.bind(membersStore)
+	);
+
+	return {
+		members: storeData[status],
+		isLoading: membersStore.isLoading,
+		error: membersStore.error,
+		refresh: membersStore.forceRefresh.bind(membersStore)
+	};
+}
 
 export type MemberDetailsFormRequestData = {
 	id?: string;
@@ -219,22 +258,8 @@ export const memberOperations = async (data: MemberDetailsFormRequestData): Prom
 
 export const deactivateMember = async (memberId: string, leaveDate: string): Promise<boolean> => {
 	// Subscribing to the store to get the latest data
-	membersStore.subscribe(() => {});
+	membersStore.forceRefresh();
 	const fn = httpsCallable(functions, "deactivateMember");
 	const res = await fn({ memberId, leaveDate });
 	return res.data as unknown as boolean;
 };
-
-export function useMembers(status: MemberStatus = "active") {
-	const storeData = useSyncExternalStore(
-		(onStoreChange) => membersStore.subscribe(onStoreChange),
-		() => membersStore.getSnapshot()
-	);
-
-	return {
-		members: storeData[status],
-		isLoading: membersStore.isLoading,
-		error: membersStore.error,
-		refresh: () => membersStore.subscribe(() => {}) // Restarts the single listener
-	};
-}
