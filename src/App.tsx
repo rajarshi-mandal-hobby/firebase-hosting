@@ -18,60 +18,60 @@ import { Suspense } from "react";
 const MemberFormPage = lazyImport(() => import("./features/admin/pages/MemberFormPage"), "MemberFormPage");
 const AdminDashboard = lazyImport(() => import("./features/admin/pages/AdminDashboard"), "AdminDashboard");
 const SuspenseBox = ({ children }: { children: React.ReactNode }) => <Suspense fallback={<LoadingBox />}>
-	{children}
+    {children}
 </Suspense>
 
 
 const router = createBrowserRouter([
-	{
-		path: "/",
-		element: <SuspenseBox><AdminDashboard /></SuspenseBox>
-	},
-	{
-		path: "/admin",
-		element: <SuspenseBox><AdminDashboard /></SuspenseBox>
-	},
-	{
-		path: "/member",
-		element: <SuspenseBox><MemberDashboard /></SuspenseBox>
-	},
-	{
-		path: "/signin",
-		element: <SignIn />
-	},
-	{
-		path: "/generate-bills",
-		element: <GenerateBillsPage />
-	},
-	{
-		path: "/default-rents",
-		element: <DefaultRentsPage />
-	},
-	{
-		path: "/add-member",
-		element: <MemberFormPage />
-	},
-	{
-		path: "/edit-member/",
-		element: <MemberFormPage />
-	},
-	{
-		path: "*",
-		element: <Center h='100vh'><NothingToShow /></Center>
-	}
+    {
+        path: "/",
+        element: <SuspenseBox><AdminDashboard /></SuspenseBox>
+    },
+    {
+        path: "/admin",
+        element: <SuspenseBox><AdminDashboard /></SuspenseBox>
+    },
+    {
+        path: "/member",
+        element: <SuspenseBox><MemberDashboard /></SuspenseBox>
+    },
+    {
+        path: "/signin",
+        element: <SignIn />
+    },
+    {
+        path: "/generate-bills",
+        element: <GenerateBillsPage />
+    },
+    {
+        path: "/default-rents",
+        element: <DefaultRentsPage />
+    },
+    {
+        path: "/add-member",
+        element: <MemberFormPage />
+    },
+    {
+        path: "/edit-member/",
+        element: <MemberFormPage />
+    },
+    {
+        path: "*",
+        element: <Center h='100vh'><NothingToShow /></Center>
+    }
 ]);
 
 export default function App() {
-	return (
-		<MantineProvider theme={theme}>
-			<Suspense fallback={<LoadingBox />}>
-				<AuthProvider>
-					<Notifications position='bottom-center' containerWidth='max-content' />
-					<AppContainer>
-						<RouterProvider router={router} />
-					</AppContainer>
-				</AuthProvider>
-			</Suspense>
-		</MantineProvider>
-	);
+    return (
+        <MantineProvider theme={theme}>
+            <Suspense fallback={<LoadingBox />}>
+                <AuthProvider>
+                    <Notifications position='bottom-center' containerWidth='max-content' />
+                    <AppContainer>
+                        <RouterProvider router={router} />
+                    </AppContainer>
+                </AuthProvider>
+            </Suspense>
+        </MantineProvider>
+    );
 }

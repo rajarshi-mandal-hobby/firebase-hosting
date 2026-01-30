@@ -1,134 +1,18 @@
-import { Accordion, Center, Group, Stack, Title, Menu, ActionIcon, Text } from "@mantine/core";
+import { Accordion, Center, Group, Stack, Title, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { useNavigate } from "react-router-dom";
-import { NAVIGATE, type Member } from "../../../../../data/types";
+import { type Member } from "../../../../../data/types";
 import { StatusIndicator, MyAvatar, GroupIcon, MemberDetailsList } from "../../../../../shared/components";
-import {
-    IconBed,
-    IconMoreVertical,
-    IconCall,
-    IconHistory,
-    IconEdit,
-    IconClose,
-    IconCheck
-} from "../../../../../shared/icons";
-import { DeactivationModal } from "../../../../members/components/modals/DeactivationModal";
-import { DisplayPriorityIcon } from "../../../rent-management/components/shared/DisplayPriorityIcon";
-import { DeleteMemberModal } from "../../../../members/components/modals/DeleteMemberModal";
-import { ActivationModal } from "../../../../members/components/modals/ActivationModal";
-import { useGlobalManager } from "../../../stores/modal-store";
-
-interface MemberContentMenuProps {
-    member: Member;
-    openDeactivateModal: () => void;
-    openActivateModal: () => void;
-    openDeleteModal: () => void
-}
-
-const useMemberContentMenu = (member: Member) => {
-    const navigate = useNavigate();
-    const { useHasErrorForModal, onModalOpen } = useGlobalManager();
-    const hasDeleteError = useHasErrorForModal(member.id, "deleteMember");
-    const hasDeactivateError = useHasErrorForModal(member.id, "deactivateMember");
-    const hasError = hasDeleteError || hasDeactivateError;
-    const handleEditClick = () => {
-        navigate(NAVIGATE.EDIT_MEMBER.path, {
-            state: { member, action: NAVIGATE.EDIT_MEMBER.action }
-        });
-    };
-    const onDeactivateModalOpen = (openDeactivateModal: () => void) => onModalOpen(member, "deactivateMember", openDeactivateModal);
-    const onDeleteModalOpen = (openDeleteModal: () => void) => onModalOpen(member, "deleteMember", openDeleteModal);
-    const onActivateModalOpen = (openActivateModal: () => void) => onModalOpen(member, "activateMember", openActivateModal);
-    return {
-        onDeactivateModalOpen,
-        onDeleteModalOpen,
-        onActivateModalOpen,
-        hasDeleteError,
-        hasDeactivateError,
-        hasError,
-        handleEditClick
-    };
-};
-
-const MemberContentMenu = ({
-    member,
-    openDeactivateModal,
-    openActivateModal,
-    openDeleteModal
-}: MemberContentMenuProps) => {
-    const {
-        onDeactivateModalOpen,
-        onDeleteModalOpen,
-        onActivateModalOpen,
-        hasDeleteError,
-        hasDeactivateError,
-        hasError,
-        handleEditClick
-    } = useMemberContentMenu(member);
-
-    console.log("🎨 Rendering MemberContentMenu for", member.name);
-
-    return (
-        <Menu>
-            <Menu.Target>
-                <ActionIcon
-                    variant='white'
-                    c={hasError ? "red" : "var(--mantine-color-bright)"}
-                    autoContrast
-                    size={32}
-                    bdrs='0 var(--mantine-radius-md) var(--mantine-radius-md) 0'>
-                    <IconMoreVertical size={16} />
-                </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-                <Menu.Label c='var(--mantine-text-color)' fz='sm' tt='full-width'>
-                    {member.name.split(" ")[0]}
-                </Menu.Label>
-                <Menu.Divider />
-                <Menu.Item
-                    leftSection={<IconCall />}
-                    onClick={() => {
-                        window.location.href = `tel:${member.phone}`;
-                    }}>
-                    Call
-                </Menu.Item>
-                <Menu.Item leftSection={<IconHistory />}>History</Menu.Item>
-                <Menu.Divider />
-                {member.isActive ?
-                    <>
-                        <Menu.Item leftSection={<IconEdit />} onClick={handleEditClick}>
-                            Edit
-                        </Menu.Item>
-                        <Menu.Item
-                            leftSection={<IconClose />}
-                            rightSection={<DisplayPriorityIcon showIcon={hasDeactivateError} />}
-                            onClick={() => onDeactivateModalOpen(openDeactivateModal)}>
-                            Deactivate
-                        </Menu.Item>
-                    </>
-                    : <>
-                        <Menu.Item onClick={() => onActivateModalOpen(openActivateModal)} leftSection={<IconCheck />}>
-                            Reactivate
-                        </Menu.Item>
-                        <Menu.Item
-                            onClick={() => onDeleteModalOpen(openDeleteModal)}
-                            leftSection={<IconClose />}
-                            rightSection={<DisplayPriorityIcon showIcon={hasDeleteError} />}>
-                            Delete
-                        </Menu.Item>
-                    </>
-                }
-            </Menu.Dropdown>
-        </Menu>
-    );
-};
+import { IconBed } from "../../../../../shared/icons";
+import { DeactivationModal } from "./modals/DeactivationModal";
+import { DeleteMemberModal } from "./modals/DeleteMemberModal";
+import { ActivationModal } from "./modals/ActivationModal";
+import { MemberContentMenu } from "./MembersContentMenu";
 
 interface MembersContentProps {
     members: Member[];
-    isActiveMembers: boolean;
 }
 
-export const MembersContent = ({ members, isActiveMembers }: MembersContentProps) => {
+export const MembersContent = ({ members }: MembersContentProps) => {
     const [deactivationModalOpened, { open: openDeactivationModal, close: closeDeactivationModal }] =
         useDisclosure(false);
     const [deleteMemberModalOpened, { open: openDeleteMemberModal, close: closeDeleteMemberModal }] =
@@ -175,13 +59,8 @@ export const MembersContent = ({ members, isActiveMembers }: MembersContentProps
             </Accordion>
 
             <DeactivationModal opened={deactivationModalOpened} onClose={closeDeactivationModal} />
-
-            {!isActiveMembers && (
-                <>
-                    <ActivationModal opened={activationModalOpened} onClose={closeActivationModal} />
-                    <DeleteMemberModal opened={deleteMemberModalOpened} onClose={closeDeleteMemberModal} />
-                </>
-            )}
+            <ActivationModal opened={activationModalOpened} onClose={closeActivationModal} />
+            <DeleteMemberModal opened={deleteMemberModalOpened} onClose={closeDeleteMemberModal} />
         </>
     );
 };

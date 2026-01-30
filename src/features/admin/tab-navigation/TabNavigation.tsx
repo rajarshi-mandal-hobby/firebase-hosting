@@ -4,8 +4,8 @@ import { ICON_SIZE } from "../../../data/types";
 import { IconExclamation } from "../../../shared/icons";
 import { useErrorCache } from "./hooks/useErrorCache";
 import { type Tab, useTabNavigation } from "./hooks/useTabNavigation";
-import { MembersManagement } from "./member-menagement/components/MembersManagement";
 import { RentManagement } from "../rent-management/components/RentManagement";
+import { MembersManagement } from "./member-menagement/components/MembersManagement";
 
 const TAB_DATA: { value: Tab; label: string }[] = [
 	{ value: "rent", label: "Rent" },

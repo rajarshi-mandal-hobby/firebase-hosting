@@ -1,184 +1,183 @@
-import { Stack, Text, Alert, Modal, Button, Divider, Title, TextInput, Paper } from "@mantine/core";
-import { toIndianLocale, StatusBadge } from "../../../../../shared/utils";
-import { NumberInputWithCurrency } from "../../../../../shared/components/NumberInputWithCurrency";
+import { Stack, Text, Alert, Button, Divider, TextInput, Paper } from '@mantine/core';
+import { toIndianLocale, StatusBadge } from '../../../../../shared/utils';
+import { NumberInputWithCurrency } from '../../../../../shared/components/NumberInputWithCurrency';
 import {
-	GroupSpaceApart,
-	GroupIcon,
-	MyLoadingOverlay,
-	FormClearButton,
-	GroupButtons
-} from "../../../../../shared/components";
-import { useRecordPaymentModal } from "./hooks/useRecordPaymentModal";
-import { IconMoneyBag, IconPayments, IconRupee, IconUniversalCurrency } from "../../../../../shared/icons";
-import { ICON_SIZE } from "../../../../../data/types/constants";
-import type { UseErrorCache } from "../../../tab-navigation/hooks/useErrorCache";
-import { AlertOnError } from "../shared/AlertOnError";
-import type { ModalActions } from "../../../tab-navigation/hooks/useModalActions";
+    GroupSpaceApart,
+    GroupIcon,
+    FormClearButton,
+    GroupButtons,
+} from '../../../../../shared/components';
+import { useRecordPaymentModal } from './hooks/useRecordPaymentModal';
+import { IconMoneyBag, IconPayments, IconRupee, IconUniversalCurrency } from '../../../../../shared/icons';
+import { ICON_SIZE } from '../../../../../data/types/constants';
+import { GlobalModal } from '../../../stores/GlobalModal';
 
-export interface RecordPaymentModalProps extends UseErrorCache {
-	opened: boolean;
-	onClose: () => void;
-	modalActions: ModalActions;
+export interface RecordPaymentModalProps {
+    opened: boolean;
+    onClose: () => void;
 }
 
-export const RecordPaymentModal = (props: RecordPaymentModalProps) => {
-	const {
-		form,
-		status,
-		statusColor,
-		statusTitle,
-		convertedAmount,
-		newOutstanding,
-		isPaymentBelowOutstanding,
-		actions,
-		hasError
-	} = useRecordPaymentModal(props);
+export const RecordPaymentModal = ({ opened, onClose }: RecordPaymentModalProps) => {
+    const {
+        form,
+        status,
+        statusColor,
+        statusTitle,
+        convertedAmount,
+        newOutstanding,
+        isPaymentBelowOutstanding,
+        hasErrorForModal,
+        isSuccess,
+        errorMemberName,
+        hasErrors,
+        selectedMember,
+        isModalWorking,
+        workingMemberName,
+        actions: { resetForm, handleRecordPayment }
+    } = useRecordPaymentModal({ opened, onClose });
 
-	const { selectedMember, isModalWorking, workingMemberName } = props.modalActions;
-	const { opened, onClose } = props;
-	const { getErrorMemberName, hasModalErrors } = props;
+    const { totalCharges, amountPaid, note, currentOutstanding } = selectedMember?.currentMonthRent || {
+        totalCharges: 0,
+        amountPaid: 0,
+        note: '',
+        currentOutstanding: 0
+    };
 
-	const memberName = selectedMember?.name || "";
-	const { totalCharges, amountPaid, note, currentOutstanding } = selectedMember?.currentMonthRent || {
-		totalCharges: 0,
-		amountPaid: 0,
-		note: "",
-		currentOutstanding: 0
-	};
+    const isButtonDisabled = isModalWorking || !form.isValid() || !form.isDirty() || !selectedMember;
 
-	const isButtonDisabled = isModalWorking || !form.isValid() || !form.isDirty() || !selectedMember;
+    console.log('🎨 Rendering RecordPaymentModal');
 
-	console.log("🎨 Rendering RecordPaymentModal", selectedMember, workingMemberName);
+    return (
+        <GlobalModal
+            opened={opened}
+            onClose={onClose}
+            modalTitle='Record Payment'
+            modalType='recordPayment'
+            selectedMemberName={selectedMember?.name || null}
+            isModalWorking={isModalWorking}
+            workingMemberName={workingMemberName}
+            isSuccess={isSuccess}
+            errorMemberName={errorMemberName}
+            hasErrorForModal={hasErrorForModal}
+            hasGlobalErrors={hasErrors}
+            buttonDisabled={isButtonDisabled}
+            buttonText='Record Payment'
+            resetCallback={resetForm}
+            showButtons={false}
+        >
+            <form onSubmit={form.onSubmit(handleRecordPayment)}>
+                <Stack gap='lg'>
+                    <Stack gap='xs'>
+                        <NumberInputWithCurrency
+                            label='Amount'
+                            list={'amount-suggestions'}
+                            rightSection={<FormClearButton field='amountPaid' form={form} />}
+                            required
+                            hideControls
+                            w={150}
+                            key={form.key('amountPaid')}
+                            {...form.getInputProps('amountPaid')}
+                        />
+                        <datalist id='amount-suggestions'>
+                            <option value={toIndianLocale(totalCharges)}>Total Charges</option>
+                            {amountPaid > 0 && (
+                                <>
+                                    <option value={toIndianLocale(amountPaid)}>Paid Amount</option>
+                                    <option value={toIndianLocale(0)}>Remove Payment</option>
+                                </>
+                            )}
+                        </datalist>
 
-	return (
-		<Modal opened={opened} onClose={onClose} title='Record Payment for:' pos='relative'>
-			<>
-				<MyLoadingOverlay
-					visible={isModalWorking}
-					name={`Saving payment for ${workingMemberName || memberName}...`}
-				/>
+                        <TextInput
+                            label='Note'
+                            placeholder='Optional note...'
+                            required={isPaymentBelowOutstanding}
+                            list='payment-note-suggestions'
+                            rightSection={<FormClearButton field='note' form={form} />}
+                            key={form.key('note')}
+                            {...form.getInputProps('note')}
+                        />
+                        <datalist id='payment-note-suggestions'>
+                            {!!note && <option value={note}>Previous Note</option>}
+                            {isPaymentBelowOutstanding && (
+                                <option value='Partial payment received.'>Partial Note</option>
+                            )}
+                        </datalist>
+                    </Stack>
 
-				<form onSubmit={form.onSubmit(actions.handleRecordPayment)}>
-					<Stack gap='lg'>
-						<Title order={4}>{memberName}</Title>
+                    <Alert color={statusColor} title={`${statusTitle}`}>
+                        <Stack gap={'xs'}>
+                            <GroupSpaceApart>
+                                <GroupIcon>
+                                    <IconPayments size={ICON_SIZE} />
+                                    <Text>Total charges</Text>
+                                </GroupIcon>
+                                <Text fw={500}>{toIndianLocale(totalCharges)}</Text>
+                            </GroupSpaceApart>
 
-						<AlertOnError
-							hasModalErrors={hasModalErrors()}
-							hasErrorForMember={hasError}
-							resetCallback={actions.resetForm}
-							failedToMessage='record payment'
-							memberName={getErrorMemberName()}
-						/>
+                            <GroupSpaceApart>
+                                <GroupIcon>
+                                    <IconMoneyBag size={ICON_SIZE} />
+                                    <Text>Previously paid</Text>
+                                </GroupIcon>
+                                <Text fw={500}>{toIndianLocale(amountPaid)}</Text>
+                            </GroupSpaceApart>
 
-						<Stack gap='xs'>
-							<NumberInputWithCurrency
-								label='Amount'
-								list={"amount-suggestions"}
-								rightSection={<FormClearButton field='amountPaid' form={form} />}
-								required
-								hideControls
-								w={150}
-								key={form.key("amountPaid")}
-								{...form.getInputProps("amountPaid")}
-							/>
-							<datalist id='amount-suggestions'>
-								<option value={toIndianLocale(totalCharges)}>Total Charges</option>
-								{amountPaid > 0 && (
-									<>
-										<option value={toIndianLocale(amountPaid)}>Paid Amount</option>
-										<option value={toIndianLocale(0)}>Remove Payment</option>
-									</>
-								)}
-							</datalist>
+                            <GroupSpaceApart>
+                                <GroupIcon>
+                                    <IconRupee size={ICON_SIZE} />
+                                    <Text>Current outstanding</Text>
+                                </GroupIcon>
+                                <Text fw={500}>{toIndianLocale(currentOutstanding)}</Text>
+                            </GroupSpaceApart>
 
-							<TextInput
-								label='Note'
-								placeholder='Optional note...'
-								required={isPaymentBelowOutstanding}
-								list='payment-note-suggestions'
-								rightSection={<FormClearButton field='note' form={form} />}
-								key={form.key("note")}
-								{...form.getInputProps("note")}
-							/>
-							<datalist id='payment-note-suggestions'>
-								{!!note && <option value={note}>Previous Note</option>}
-								{isPaymentBelowOutstanding && <option value='Partial payment received.'>Partial Note</option>}
-							</datalist>
-						</Stack>
+                            <Divider color={statusColor} />
 
-						<Alert color={statusColor} title={`${statusTitle}`}>
-							<Stack gap={"xs"}>
-								<GroupSpaceApart>
-									<GroupIcon>
-										<IconPayments size={ICON_SIZE} />
-										<Text>Total charges</Text>
-									</GroupIcon>
-									<Text fw={500}>{toIndianLocale(totalCharges)}</Text>
-								</GroupSpaceApart>
+                            {/* New Payment Being Added */}
+                            <GroupSpaceApart>
+                                <GroupIcon>
+                                    <IconUniversalCurrency size={ICON_SIZE} />
+                                    <Text>This payment</Text>
+                                </GroupIcon>
+                                <Text fw={700}>{toIndianLocale(convertedAmount)}</Text>
+                            </GroupSpaceApart>
 
-								<GroupSpaceApart>
-									<GroupIcon>
-										<IconMoneyBag size={ICON_SIZE} />
-										<Text>Previously paid</Text>
-									</GroupIcon>
-									<Text fw={500}>{toIndianLocale(amountPaid)}</Text>
-								</GroupSpaceApart>
+                            <GroupSpaceApart>
+                                <GroupIcon>
+                                    <IconRupee size={ICON_SIZE} />
+                                    <Text>New outstanding</Text>
+                                </GroupIcon>
+                                <Text fw={700} c={statusColor}>
+                                    {toIndianLocale(newOutstanding)}
+                                </Text>
+                            </GroupSpaceApart>
 
-								<GroupSpaceApart>
-									<GroupIcon>
-										<IconRupee size={ICON_SIZE} />
-										<Text>Current outstanding</Text>
-									</GroupIcon>
-									<Text fw={500}>{toIndianLocale(currentOutstanding)}</Text>
-								</GroupSpaceApart>
+                            <Paper p='xs'>
+                                <Text size='xs'>
+                                    <strong>Note:</strong>
+                                    <br />
+                                    - If payment is less than total charges, a note is required.
+                                    <br />- Set amount to <strong>0</strong> to remove a payment. Any previous note will
+                                    be removed.
+                                </Text>
+                            </Paper>
+                        </Stack>
+                    </Alert>
 
-								<Divider color={statusColor} />
-
-								{/* New Payment Being Added */}
-								<GroupSpaceApart>
-									<GroupIcon>
-										<IconUniversalCurrency size={ICON_SIZE} />
-										<Text>This payment</Text>
-									</GroupIcon>
-									<Text fw={700}>{toIndianLocale(convertedAmount)}</Text>
-								</GroupSpaceApart>
-
-								<GroupSpaceApart>
-									<GroupIcon>
-										<IconRupee size={ICON_SIZE} />
-										<Text>New outstanding</Text>
-									</GroupIcon>
-									<Text fw={700} c={statusColor}>
-										{toIndianLocale(newOutstanding)}
-									</Text>
-								</GroupSpaceApart>
-
-								<Paper p='xs'>
-									<Text size='xs'>
-										<strong>Note:</strong>
-										<br />
-										- If payment is less than total charges, a note is required.
-										<br />- Set amount to <strong>0</strong> to remove a payment. Any previous note will be
-										removed.
-									</Text>
-								</Paper>
-							</Stack>
-						</Alert>
-
-						<GroupButtons>
-							<Button variant='transparent' onClick={onClose}>
-								Cancel
-							</Button>
-							<Button
-								disabled={isButtonDisabled}
-								type='submit'
-								leftSection={<StatusBadge size={16} status={status} />}>
-								Record {toIndianLocale(convertedAmount)}
-							</Button>
-						</GroupButtons>
-					</Stack>
-				</form>
-			</>
-		</Modal>
-	);
+                    <GroupButtons>
+                        <Button variant='transparent' onClick={onClose}>
+                            Cancel
+                        </Button>
+                        <Button
+                            disabled={isButtonDisabled}
+                            type='submit'
+                            leftSection={<StatusBadge size={16} status={status} />}
+                        >
+                            Record {toIndianLocale(convertedAmount)}
+                        </Button>
+                    </GroupButtons>
+                </Stack>
+            </form>
+        </GlobalModal>
+    );
 };
