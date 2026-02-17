@@ -7,12 +7,12 @@ import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: 'AIzaSyDummy_API_KEY_FOR_EMULATOR', // Dummy key for emulator
-  authDomain: 'rajarshi-mess.firebaseapp.com',
-  projectId: 'rajarshi-mess',
-  storageBucket: 'rajarshi-mess.appspot.com',
-  messagingSenderId: '123456789',
-  appId: '1:123456789:web:abcdef123456789',
+    apiKey: 'AIzaSyDummy_API_KEY_FOR_EMULATOR', // Dummy key for emulator
+    authDomain: 'rajarshi-mess.firebaseapp.com',
+    projectId: 'rajarshi-mess',
+    storageBucket: 'rajarshi-mess.appspot.com',
+    messagingSenderId: '123456789',
+    appId: '1:123456789:web:abcdef123456789'
 };
 
 // Initialize Firebase
@@ -32,39 +32,39 @@ export const storage = getStorage(app);
 
 // Connect to emulators in development
 if (import.meta.env.MODE === 'development') {
-  console.log('🔥 Connecting to Firebase Emulators...');
+    console.log('🔥 Connecting to Firebase Emulators...');
 
-  try {
-    // Connect to Auth emulator
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-    console.log('✅ Connected to Auth Emulator');
-  } catch {
-    console.log('Auth emulator already connected or failed to connect');
-  }
+    try {
+        // Connect to Auth emulator
+        connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+        console.log('✅ Connected to Auth Emulator');
+    } catch {
+        console.log('Auth emulator already connected or failed to connect');
+    }
 
-  try {
-    // Connect to Firestore emulator
-    connectFirestoreEmulator(db, '127.0.0.1', 8080);
-    console.log('✅ Connected to Firestore Emulator');
-  } catch {
-    console.log('Firestore emulator already connected or failed to connect');
-  }
+    try {
+        // Connect to Firestore emulator
+        connectFirestoreEmulator(db, '127.0.0.1', 8080);
+        console.log('✅ Connected to Firestore Emulator');
+    } catch {
+        console.log('Firestore emulator already connected or failed to connect');
+    }
 
-  try {
-    // Connect to Functions emulator
-    connectFunctionsEmulator(functions, '127.0.0.1', 5001);
-    console.log('✅ Connected to Functions Emulator');
-  } catch {
-    console.log('Functions emulator already connected or failed to connect');
-  }
+    try {
+        // Connect to Functions emulator
+        connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+        console.log('✅ Connected to Functions Emulator');
+    } catch {
+        console.log('Functions emulator already connected or failed to connect');
+    }
 
-  try {
-    // Connect to Storage emulator
-    connectStorageEmulator(storage, '127.0.0.1', 9199);
-    console.log('✅ Connected to Storage Emulator');
-  } catch {
-    console.log('Storage emulator already connected or failed to connect');
-  }
+    try {
+        // Connect to Storage emulator
+        connectStorageEmulator(storage, '127.0.0.1', 9199);
+        console.log('✅ Connected to Storage Emulator');
+    } catch {
+        console.log('Storage emulator already connected or failed to connect');
+    }
 }
 
 export default app;

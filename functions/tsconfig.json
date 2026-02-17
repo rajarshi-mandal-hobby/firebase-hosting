@@ -1,20 +1,22 @@
 {
-  "compilerOptions": {
-		"module": "NodeNext" /* Required for modern ESM resolution in Node 24 */,
-		"moduleResolution": "NodeNext" /* Ensures TypeScript checks imports like Node 24 will */,
-		"target": "ES2022" /* Stable target for Node 24; or 'ESNext' for latest features */,
-		"lib": ["ESNext"] /* Includes definitions for the latest JS features */,
-		"outDir": "lib" /* Standard Firebase output directory */,
-		"rootDir": "src" /* Your source folder */,
-		"sourceMap": true /* Vital for debugging ES Modules */,
-		"strict": true /* Enable all strict type-checking options */,
-		"esModuleInterop": true /* Compatibility with non-ESM libraries */,
-		"skipLibCheck": true /* Faster builds by skipping declaration file checks */,
-		"noImplicitReturns": true /* Best practice: ensure all code paths return a value */,
-		"noUnusedLocals": true /* Best practice: remove unused variables */,
-		"forceConsistentCasingInFileNames": true,
-		"allowSyntheticDefaultImports": true
-  },
-  "compileOnSave": true,
-  "include": ["src"]
+    "compilerOptions": {
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "target": "ES2022",
+        "lib": ["ESNext"],
+        "outDir": "lib",
+        "rootDir": "src",
+        "sourceMap": true,
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "noImplicitReturns": true,
+        "noUnusedLocals": true,
+        "forceConsistentCasingInFileNames": true,
+        "allowSyntheticDefaultImports": true,
+        "resolveJsonModule": true, // Added for config imports
+        "isolatedModules": true // Added for transpiler safety
+    },
+    "compileOnSave": true,
+    "include": ["src"]
 }

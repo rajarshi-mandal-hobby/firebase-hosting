@@ -12,7 +12,7 @@ interface MembersContentProps {
     members: Member[];
 }
 
-export const MembersContent = ({ members }: MembersContentProps) => {
+export function MembersContent({ members }: MembersContentProps) {
     const [deactivationModalOpened, { open: openDeactivationModal, close: closeDeactivationModal }] =
         useDisclosure(false);
     const [deleteMemberModalOpened, { open: openDeleteMemberModal, close: closeDeleteMemberModal }] =

@@ -1,61 +1,105 @@
-import { useForm } from "@mantine/form";
-import { useState } from "react";
-import { saveDefaultValues } from "../../../../data/services/defaultsService";
-import { type DefaultValues } from "../../../../data/types/";
-import { notifyError, notifySuccess } from "../../../../shared/utils/notifications";
-import { valibotResolver } from "mantine-form-valibot-resolver";
-import { DefaultRentsSchema } from "../utils/validationSchemas";
-import * as valibot from "valibot";
+import { useForm } from '@mantine/form';
+import { useEffect, useEffectEvent, useState } from 'react';
+import { type DefaultRents } from '../../../../data/types/';
+import { useFormStore } from '../components/DefaultRentsPage';
+import { valibotResolver } from 'mantine-form-valibot-resolver';
+import { DefaultRentsSchema } from '../utils/validationSchemas';
+import * as valibot from 'valibot';
 
-type DefaultRentsFormValues = {
-	secondBed: string | number;
-	secondRoom: string | number;
-	secondSpecial: string | number;
-	thirdBed: string | number;
-	thirdRoom: string | number;
-	securityDeposit: string | number;
-	wifiMonthlyCharge: string | number;
-	upiVpa: string;
-};
+interface DefaultRentsFormValues {
+    secondBed: string | number;
+    secondRoom: string | number;
+    secondSpecial: string | number;
+    thirdBed: string | number;
+    thirdRoom: string | number;
+    securityDeposit: string | number;
+    wifiMonthlyCharge: string | number;
+    upiVpa: string;
+}
 
-export const useDefaultRentsForm = (values: DefaultValues | null, handleRefresh: () => void) => {
-	const [isSaving, setIsSaving] = useState(false);
+interface UseDefaultRentsFormProps {
+    defaultRents: DefaultRents | null;
+    onRefresh: () => void;
+}
 
-	const form = useForm<DefaultRentsFormValues>({
-		mode: "uncontrolled",
-		initialValues: {
-			secondBed: values?.bedRents["2nd"].Bed ?? "",
-			secondRoom: values?.bedRents["2nd"].Room ?? "",
-			secondSpecial: values?.bedRents["2nd"].Special ?? "",
-			thirdBed: values?.bedRents["3rd"].Bed ?? "",
-			thirdRoom: values?.bedRents["3rd"].Room ?? "",
-			securityDeposit: values?.securityDeposit ?? "",
-			wifiMonthlyCharge: values?.wifiMonthlyCharge ?? "",
-			upiVpa: values?.upiVpa ?? ""
-		},
-		validate: valibotResolver(DefaultRentsSchema),
-		validateInputOnBlur: true,
-		transformValues: (values) => valibot.parse(DefaultRentsSchema, values)
-	});
+export function useDefaultRentsForm({ defaultRents, onRefresh }: UseDefaultRentsFormProps) {
+    const { bedRents, securityDeposit, wifiMonthlyCharge, upiVpa } =
+        defaultRents ??
+        ({
+            bedRents: {
+                '2nd': {
+                    Bed: '',
+                    Room: '',
+                    Special: ''
+                },
+                '3rd': {
+                    Bed: '',
+                    Room: ''
+                }
+            },
+            securityDeposit: '',
+            wifiMonthlyCharge: '',
+            upiVpa: ''
+        } as const);
 
-	const handleSave = async (values: DefaultRentsFormValues) => {
-		setIsSaving(true);
-		try {
-			const result = await saveDefaultValues(values);
-			if (result.success) {
-				handleRefresh();
-				notifySuccess("Default rents saved successfully.");
-			} else {
-				form.setErrors(result.errors?.nested || {});
-				notifyError("Please check the form for errors.");
-			}
-		} catch (error) {
-			notifyError("Save failed");
-			console.error(error);
-		} finally {
-			setIsSaving(false);
-		}
-	};
+    const { state, dispatcher, resetState } = useFormStore<DefaultRentsFormValues>('default-rents');
+    const [isSaving, setIsSaving] = useState(false);
+    const [rootError, setRootError] = useState<string | null>(null);
 
-	return { form, isSaving, handleSave };
+    const form = useForm<DefaultRentsFormValues>({
+        mode: 'uncontrolled',
+        initialValues: {
+            secondBed: bedRents['2nd'].Bed,
+            secondRoom: bedRents['2nd'].Room,
+            secondSpecial: bedRents['2nd'].Special,
+            thirdBed: bedRents['3rd'].Bed,
+            thirdRoom: bedRents['3rd'].Room,
+            securityDeposit: securityDeposit,
+            wifiMonthlyCharge: wifiMonthlyCharge,
+            upiVpa: upiVpa
+        },
+        validate: valibotResolver(DefaultRentsSchema),
+        validateInputOnBlur: true,
+        transformValues: (values) => valibot.parse(DefaultRentsSchema, values)
+    });
+
+    const effEvt = useEffectEvent(() => {
+        if (state.saveResult?.success) {
+            form.resetDirty();
+        } else if (state.saveResult?.errors) {
+            if (state.saveResult.errors.nested) {
+                form.setErrors(state.saveResult.errors.nested);
+            } else if (state.saveResult.errors.root) {
+                setRootError(state.saveResult.errors.root[0]);
+            }
+        }
+
+        setIsSaving(state.isPending);
+    });
+
+    useEffect(() => {
+        effEvt();
+    }, [state.isPending]);
+
+    return {
+        form,
+        isSaving,
+        rootError,
+        actions: {
+            handleSave: (values: DefaultRentsFormValues) => dispatcher(values),
+            handleRefresh: () => {
+                resetState();
+                onRefresh();
+            },
+            getDespriction: (inputKey: keyof DefaultRentsFormValues, defaultDespriction: string) => {
+                const errors = form.errors;
+                return errors[inputKey] ? null : defaultDespriction;
+            },
+            resetForm: () => {
+                form.reset();
+                resetState();
+                setRootError(null);
+            }
+        }
+    };
 };

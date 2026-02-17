@@ -4,12 +4,11 @@ import * as v from 'valibot';
 // export type ValidationError = z.ZodFlattenedError<unknown, string>;
 export type ValidationError = v.FlatErrors<any>;
 
-
 export type SaveResult =
-  | {
-      success: true;
-    }
-  | {
-      success: false;
-      errors: ValidationError;
-    };
+    | {
+          success: true;
+      }
+    | {
+          success: false;
+          errors: ValidationError;
+      };

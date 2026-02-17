@@ -1,14 +1,14 @@
 input::-webkit-calendar-picker-indicator {
-	opacity: 0;
+    opacity: 0;
 }
 
 .mantine-active {
-	transition: all 100ms ease-in-out;
-	&:active {
-		transform: scale(0.95);
-	}
+    transition: all 100ms ease-in-out;
+    &:active {
+        transform: scale(0.95);
+    }
 }
 
-:root[data-mantine-color-scheme="light"] {
-	--mantine-color-dimmed: var(--mantine-color-gray-7);
+:root[data-mantine-color-scheme='light'] {
+    --mantine-color-dimmed: var(--mantine-color-gray-7);
 }

@@ -1,26 +1,29 @@
 import { Menu, ActionIcon } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { NAVIGATE, type Member } from '../../../../../data/types';
 import { IconMoreVertical, IconCall, IconHistory, IconEdit, IconClose, IconCheck } from '../../../../../shared/icons';
-import { DisplayPriorityIcon } from '../../../rent-management/components/shared/DisplayPriorityIcon';
+import { DisplayPriorityIconOnError } from '../../../../../shared/components/DisplayPriorityIconOnError';
 import { useGlobalModal } from '../../../stores/modal-store';
+import { useNavigation } from '../../../pages/AdminDashboard';
 
-export const useMemberContentMenu = (member: Member) => {
-    const navigate = useNavigate();
+export function useMemberContentMenu({ member }: { member: Member }) {
     const { useHasErrorForModal, onModalOpen } = useGlobalModal();
     const hasDeleteError = useHasErrorForModal(member.id, 'deleteMember');
     const hasDeactivateError = useHasErrorForModal(member.id, 'deactivateMember');
     const hasError = hasDeleteError || hasDeactivateError;
-    const handleEditClick = () => {
-        navigate(NAVIGATE.EDIT_MEMBER.path, {
-            state: { member, action: NAVIGATE.EDIT_MEMBER.action }
-        });
+    const handleHistoryClick = () => {
+        // navigate(NAVIGATE.MEMBER_DASHBOARD.path, { state: { member } });
     };
     const onDeactivateModalOpen = (openDeactivateModal: () => void) =>
         onModalOpen(member, 'deactivateMember', openDeactivateModal);
     const onDeleteModalOpen = (openDeleteModal: () => void) => onModalOpen(member, 'deleteMember', openDeleteModal);
     const onActivateModalOpen = (openActivateModal: () => void) =>
         onModalOpen(member, 'activateMember', openActivateModal);
+    const { navigateTo, view } = useNavigation();
+
+    const openEditActivity = () => {
+        navigateTo('member-action', { memberid: member.id, action: 'edit' });
+    };
     return {
         onDeactivateModalOpen,
         onDeleteModalOpen,
@@ -28,9 +31,11 @@ export const useMemberContentMenu = (member: Member) => {
         hasDeleteError,
         hasDeactivateError,
         hasError,
-        handleEditClick
+        handleHistoryClick,
+        openEditActivity,
+        view
     };
-};
+}
 
 interface MemberContentMenuProps {
     member: Member;
@@ -52,13 +57,13 @@ export const MemberContentMenu = ({
         hasDeleteError,
         hasDeactivateError,
         hasError,
-        handleEditClick
-    } = useMemberContentMenu(member);
-
-    console.log('🎨 Rendering MemberContentMenu for', member.name);
+        handleHistoryClick,
+        openEditActivity,
+        view
+    } = useMemberContentMenu({ member });
 
     return (
-        <Menu>
+        <Menu key={view} >
             <Menu.Target>
                 <ActionIcon
                     variant='white'
@@ -75,24 +80,21 @@ export const MemberContentMenu = ({
                     {member.name.split(' ')[0]}
                 </Menu.Label>
                 <Menu.Divider />
-                <Menu.Item
-                    leftSection={<IconCall />}
-                    onClick={() => {
-                        window.location.href = `tel:${member.phone}`;
-                    }}
-                >
+                <Menu.Item leftSection={<IconCall />} onClick={() => (window.location.href = `tel:${member.phone}`)}>
                     Call
                 </Menu.Item>
-                <Menu.Item leftSection={<IconHistory />}>History</Menu.Item>
+                <Menu.Item leftSection={<IconHistory />} onClick={handleHistoryClick}>
+                    History
+                </Menu.Item>
                 <Menu.Divider />
                 {member.isActive ?
                     <>
-                        <Menu.Item leftSection={<IconEdit />} onClick={handleEditClick}>
+                        <Menu.Item leftSection={<IconEdit />} onClick={openEditActivity}>
                             Edit
                         </Menu.Item>
                         <Menu.Item
                             leftSection={<IconClose />}
-                            rightSection={<DisplayPriorityIcon showIcon={hasDeactivateError} />}
+                            rightSection={<DisplayPriorityIconOnError showIcon={hasDeactivateError} />}
                             onClick={() => onDeactivateModalOpen(openDeactivateModal)}
                         >
                             Deactivate
@@ -105,7 +107,7 @@ export const MemberContentMenu = ({
                         <Menu.Item
                             onClick={() => onDeleteModalOpen(openDeleteModal)}
                             leftSection={<IconClose />}
-                            rightSection={<DisplayPriorityIcon showIcon={hasDeleteError} />}
+                            rightSection={<DisplayPriorityIconOnError showIcon={hasDeleteError} />}
                         >
                             Delete
                         </Menu.Item>

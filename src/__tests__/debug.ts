@@ -1,4 +1,4 @@
-const map = new Map();
-map.set('a', 1);
-map.set('a', 2);
-console.log(map.get('a'));
+const a = true;
+const b = false;
+const c = null
+console.log(!c);

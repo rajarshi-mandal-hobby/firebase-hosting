@@ -1,12 +1,15 @@
-import { type ButtonProps, Modal, Stack, Collapse, Alert, Group, Button, Text } from '@mantine/core';
+import { type ButtonProps, Modal, Stack, Collapse, Alert, Group, Button, Text, type ModalProps } from '@mantine/core';
 import { globalModalMessages, type ModalType } from './modal-store';
-import { ALT_TEXT, ICON_SIZE } from '../../../data/types';
+import { ALT_TEXT } from '../../../data/types';
 import { MyLoadingOverlay, GroupButtons } from '../../../shared/components';
 import { IconExclamation } from '../../../shared/icons';
 
-interface GlobalModalProps {
+export interface GlobalModalProps {
     opened: boolean;
     onClose: () => void;
+}
+
+interface GlobalModalConfigProps extends GlobalModalProps, ModalProps {
     modalTitle: string;
     modalType: ModalType;
     selectedMemberName: string | null;
@@ -17,16 +20,16 @@ interface GlobalModalProps {
     errorMemberName: string | null;
     hasGlobalErrors: boolean;
     hasErrorForModal: boolean;
-    buttonDisabled: boolean;
+    buttonDisabled?: boolean;
     showButtons?: boolean;
-    buttonText: string;
+    buttonText?: string;
     buttonProps?: ButtonProps;
     children: React.ReactNode;
     resetCallback: () => void;
     handleConfirmAction?: () => void;
 }
 
-export const GlobalModal = ({
+export function GlobalModal({
     opened,
     onClose,
     modalTitle,
@@ -39,24 +42,25 @@ export const GlobalModal = ({
     errorMemberName,
     hasGlobalErrors,
     hasErrorForModal,
-    buttonDisabled,
-    showButtons = true,
-    buttonText,
+    buttonDisabled = false,
+    showButtons = false,
+    buttonText = 'Submit',
     buttonProps,
     children,
     resetCallback,
     handleConfirmAction
-}: GlobalModalProps) => {
+}: GlobalModalConfigProps) {
     const errorMessage = errorMemberName ? globalModalMessages[modalType](errorMemberName).error : ALT_TEXT;
     const isVisible = isModalWorking || isSuccess;
     const currentWorkingMemberName = (isModalWorking ? workingMemberName : selectedMemberName) || ALT_TEXT;
     const isActivateModal = modalType === 'activateMember';
+    const hasMultipleErrorMembers = errorMemberName?.includes('and');
     return (
         <Modal opened={opened} onClose={onClose} title={modalTitle} centered size='sm' pos='relative'>
             <MyLoadingOverlay visible={isVisible} name={currentWorkingMemberName} success={isSuccess} />
             <Stack gap='lg'>
                 <Collapse in={hasGlobalErrors}>
-                    <Alert color='red' p='xs' variant='outline' icon={<IconExclamation size={ICON_SIZE} />}>
+                    <Alert color='red' p='xs' variant='outline' icon={<IconExclamation />}>
                         {hasErrorForModal ?
                             <Group wrap='nowrap' grow preventGrowOverflow={false}>
                                 <Text>
@@ -69,7 +73,11 @@ export const GlobalModal = ({
                                     </Button>
                                 )}
                             </Group>
-                        :   <Text>Failed transaction for {errorMemberName}</Text>}
+                        :   <Text>
+                                {errorMemberName} has {hasMultipleErrorMembers ? '' : 'a '}failed{' '}
+                                {hasMultipleErrorMembers ? 'transactions' : 'transaction'}.
+                            </Text>
+                        }
                     </Alert>
                 </Collapse>
 
@@ -101,4 +109,4 @@ export const GlobalModal = ({
             </Stack>
         </Modal>
     );
-};
+}

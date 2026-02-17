@@ -1,6 +1,6 @@
-import { ThemeIcon } from "@mantine/core";
-import { IconCheck, IconDoneAll, IconPriorityHigh, type IconComponent } from "../icons";
-import type { PaymentStatus } from "../types/firestore-types";
+import { ThemeIcon } from '@mantine/core';
+import { IconCheck, IconDoneAll, IconPriorityHigh, type IconComponent } from '../icons';
+import type { PaymentStatus } from '../types/firestore-types';
 
 // Define the shape of each status configuration
 interface StatusConfigEntry {
@@ -13,27 +13,27 @@ interface StatusConfigEntry {
 const StatusConfig: Record<PaymentStatus, StatusConfigEntry> = {
     Paid: {
         icon: IconCheck,
-        color: "green",
-        title: "Payment Complete",
-        message: "Your rent for this month has been paid in full."
+        color: 'green',
+        title: 'Payment Complete',
+        message: 'Your rent for this month has been paid in full.'
     },
     Overpaid: {
         icon: IconDoneAll,
-        color: "green.8",
-        title: "Overpaid",
-        message: "You have a credit balance that will be adjusted in future bills."
+        color: 'green.8',
+        title: 'Overpaid',
+        message: 'You have a credit balance that will be adjusted in future bills.'
     },
     Partial: {
         icon: IconPriorityHigh,
-        color: "orange",
-        title: "Partial Payment",
-        message: "You have made a partial payment. Please complete the remaining amount."
+        color: 'orange',
+        title: 'Partial Payment',
+        message: 'You have made a partial payment. Please complete the remaining amount.'
     },
     Due: {
         icon: IconPriorityHigh,
-        color: "red",
-        title: "Payment Due",
-        message: "Your rent payment is pending. Please make the payment before 15th of this month."
+        color: 'red',
+        title: 'Payment Due',
+        message: 'Your rent payment is pending. Please make the payment before 15th of this month.'
     }
 } as const;
 

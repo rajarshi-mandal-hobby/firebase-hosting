@@ -1,7 +1,7 @@
 import { Stack, Title, Badge, Collapse, Alert, Text } from '@mantine/core';
 import { MonthPickerInput } from '@mantine/dates';
 import dayjs from 'dayjs';
-import { ALT_TEXT, ICON_SIZE } from '../../../../../../data/types';
+import { ALT_TEXT, DEFAULT_SVG_SIZE } from '../../../../../../data/types';
 import { GroupSpaceApart, GroupIcon } from '../../../../../../shared/components';
 import {
     IconCalendarMonth,
@@ -19,7 +19,7 @@ interface DeactivationModalProps {
     onClose: () => void;
 }
 
-export const DeactivationModal = ({ opened, onClose }: DeactivationModalProps) => {
+export function DeactivationModal({ opened, onClose }: DeactivationModalProps) {
     const {
         memberName,
         memberLastBillingMonth,
@@ -38,7 +38,7 @@ export const DeactivationModal = ({ opened, onClose }: DeactivationModalProps) =
         workingMemberName,
         isSuccess,
         errorMemberName,
-        hasErrors,
+        hasGlobalErrors,
         hasErrorForModal,
         handleErrorReset
     } = useDeactivationModal(opened, onClose);
@@ -57,13 +57,14 @@ export const DeactivationModal = ({ opened, onClose }: DeactivationModalProps) =
             isSuccess={isSuccess}
             workingMemberName={workingMemberName}
             errorMemberName={errorMemberName}
-            hasGlobalErrors={hasErrors}
+            hasGlobalErrors={hasGlobalErrors}
             hasErrorForModal={hasErrorForModal}
             buttonDisabled={isModalWorking || !leaveMonth || !!monthInputError}
             buttonText='Deactivate'
             buttonProps={{ color: 'red' }}
             resetCallback={handleErrorReset}
             handleConfirmAction={handleConfirmDeactivation}
+            showButtons
         >
             {/* Leave Date */}
             <MonthPickerInput
@@ -88,28 +89,28 @@ export const DeactivationModal = ({ opened, onClose }: DeactivationModalProps) =
 
                 <GroupSpaceApart>
                     <GroupIcon>
-                        <IconPayments size={ICON_SIZE} />
+                        <IconPayments size={DEFAULT_SVG_SIZE} />
                         <Text>Total Agreed Deposit</Text>
                     </GroupIcon>
                     <Text fw={500}>{toIndianLocale(settlementPreview.totalAgreedDeposit)}</Text>
                 </GroupSpaceApart>
                 <GroupSpaceApart>
                     <GroupIcon>
-                        <IconUniversalCurrency size={ICON_SIZE} />
+                        <IconUniversalCurrency size={DEFAULT_SVG_SIZE} />
                         <Text>Rent at Joining</Text>
                     </GroupIcon>
                     <Text fw={500}>{toIndianLocale(settlementPreview.rentAtJoining)}</Text>
                 </GroupSpaceApart>
                 <GroupSpaceApart>
                     <GroupIcon>
-                        <IconRupee size={ICON_SIZE} />
+                        <IconRupee size={DEFAULT_SVG_SIZE} />
                         <Text>Outstanding for {memberLastBillingMonth}</Text>
                     </GroupIcon>
                     <Text fw={500}>{toIndianLocale(settlementPreview.currentMonthOutstanding)}</Text>
                 </GroupSpaceApart>
                 <GroupSpaceApart>
                     <GroupIcon>
-                        <IconMoneyBag size={ICON_SIZE} />
+                        <IconMoneyBag size={DEFAULT_SVG_SIZE} />
                         <Text fw={700}>{settlementPreview.text}</Text>
                     </GroupIcon>
                     <Text fw={700} c={settlementPreview.color}>
@@ -118,7 +119,7 @@ export const DeactivationModal = ({ opened, onClose }: DeactivationModalProps) =
                 </GroupSpaceApart>
                 <GroupSpaceApart>
                     <GroupIcon>
-                        <IconCalendarMonth size={ICON_SIZE} />
+                        <IconCalendarMonth size={DEFAULT_SVG_SIZE} />
                         <Text fw={700}>Leave Month</Text>
                     </GroupIcon>
                     <Text fw={700}>{leaveMonth ? dayjs(getSafeDate(leaveMonth)).format('MMMM YYYY') : ALT_TEXT}</Text>

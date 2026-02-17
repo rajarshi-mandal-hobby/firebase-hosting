@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useEffectEvent, useRef, useSyncExternalStore } from 'react';
 import { type Member } from '../../../data/types';
 import { notifyLoading, notifyUpdate, notifyClose } from '../../../shared/utils';
 
@@ -27,7 +27,7 @@ const subscribe = (cb: () => void) => {
     return () => listeners.delete(cb);
 };
 
-export const modalStore = {
+const modalStore = {
     subscribe,
     getSnapshot: () => state,
     update: (next: Partial<GlobalModalState>) => {
@@ -43,7 +43,7 @@ const useModalSelector = <T>(selector: (state: GlobalModalState) => T): T =>
     useSyncExternalStore(modalStore.subscribe, () => selector(modalStore.getSnapshot()));
 
 // --- Hook 1: Modal Operations ---
-export const modalTypeMessages = {
+export const globalModalMessages = {
     recordPayment: (name: string, errorMessage?: string | null) => ({
         success: `Successfully recorded payment for ${name}`,
         error: `Failed to record payment for ${name}${errorMessage ? `: ${errorMessage}` : ''}`
@@ -67,37 +67,43 @@ export const modalTypeMessages = {
 };
 
 export const useGlobalModalManager = (modalOpened: ModalType, opened: boolean, onCloseCallback: () => void) => {
-    // Subscribe to the global singleton
-    const astate = useModalSelector((state) => (opened && state.openedModalName === modalOpened ? state : null));
+    const isModalOpenedRef = useRef(opened);
+    isModalOpenedRef.current = opened;
+
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const errorMessageRef = useRef<string | null>(null);
-    const [triggerAutoClose, setTriggerAutoClose] = useState(false);
-    // Required to show notifications if the modal is not opened
-    const isModalOpenedRef = useRef(false);
+
+    const globalModalStore = useModalSelector((s) => (opened ? s : null));
+
+    const selectedMember = globalModalStore?.selectedMember;
+    const workingMember = globalModalStore?.workingMember;
+    const errorCache = globalModalStore?.errorCache;
+    const errorMemberNames = globalModalStore?.errorMemberNames;
+    const openedModalName = globalModalStore?.openedModalName;
 
     const errorMemberName = (() => {
-        if (!astate) return null;
-        const count = astate.errorMemberNames.size;
+        if (!errorMemberNames) return null;
+        const count = errorMemberNames.size;
         if (!count) return null;
-        const name = astate.errorMemberNames.get(astate.selectedMember?.id || '');
+        const name = errorMemberNames.get(selectedMember?.id || '');
         if (name) return name;
-        if (count === 1) return astate.errorMemberNames.values().next().value || null;
-        return `${astate.errorMemberNames.values().next().value?.split(' ')[0]} and ${count - 1} more`;
+        if (count === 1) return errorMemberNames.values().next().value || null;
+        return `${errorMemberNames.values().next().value?.split(' ')[0]} and ${count - 1} more`;
     })();
 
     // --- Actions ---
     const setModalError = <T>(formValues: T, errorMessage: string) => {
-        if (!astate) return;
-        const memberId = astate.selectedMember?.id;
-        const memberName = astate.selectedMember?.name;
-        const modalType = astate.openedModalName;
+        const memberId = selectedMember?.id;
+        const memberName = selectedMember?.name;
+        const modalType = openedModalName;
         if (!memberId || !memberName || !modalType) return;
-        const nextCache = new Map(astate.errorCache);
+        console.log(memberId, memberName, modalType);
+        const nextCache = new Map(errorCache);
         const memberMap = new Map(nextCache.get(memberId) || []);
         memberMap.set(modalType, formValues);
         nextCache.set(memberId, memberMap);
 
-        const nextNames = new Map(astate.errorMemberNames);
+        const nextNames = new Map(errorMemberNames);
         nextNames.set(memberId, memberName);
         modalStore.update({ errorCache: nextCache, errorMemberNames: nextNames });
 
@@ -105,12 +111,11 @@ export const useGlobalModalManager = (modalOpened: ModalType, opened: boolean, o
     };
 
     const clearModalError = () => {
-        if (!astate) return;
-        const modal = astate.openedModalName;
-        const memberId = astate.selectedMember?.id;
+        const modal = openedModalName;
+        const memberId = selectedMember?.id;
         if (!modal || !memberId) return;
-        const nextCache = new Map(astate.errorCache);
-        const nextNames = new Map(astate.errorMemberNames);
+        const nextCache = new Map(errorCache);
+        const nextNames = new Map(errorMemberNames);
 
         if (!modal) {
             nextCache.delete(memberId);
@@ -131,71 +136,45 @@ export const useGlobalModalManager = (modalOpened: ModalType, opened: boolean, o
     };
 
     const handleModalWork = async (callback: () => Promise<void> | void) => {
-        if (!astate) return;
-        const { isWorking } = astate.workingMember;
-        if (isWorking || !astate.selectedMember) return;
+        if (!selectedMember || (workingMember && workingMember.isWorking)) return;
 
         modalStore.update({
-            workingMember: {
-                id: astate.selectedMember.id,
-                name: astate.selectedMember.name,
-                isWorking: true,
-                isSuccess: false
-            }
+            workingMember: { id: selectedMember.id, name: selectedMember.name, isWorking: true, isSuccess: false }
         });
-        setTriggerAutoClose(true);
-        const loadingNotification = notifyLoading(`Processing for ${astate.selectedMember?.name}...`);
+
+        const loadingNotification = notifyLoading(`Processing for ${selectedMember.name}...`);
 
         try {
             await callback();
         } finally {
             const snap = modalStore.getSnapshot();
-            const { name } = snap.workingMember;
-            const success = !snap.errorCache.get(snap.workingMember.id ?? '')?.has(modalOpened!);
-            // Will hold the modal type as it is an async operation
-            const modalType = modalOpened!;
+            const success = !snap.errorCache.get(selectedMember.id)?.has(modalOpened);
 
-            if (isModalOpenedRef.current) {
+            if (isModalOpenedRef.current && success) {
                 notifyClose(loadingNotification);
-            }
-            // Show notification only if the modal is not opened
-            else if (success && !isModalOpenedRef.current) {
-                console.log('Success and modal not opened');
-                notifyUpdate(loadingNotification, modalTypeMessages[modalType](name!).success, { type: 'success' });
-            } else if (!success) {
-                console.log('Error and modal not opened');
-                notifyUpdate(
-                    loadingNotification,
-                    !isModalOpenedRef.current ?
-                        modalTypeMessages[modalType](name!, errorMessageRef.current).error
-                    :   errorMessageRef.current || 'Something went wrong',
-                    { type: 'error' }
-                );
+            } else {
+                const msg = globalModalMessages[modalOpened](snap.workingMember.name || '');
+                notifyUpdate(loadingNotification, success ? msg.success : errorMessageRef.current || msg.error, {
+                    type: success ? 'success' : 'error'
+                });
             }
 
-            modalStore.update({
-                workingMember: {
-                    ...snap.workingMember,
-                    isWorking: false,
-                    isSuccess: success
-                }
-            });
-            setTriggerAutoClose(false);
+            modalStore.update({ workingMember: { ...snap.workingMember, isWorking: false, isSuccess: success } });
         }
     };
 
     // --- Sync/Timer Logic ---
-    const onTick = useEffectEvent(() => {
+    const clearAndAutoClose = useEffectEvent(() => {
         // If state is null, get the snapshot
-        const currentState = astate ? astate : modalStore.getSnapshot();
+        const autoClearSnap = modalStore.getSnapshot();
         // Cleanup on close
-        if (!opened) {
+        if (!opened && autoClearSnap.selectedMember !== null) {
             console.log('Clearing modal');
             modalStore.update({
                 selectedMember: null,
                 openedModalName: null,
                 workingMember: {
-                    ...currentState.workingMember,
+                    ...autoClearSnap.workingMember,
                     isSuccess: false
                 }
             });
@@ -203,9 +182,10 @@ export const useGlobalModalManager = (modalOpened: ModalType, opened: boolean, o
         }
 
         // Auto-close if successful for THIS specific modal
-        const isSameModal = currentState.openedModalName === modalOpened;
-        if (opened && isSameModal && currentState.workingMember.isSuccess) {
+        const isSameModal = autoClearSnap.openedModalName === modalOpened;
+        if (opened && isSameModal && autoClearSnap.workingMember.isSuccess) {
             console.log('Closing modal');
+            if (timerRef.current) clearTimeout(timerRef.current);
             timerRef.current = setTimeout(() => {
                 const snap = modalStore.getSnapshot();
                 if (
@@ -228,30 +208,27 @@ export const useGlobalModalManager = (modalOpened: ModalType, opened: boolean, o
     });
 
     useEffect(() => {
-        isModalOpenedRef.current = opened;
-        onTick();
+        clearAndAutoClose();
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
-    }, [opened, triggerAutoClose]);
+    }, [opened, workingMember?.isSuccess]);
 
-    const hasErrorForMember =
-        !!astate && !!astate.selectedMember?.id ? astate.errorCache.has(astate.selectedMember.id) : false;
-    const hasErrorForModal =
-        !!astate && !!astate.selectedMember?.id ?
-            !!astate.errorCache.get(astate.selectedMember.id)?.has(modalOpened)
-        :   false;
+    const hasErrorForMember = selectedMember?.id ? !!errorCache?.has(selectedMember.id) : false;
+    const hasErrorForModal = selectedMember?.id ? !!errorCache?.get(selectedMember.id)?.has(modalOpened) : false;
     const getCachedFormValues = <T>(): T => {
-        if (!astate || !modalOpened || !astate.selectedMember?.id) return {} as T;
-        return astate.errorCache.get(astate.selectedMember.id)?.get(modalOpened) ?? ({} as T);
+        if (!selectedMember || !errorCache) return {} as T;
+        const cachedValues = errorCache.get(selectedMember.id)?.get(modalOpened);
+        if (!cachedValues) return {} as T;
+        return cachedValues as T;
     };
 
     return {
-        selectedMember: astate?.selectedMember ?? null,
-        isModalWorking: !!astate?.workingMember.isWorking,
-        isSuccess: !!astate?.workingMember.isSuccess,
-        workingMemberName: astate?.workingMember.name ?? null,
-        hasErrors: !!astate?.errorCache.size,
+        selectedMember: selectedMember ?? null,
+        isModalWorking: !!workingMember?.isWorking,
+        isSuccess: !!workingMember?.isSuccess,
+        workingMemberName: workingMember?.name ?? null,
+        hasGlobalErrors: !!errorCache?.size,
         errorMemberName,
         handleModalWork,
         setModalError,
@@ -262,7 +239,7 @@ export const useGlobalModalManager = (modalOpened: ModalType, opened: boolean, o
     };
 };
 
-export const useGlobalManager = () => {
+export const useGlobalModal = () => {
     const totalErrorCount = useModalSelector((state) => [...state.errorCache.values()].flat().length);
 
     const onModalOpen = (member: Member, modal: ModalType, openCallback: () => void) => {
@@ -275,12 +252,22 @@ export const useGlobalManager = () => {
     const useHasErrorForModal = (memberId: string | undefined, type: ModalType) =>
         useModalSelector((state) => (memberId ? (state.errorCache.get(memberId)?.has(type) ?? false) : false));
 
+    const errorMemberName = useModalSelector((state) => {
+        const count = state.errorMemberNames.size;
+        if (!count) return null;
+        const name = state.errorMemberNames.get(state.selectedMember?.id || '');
+        if (name) return name;
+        if (count === 1) return state.errorMemberNames.values().next().value || null;
+        return `${[...state.errorMemberNames.values()][count - 1]?.split(' ')[0]} and ${count - 1} more`;
+    });
+
     return {
         // Return data directly
         totalErrorCount,
         // Return stable references
         onModalOpen,
         useHasErrorForMember,
-        useHasErrorForModal
+        useHasErrorForModal,
+        errorMemberName
     };
 };

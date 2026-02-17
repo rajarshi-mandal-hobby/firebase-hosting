@@ -6,7 +6,7 @@ import { parseDefaultRentsSchema } from "./schemas/config.js";
 import { DEFAULT_COL, DefaultValues, type SaveResponse, VALUES_DOC } from "./types/index.js";
 import * as v from "valibot";
 
-export const saveDefaultValues = onCall({ cors: true }, async (req): Promise<SaveResponse> => {
+export const saveDefaultRents = onCall({ cors: true }, async (req): Promise<SaveResponse> => {
 	validateAuth(req);
 
 	const result = parseDefaultRentsSchema(req.data);

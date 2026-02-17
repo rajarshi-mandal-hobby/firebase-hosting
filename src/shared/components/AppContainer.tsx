@@ -1,9 +1,9 @@
-import { Container } from "@mantine/core";
-import type { ContainerProps } from "@mantine/core";
-import { useState, type ReactNode } from "react";
-import { ErrorBoundary } from "./ErrorBoundary";
+import { Container } from '@mantine/core';
+import type { ContainerProps } from '@mantine/core';
+import { useState, type ReactNode } from 'react';
+import { ErrorBoundary } from './ErrorBoundary';
 
-type AppContainerProps = Omit<ContainerProps, "children"> & {
+type AppContainerProps = Omit<ContainerProps, 'children'> & {
     /** Container content */
     children: ReactNode;
 };
@@ -18,4 +18,4 @@ export function AppContainer({ children, ...props }: AppContainerProps) {
             </Container>
         </ErrorBoundary>
     );
-};
+}

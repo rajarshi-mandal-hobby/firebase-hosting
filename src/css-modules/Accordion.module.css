@@ -1,68 +1,68 @@
 /* MemberDashboard CSS Module */
 
 .accordion-item {
-	/* Inactive state - gray background with body color border */
-	border-color: transparent;
-	overflow: hidden;
-	margin-block: 2px;
-	transition-property: border-radius;
-	transition-duration: 0.15s;
-	transition-timing-function: ease-out;
-	/* Target child elements when item is active */
-	:global(.mantine-ActionIcon-root) {
-		margin-inline-end: var(--mantine-spacing-sm);
-		box-shadow: var(--mantine-shadow-xs);
-	}
-	:global(.mantine-Center-root) {
-		background-color: var(--mantine-color-gray-1);
-	}
-	&:first-of-type {
-		margin-top: 0;
-	}
-	&:last-of-type {
-		margin-bottom: 0;
-	}
-	&[data-active="true"] {
-		background-color: var(--mantine-color-body);
-		border-radius: var(--mantine-radius-lg);
-		box-shadow: 0 0 0 1px var(--mantine-color-gray-2) inset;
-		/* border: 1px solid var(--mantine-color-gray-3); */
-	}
-	&:hover {
-		background-color: transparent;
-	}
+    /* Inactive state - gray background with body color border */
+    border-color: transparent;
+    overflow: hidden;
+    margin-block: 2px;
+    transition-property: border-radius;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out;
+    /* Target child elements when item is active */
+    :global(.mantine-ActionIcon-root) {
+        margin-inline-end: var(--mantine-spacing-sm);
+        box-shadow: var(--mantine-shadow-xs);
+    }
+    :global(.mantine-Center-root) {
+        background-color: var(--mantine-color-gray-1);
+    }
+    &:first-of-type {
+        margin-top: 0;
+    }
+    &:last-of-type {
+        margin-bottom: 0;
+    }
+    &[data-active='true'] {
+        background-color: var(--mantine-color-body);
+        border-radius: var(--mantine-radius-lg);
+        box-shadow: 0 0 0 1px var(--mantine-color-gray-2) inset;
+        /* border: 1px solid var(--mantine-color-gray-3); */
+    }
+    &:hover {
+        background-color: transparent;
+    }
 }
 
 .accordion-chevron {
-	background-color: var(--mantine-primary-color-contrast);
-	height: 32px;
-	width: 32px;
-	border-radius: var(--mantine-radius-md) 0 0 var(--mantine-radius-md);
-	justify-content: center;
-	border: 0;
-	box-shadow: var(--mantine-shadow-xs);
-	transition: all 0.15s linear;
-	transform: scale(1);
-	&[data-rotate] {
-		transform: scale(-1);
-	}
-	&[data-rotate="true"] {
-		border-radius: 0 var(--mantine-radius-md) var(--mantine-radius-md) 0;
-		box-shadow:
-			rgba(0, 0, 0, 0.05) 0px -1px 3px 0px,
-			rgba(0, 0, 0, 0.1) 0px -1px 2px 0px;
-	}
+    background-color: var(--mantine-primary-color-contrast);
+    height: 32px;
+    width: 32px;
+    border-radius: var(--mantine-radius-md) 0 0 var(--mantine-radius-md);
+    justify-content: center;
+    border: 0;
+    box-shadow: var(--mantine-shadow-xs);
+    transition: all 0.15s linear;
+    transform: scale(1);
+    &[data-rotate] {
+        transform: scale(-1);
+    }
+    &[data-rotate='true'] {
+        border-radius: 0 var(--mantine-radius-md) var(--mantine-radius-md) 0;
+        box-shadow:
+            rgba(0, 0, 0, 0.05) 0px -1px 3px 0px,
+            rgba(0, 0, 0, 0.1) 0px -1px 2px 0px;
+    }
 }
 
 .accordion-label {
-	padding-top: var(--mantine-spacing-lg);
-	padding-bottom: var(--mantine-spacing-lg);
+    padding-top: var(--mantine-spacing-lg);
+    padding-bottom: var(--mantine-spacing-lg);
 }
 
 .accordion-control {
-	padding-inline-end: 0;
-	padding-inline-start: var(--mantine-spacing-sm);
-	&:hover {
-		background: transparent;
-	}
+    padding-inline-end: 0;
+    padding-inline-start: var(--mantine-spacing-sm);
+    &:hover {
+        background: transparent;
+    }
 }

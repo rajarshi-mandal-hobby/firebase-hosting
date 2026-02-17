@@ -18,7 +18,7 @@ export const useDeleteMemberModal = (opened: boolean, onClose: () => void) => {
         workingMemberName,
         isSuccess,
         errorMemberName,
-        hasErrors,
+        hasGlobalErrors,
         hasErrorForModal
     } = useGlobalModalManager('deleteMember', opened, onClose);
 
@@ -67,7 +67,7 @@ export const useDeleteMemberModal = (opened: boolean, onClose: () => void) => {
         workingMemberName,
         isSuccess,
         errorMemberName,
-        hasErrors,
+        hasGlobalErrors,
         hasErrorForModal,
         handleErrorReset,
         handleDelete,
@@ -82,14 +82,14 @@ interface DeleteMemberModalProps {
     onClose: () => void;
 }
 
-export const DeleteMemberModal = ({ opened, onClose }: DeleteMemberModalProps) => {
+export function DeleteMemberModal({ opened, onClose }: DeleteMemberModalProps) {
     const {
         selectedMember,
         isModalWorking,
         workingMemberName,
         isSuccess,
         errorMemberName,
-        hasErrors,
+        hasGlobalErrors,
         hasErrorForModal,
         handleErrorReset,
         handleDelete,
@@ -112,13 +112,14 @@ export const DeleteMemberModal = ({ opened, onClose }: DeleteMemberModalProps) =
             isSuccess={isSuccess}
             workingMemberName={workingMemberName}
             errorMemberName={errorMemberName}
-            hasGlobalErrors={hasErrors}
+            hasGlobalErrors={hasGlobalErrors}
             hasErrorForModal={hasErrorForModal}
             buttonDisabled={isModalWorking || !!deleteError}
             buttonText='Delete'
             buttonProps={{ color: 'red' }}
             resetCallback={handleErrorReset}
             handleConfirmAction={handleDelete}
+            showButtons
         >
             <TextInput
                 label='Permanently delete this member?'

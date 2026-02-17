@@ -12,7 +12,8 @@ export type DeepPartial<T> = {
 	[P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
-export const toNumber = (value: string | number): number => {
+export const toNumber = (value: unknown): number => {
+	if (!value) return 0;
 	if (typeof value === "number") return value;
 	const num = Number(value);
 	return isNaN(num) ? 0 : num;

@@ -13,7 +13,7 @@ export const FourDigitSchema = v.pipe(
 );
 
 const BedScheme = v.pipe(
-	FourDigitSchema,
+	IntegerSchema,
 	v.minValue(1600, "Must be at least ₹1600"),
 	v.maxValue(9999, "Must be at most ₹9999")
 );
@@ -76,4 +76,4 @@ export const DefaultRentsSchema = v.pipe(
 	)
 );
 
-export const parseDefaultRentsSchema =(requestData: any) => v.safeParse(DefaultRentsSchema, requestData);
+export const parseDefaultRentsSchema =(requestData: unknown) => v.safeParse(DefaultRentsSchema, requestData);

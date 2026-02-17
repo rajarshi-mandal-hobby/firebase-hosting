@@ -1,9 +1,9 @@
-import { LoadingOverlay, Paper, Stack, ThemeIcon, type LoadingOverlayProps } from "@mantine/core";
-import { LoaderSleeping } from "./LoaderSleeping";
-import { IconCheck } from "../icons";
-import { ICON_SIZE } from "../types";
-import { Text } from "@mantine/core";
-import { GroupIcon } from "./group-helpers";
+import { LoadingOverlay, Paper, Stack, ThemeIcon, type LoadingOverlayProps } from '@mantine/core';
+import { LoaderSleeping } from './LoaderSleeping';
+import { IconCheck } from '../icons';
+import { DEFAULT_SVG_SIZE } from '../types';
+import { Text } from '@mantine/core';
+import { GroupIcon } from './group-helpers';
 
 const FactoryLoadingOverlay = LoadingOverlay.withProps({
     overlayProps: {
@@ -12,8 +12,8 @@ const FactoryLoadingOverlay = LoadingOverlay.withProps({
     zIndex: 100,
     transitionProps: {
         duration: 150,
-        transition: "fade",
-        timingFunction: "ease-in-out"
+        transition: 'fade',
+        timingFunction: 'ease-in-out'
     }
 });
 
@@ -30,16 +30,18 @@ export const MyLoadingOverlay = ({ name, success, ...props }: NewLoadingOverlayP
                     {success ?
                         <GroupIcon>
                             <ThemeIcon color='green.8'>
-                                <IconCheck size={ICON_SIZE} />
+                                <IconCheck size={DEFAULT_SVG_SIZE} />
                             </ThemeIcon>
                             <Stack gap={0}>
                                 <Text size='md' fw={700}>
                                     Success
                                 </Text>
-                                <Text size='xs' fw={700}>{name}</Text>
+                                <Text size='xs' fw={700}>
+                                    {name}
+                                </Text>
                             </Stack>
                         </GroupIcon>
-                        : <LoaderSleeping name={name} />}
+                    :   <LoaderSleeping name={name} />}
                 </Paper>
             )
         }}

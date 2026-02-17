@@ -31,7 +31,7 @@ export const useDeactivationModal = (opened: boolean, onClose: () => void) => {
         clearModalError,
         getCachedFormValues,
         errorMemberName,
-        hasErrors,
+        hasGlobalErrors,
         isSuccess
     } = useGlobalModalManager('deactivateMember', opened, onClose);
 
@@ -41,23 +41,14 @@ export const useDeactivationModal = (opened: boolean, onClose: () => void) => {
         floor: selectedMember?.floor ?? ''
     };
 
-    const handleReset = () => {
-        setLeaveMonth(null);
-        setMonthInputError(null);
-    };
-
-    const effectEvent = useEffectEvent(() => {
+    const initForm = useEffectEvent(() => {
         if (!opened || !selectedMember) return;
-        if (hasErrorForModal) {
-            setLeaveMonth(getCachedFormValues());
-            setMonthInputError(null);
-        } else {
-            handleReset();
-        }
+        setLeaveMonth(hasErrorForModal ? getCachedFormValues() : null);
+        setMonthInputError(null);
     });
 
     useEffect(() => {
-        effectEvent();
+        initForm();
     }, [opened]);
 
     const getSettlementStatus = (refundAmount: number): { status: SettlementStatus; color: string; text: string } => {
@@ -118,7 +109,8 @@ export const useDeactivationModal = (opened: boolean, onClose: () => void) => {
 
     const handleErrorReset = () => {
         if (!selectedMember) return;
-        handleReset();
+        setLeaveMonth(null);
+        setMonthInputError(null);
         clearModalError();
     };
 
@@ -188,7 +180,7 @@ export const useDeactivationModal = (opened: boolean, onClose: () => void) => {
         workingMemberName,
         isSuccess,
         errorMemberName,
-        hasErrors,
+        hasGlobalErrors,
         hasErrorForModal,
         handleErrorReset
     };

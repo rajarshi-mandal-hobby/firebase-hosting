@@ -1,4 +1,4 @@
-import { toNumber } from "../../../shared/utils";
+import { toNumber } from '../../../shared/utils';
 
 /**
  * Computes the per head bill amount by dividing the total bill by the number of members.
@@ -7,4 +7,4 @@ import { toNumber } from "../../../shared/utils";
  * @returns The per head bill amount, rounded up to the nearest integer.
  */
 export const computePerHeadBill = (totalBill: number | string | undefined, memberCount: number | string | undefined) =>
-   totalBill && memberCount ? Math.ceil(toNumber(totalBill) / toNumber(memberCount)) : 0;
+    totalBill && memberCount ? Math.ceil(toNumber(totalBill) / toNumber(memberCount)) : 0;

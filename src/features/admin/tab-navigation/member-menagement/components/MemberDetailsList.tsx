@@ -1,5 +1,5 @@
-import { Table, Text } from "@mantine/core";
-import type { Member } from "../../../../../data/types";
+import { Table, Text } from '@mantine/core';
+import type { Member } from '../../../../../data/types';
 import {
     IconCall,
     IconCalendarMonth,
@@ -9,10 +9,10 @@ import {
     IconPayments,
     IconWifi,
     IconFirebase
-} from "../../../../../shared/icons";
-import { ICON_SIZE } from "../../../../../shared/types";
-import { displayPhoneNumber, formatDate, toIndianLocale } from "../../../../../shared/utils";
-import { GroupIcon } from "../../../../../shared/components/group-helpers";
+} from '../../../../../shared/icons';
+import { DEFAULT_SVG_SIZE } from '../../../../../shared/types';
+import { displayPhoneNumber, formatDate, toIndianLocale } from '../../../../../shared/utils';
+import { GroupIcon } from '../../../../../shared/components/group-helpers';
 
 type TableRowProps = {
     heading: string;
@@ -24,7 +24,7 @@ const TableRow = ({ heading, value, icon: Icon }: TableRowProps) => (
     <Table.Tr>
         <Table.Th pl={0} fw={500} w={180}>
             <GroupIcon>
-                <Icon size={ICON_SIZE} />
+                <Icon size={DEFAULT_SVG_SIZE} />
                 {heading}
             </GroupIcon>
         </Table.Th>
@@ -42,29 +42,13 @@ type MemberDetailsListProps = {
 export const MemberDetailsList = ({ member, isAdmin = false }: MemberDetailsListProps) => (
     <Table layout='fixed' verticalSpacing='sm' fz='sm'>
         <Table.Tbody>
-            <TableRow
-                heading='Phone'
-                value={displayPhoneNumber(member.phone)}
-                icon={IconCall}
-            />
-            <TableRow
-                heading='Move-in Date'
-                value={formatDate(member.moveInDate)}
-                icon={IconCalendarMonth}
-            />
-            <TableRow
-                heading='Floor & Bed'
-                value={`${member.floor} - ${member.bedType}`}
-                icon={IconBed}
-            />
-            <TableRow
-                heading='Current Rent'
-                value={toIndianLocale(member.currentRent) + "/month"}
-                icon={IconRupee}
-            />
+            <TableRow heading='Phone' value={displayPhoneNumber(member.phone)} icon={IconCall} />
+            <TableRow heading='Move-in Date' value={formatDate(member.moveInDate)} icon={IconCalendarMonth} />
+            <TableRow heading='Floor & Bed' value={`${member.floor} - ${member.bedType}`} icon={IconBed} />
+            <TableRow heading='Current Rent' value={toIndianLocale(member.currentRent) + '/month'} icon={IconRupee} />
             <TableRow
                 heading='Rent at Joining'
-                value={toIndianLocale(member.rentAtJoining) + "/month"}
+                value={toIndianLocale(member.rentAtJoining) + '/month'}
                 icon={IconUniversalCurrency}
             />
             <TableRow
@@ -82,42 +66,20 @@ export const MemberDetailsList = ({ member, isAdmin = false }: MemberDetailsList
                 value={toIndianLocale(member.totalAgreedDeposit)}
                 icon={IconPayments}
             />
-            <TableRow
-                heading='WiFi'
-                value={member.optedForWifi ? "Opted In" : "Not Opted"}
-                icon={IconWifi}
-            />
+            <TableRow heading='WiFi' value={member.optedForWifi ? 'Opted In' : 'Not Opted'} icon={IconWifi} />
             {/* Admin-only fields */}
             {isAdmin && (
                 <>
                     {member.leaveDate && (
-                        <TableRow
-                            heading='Leave Date'
-                            value={formatDate(member.leaveDate)}
-                            icon={IconFirebase}
-                        />
+                        <TableRow heading='Leave Date' value={formatDate(member.leaveDate)} icon={IconFirebase} />
                     )}
                     {member.ttlExpiry && (
-                        <TableRow
-                            heading='TTL Expiry'
-                            value={formatDate(member.ttlExpiry)}
-                            icon={IconFirebase}
-                        />
+                        <TableRow heading='TTL Expiry' value={formatDate(member.ttlExpiry)} icon={IconFirebase} />
                     )}
                     {member.firebaseUid && (
-                        <TableRow
-                            heading='Firebase UID'
-                            value={member.firebaseUid}
-                            icon={IconFirebase}
-                        />
+                        <TableRow heading='Firebase UID' value={member.firebaseUid} icon={IconFirebase} />
                     )}
-                    {member.fcmToken && (
-                        <TableRow
-                            heading='FCM Token'
-                            value={member.fcmToken}
-                            icon={IconFirebase}
-                        />
-                    )}
+                    {member.fcmToken && <TableRow heading='FCM Token' value={member.fcmToken} icon={IconFirebase} />}
                 </>
             )}
         </Table.Tbody>

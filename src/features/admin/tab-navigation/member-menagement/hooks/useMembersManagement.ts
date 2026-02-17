@@ -1,19 +1,19 @@
-import { useState } from "react";
-import { useMembers, type MemberStatus } from "../../../../../data/services/membersService";
-import type { Floor, Member } from "../../../../../data/types";
+import { useState } from 'react';
+import { useMembers, type MemberStatus } from '../../../../../data/services/membersService';
+import type { Floor, Member } from '../../../../../data/types';
 
 export interface FiltersType {
-    floor: Floor | "All";
+    floor: Floor | 'All';
     accountStatus: MemberStatus;
     optedForWifi: boolean;
     searchQuery: string;
 }
 
 const DefaultFilters: FiltersType = {
-    floor: "All",
-    accountStatus: "active",
+    floor: 'All',
+    accountStatus: 'active',
     optedForWifi: false,
-    searchQuery: ""
+    searchQuery: ''
 } as const;
 
 /**
@@ -41,7 +41,7 @@ export const useMembersManagement = () => {
             if (memberFilter.optedForWifi && !member.optedForWifi) continue;
 
             // 2. Floor Check
-            if (memberFilter.floor !== "All" && member.floor !== memberFilter.floor) continue;
+            if (memberFilter.floor !== 'All' && member.floor !== memberFilter.floor) continue;
 
             // 3. Search Query Check
             if (normalizedQuery) {
@@ -70,22 +70,22 @@ export const useMembersManagement = () => {
         const status = e.currentTarget.value as MemberStatus;
         const prevStatus = memberFilter.accountStatus;
         // Gaurd clause for default active status
-        if (prevStatus === "active" && status === "active") return;
+        if (prevStatus === 'active' && status === 'active') return;
 
         setMemberFilters((prev) => ({
             ...prev,
-            accountStatus: prevStatus === status ? "active" : status
+            accountStatus: prevStatus === status ? 'active' : status
         }));
     };
 
     const handleFloorChange = (e: React.MouseEvent<HTMLButtonElement>) => {
-        const floor = e.currentTarget.value as Floor | "All";
+        const floor = e.currentTarget.value as Floor | 'All';
         const prevFloor = memberFilter.floor;
         // Gaurd for default floor
-        if (prevFloor === "All" && floor === "All") return;
+        if (prevFloor === 'All' && floor === 'All') return;
         setMemberFilters((prev) => ({
             ...prev,
-            floor: prevFloor === floor ? "All" : floor
+            floor: prevFloor === floor ? 'All' : floor
         }));
     };
 

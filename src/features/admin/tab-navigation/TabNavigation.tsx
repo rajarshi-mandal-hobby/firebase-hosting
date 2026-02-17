@@ -1,39 +1,67 @@
-import { SegmentedControl, Collapse, Alert } from "@mantine/core";
-import { Activity } from "react";
-import { ICON_SIZE } from "../../../data/types";
-import { IconExclamation } from "../../../shared/icons";
-import { useErrorCache } from "./hooks/useErrorCache";
-import { type Tab, useTabNavigation } from "./hooks/useTabNavigation";
-import { RentManagement } from "../rent-management/components/RentManagement";
-import { MembersManagement } from "./member-menagement/components/MembersManagement";
+import { SegmentedControl, Collapse, Alert } from '@mantine/core';
+import { Activity, useState } from 'react';
+import { DEFAULT_SVG_SIZE } from '../../../data/types';
+import { IconExclamation } from '../../../shared/icons';
+import { RentManagement } from './rent-management/components/RentManagement';
+import { MembersManagement } from './member-menagement/components/MembersManagement';
+import { useGlobalModal } from '../stores/modal-store';
 
-const TAB_DATA: { value: Tab; label: string }[] = [
-	{ value: "rent", label: "Rent" },
-	{ value: "members", label: "Members" }
-] as const;
+type Tab = 'rent' | 'members';
+
+const useTabNavigation = () => {
+    const [activeTab, setActiveTab] = useState<Tab>('rent');
+
+    const { totalErrorCount, errorMemberName } = useGlobalModal();
+    const hasGlobalErrors = totalErrorCount > 0;
+
+    const getActivityMode = (tab: Tab) => (tab === activeTab ? 'visible' : 'hidden');
+
+    const handleTabChange = (tab: string) => setActiveTab(tab as Tab);
+
+    return {
+        activeTab,
+        handleTabChange,
+        hasGlobalErrors,
+        totalErrorCount,
+        getActivityMode,
+        errorMemberName
+    };
+};
 
 export function TabNavigation() {
-	const { activeTab, handleTabChange, hasGlobalErrors, totalErrorCount, getActivityMode } = useTabNavigation();
+    const TAB_DATA: { value: Tab; label: string }[] = [
+        { value: 'rent', label: 'Rent' },
+        { value: 'members', label: 'Members' }
+    ] as const;
 
-	const errorCacheOptions = useErrorCache();
-	console.log("🎨 Rendering TabNavigation");
-	return (
-		<>
-			<SegmentedControl value={activeTab} onChange={handleTabChange} data={TAB_DATA} />
+    const { activeTab, handleTabChange, hasGlobalErrors, totalErrorCount, getActivityMode, errorMemberName } =
+        useTabNavigation();
 
-			<Collapse in={hasGlobalErrors}>
-				<Alert color='red' variant='outline' p='xs' mt='lg' icon={<IconExclamation size={ICON_SIZE} color='red' />}>
-					{totalErrorCount} {totalErrorCount === 1 ? "transaction" : "transactions"} failed. Please try again.
-				</Alert>
-			</Collapse>
+    console.log('🎨 Rendering TabNavigation');
+    return (
+        <>
+            <SegmentedControl value={activeTab} onChange={handleTabChange} data={TAB_DATA} />
 
-			<Activity mode={getActivityMode(activeTab === "rent")}>
-				<RentManagement {...errorCacheOptions} />
-			</Activity>
+            <Collapse in={hasGlobalErrors}>
+                <Alert
+                    color='red'
+                    variant='outline'
+                    p='xs'
+                    mt='lg'
+                    icon={<IconExclamation size={DEFAULT_SVG_SIZE} color='red' />}
+                >
+                    {errorMemberName} has failed {totalErrorCount === 1 ? 'transaction' : 'transactions'}. Please try
+                    again.
+                </Alert>
+            </Collapse>
 
-			<Activity mode={getActivityMode(activeTab === "members")}>
-				<MembersManagement />
-			</Activity>
-		</>
-	);
+            <Activity mode={getActivityMode('rent')}>
+                <RentManagement />
+            </Activity>
+
+            <Activity mode={getActivityMode('members')}>
+                <MembersManagement />
+            </Activity>
+        </>
+    );
 }
