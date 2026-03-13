@@ -1,27 +1,27 @@
-import { notifications, type NotificationData } from "@mantine/notifications";
-import { Loader, type NotificationProps } from "@mantine/core";
-import { IconCheck, IconClose, IconDoneAll, IconInfo } from "../icons";
+import { notifications, type NotificationData } from '@mantine/notifications';
+import { Loader, type NotificationProps } from '@mantine/core';
+import { IconCheck, IconClose, IconDoneAll, IconInfo } from '../icons';
 
 // Configuration for notification types
 const NOTIFICATION_CONFIG = {
     success: {
-        color: "green",
+        color: 'green',
         icon: <IconCheck size={16} color='white' />
     },
     error: {
-        color: "red",
+        color: 'red',
         icon: <IconClose size={16} color='white' />
     },
     info: {
-        color: "indigo",
+        color: 'indigo',
         icon: <IconInfo size={16} color='white' />
     },
     loading: {
-        color: "yellow",
+        color: 'yellow',
         icon: <Loader size={16} color='white' />
     },
     doneAll: {
-        color: "green.8",
+        color: 'green.8',
         icon: <IconDoneAll size={16} color='white' />
     }
 } as const;
@@ -33,7 +33,7 @@ type NotifyOptions = {
     autoClose?: number | false;
     type?: NotifyType;
     iconColor?: string;
-} & Omit<NotificationProps, "color">;
+} & Omit<NotificationProps, 'color'>;
 
 const DEFAULT_AUTO_CLOSE = 2000;
 
@@ -47,7 +47,7 @@ export const notify = ({
     icon,
     iconColor,
     autoClose = DEFAULT_AUTO_CLOSE,
-    type = "success",
+    type = 'success',
     ...props
 }: NotifyOptions): string => {
     const config = NOTIFICATION_CONFIG[type];
@@ -60,7 +60,7 @@ export const notify = ({
         message,
         icon: iconNode,
         autoClose,
-        withCloseButton: type !== "loading",
+        withCloseButton: type !== 'loading',
         ...props
     };
 
@@ -82,7 +82,7 @@ export const notifyUpdate = (id: string, message: string, options: Partial<Notif
     return notify({
         id,
         message,
-        type: "doneAll",
+        type: 'doneAll',
         autoClose: DEFAULT_AUTO_CLOSE,
         ...options
     });
@@ -93,18 +93,18 @@ export const notifyClose = (id: string) => {
 };
 
 export const notifySuccess = (message: string, options?: Partial<NotifyOptions>) =>
-    notify({ message, type: "success", ...options });
+    notify({ message, type: 'success', ...options });
 
 export const notifyError = (message: string, options?: Partial<NotifyOptions>) =>
-    notify({ message, type: "error", autoClose: 3000, ...options });
+    notify({ message, type: 'error', autoClose: 3000, ...options });
 
 export const notifyInfo = (message: string, options?: Partial<NotifyOptions>) =>
-    notify({ message, type: "info", ...options });
+    notify({ message, type: 'info', ...options });
 
 export const notifyLoading = (message: string, options?: Partial<NotifyOptions>) =>
     notify({
         message,
-        type: "loading",
+        type: 'loading',
         autoClose: false,
         ...options
     });

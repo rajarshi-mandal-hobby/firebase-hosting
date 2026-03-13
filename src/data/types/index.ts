@@ -1,16 +1,24 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { AdminConfig } from '../shemas/AdminConfig';
+import type { FlatErrors } from 'valibot';
 
 export * from './constants';
 
-export type MemberAction = 'add' | 'edit' | 'reactivate';
+/**
+ * Payment status for rent history
+ */
+export type PaymentStatus = 'Due' | 'Paid' | 'Partial' | 'Overpaid';
+
+/**
+ * General status type that extends payment status for broader use
+ * Includes member activity statuses in addition to payment statuses
+ */
+export type GeneralStatus = PaymentStatus | 'active' | 'inactive';
 
 export interface ConfigCollection {
     globalSettings: DefaultRents | null;
     admins: AdminConfig | null;
 }
-
-export type PaymentStatus = 'Due' | 'Paid' | 'Partial' | 'Overpaid';
 
 export const Floors = {
     second: '2nd',
@@ -67,30 +75,6 @@ export interface Member {
     fcmToken?: string;
 }
 
-export const toMember = (data: any): Member => {
-    return {
-        id: data.id,
-        name: data.name,
-        phone: data.phone,
-        floor: data.floor,
-        bedType: data.bedType,
-        moveInDate: data.moveInDate,
-        securityDeposit: data.securityDeposit,
-        rentAtJoining: data.rentAtJoining,
-        advanceDeposit: data.advanceDeposit,
-        currentRent: data.currentRent,
-        currentMonthRent: data.currentMonthRent,
-        totalAgreedDeposit: data.totalAgreedDeposit,
-        isActive: data.isActive,
-        optedForWifi: data.optedForWifi,
-        note: data.note,
-        leaveDate: data.leaveDate,
-        ttlExpiry: data.ttlExpiry,
-        firebaseUid: data.firebaseUid,
-        fcmToken: data.fcmToken
-    };
-};
-
 export interface RentHistory {
     id: string; // YYYY-MM
     generatedAt: Timestamp;
@@ -135,3 +119,14 @@ export interface ElectricBill {
     };
     floorIdNameMap: Record<Floor, Record<string, string>>;
 }
+
+type ValidationError = FlatErrors<any>;
+
+export type SaveResult =
+    | {
+          success: true;
+      }
+    | {
+          success: false;
+          errors: ValidationError;
+      };

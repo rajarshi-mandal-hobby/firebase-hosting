@@ -1,19 +1,24 @@
 import { Stack, Title, Paper, Button, Text } from '@mantine/core';
-import { GroupSpaceApart } from '.';
+import { GroupButtons } from '.';
+
+export const MaxRetryError = new Error('Maximum retry attempts reached. Refresh the page to try again.', {
+    cause: 'max-retries'
+});
 
 interface ErrorContainerProps {
-    error: Error;
+    error: Error | string;
     onRetry?: () => void;
+    isErrorBoundary?: boolean;
 }
 
-export const ErrorContainer = ({ error, onRetry }: ErrorContainerProps) => {
-    const errorName = error.name ?? 'Unknown';
-    const errorMessage = error.message ?? 'An unknown error occurred.';
-    const isMaxRetryError = error.message.includes('Maximum retry');
+export const ErrorContainer = ({ error, onRetry, isErrorBoundary = false }: ErrorContainerProps) => {
+    const errorName = typeof error === 'string' ? 'Error' : error.name;
+    const errorMessage = typeof error === 'string' ? error : error.message;
+    const isMaxRetryError = typeof error === 'string' ? error.includes('Maximum retry') : error.cause === 'max-retries';
     return (
         <Stack gap='sm' style={{ wordBreak: 'break-word' }} my='xl'>
             <Title order={2} ta='center' c='dimmed'>
-                {'╰（‵□′）╯'}
+                {isErrorBoundary ? '╰（‵□′）╯' : '（╯°□°）╯︵ ┻━┻'}
             </Title>
             <Title order={4} ta='center' c='dimmed'>
                 There is must be some mistake.
@@ -26,7 +31,7 @@ export const ErrorContainer = ({ error, onRetry }: ErrorContainerProps) => {
                     {errorMessage}
                 </Text>
 
-                <GroupSpaceApart mt='xl'>
+                <GroupButtons justify='space-between'>
                     <Button variant='default' onClick={() => window.location.reload()}>
                         Refresh
                     </Button>
@@ -35,7 +40,7 @@ export const ErrorContainer = ({ error, onRetry }: ErrorContainerProps) => {
                             Retry
                         </Button>
                     )}
-                </GroupSpaceApart>
+                </GroupButtons>
             </Paper>
         </Stack>
     );

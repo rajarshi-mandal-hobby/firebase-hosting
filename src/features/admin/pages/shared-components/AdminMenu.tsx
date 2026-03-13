@@ -1,13 +1,13 @@
 import { Menu, ActionIcon } from '@mantine/core';
-import { useLocation, useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../../../../contexts/AuthContext';
 import { IconMoreVertical, IconRupee, IconLogout } from '../../../../shared/icons';
 import { ACTION_BUTTON_SIZE, ACTION_ICON_SIZE, NAVIGATE } from '../../../../data/types';
+import { useMyNavigation, type View } from '../../../../shared/hooks';
 
 export const AdminMenu = () => {
     const { logout } = useAuth();
-    const location = useLocation();
-    const navigate = useNavigate();
+    const { navigateTo } = useMyNavigation();
 
     const pathsToPage: Record<string, string> = {
         [NAVIGATE.ADD_MEMBER.path]: NAVIGATE.ADD_MEMBER.name,
@@ -18,8 +18,8 @@ export const AdminMenu = () => {
 
     // Navigate to home if not already on home
     // Replace the current history entry if not already on home
-    const navigateToHome = (path: keyof typeof pathsToPage) =>
-        navigate(path, { replace: location.pathname !== NAVIGATE.HOME.path });
+    // const navigateToHome = (path: keyof typeof pathsToPage) =>
+    //     navigate(path, { replace: location.pathname !== NAVIGATE.HOME.path });
 
     return (
         <Menu>
@@ -33,7 +33,7 @@ export const AdminMenu = () => {
                 {pathsToPageArray
                     .filter(([path]) => location.pathname !== path)
                     .map(([path, label]) => (
-                        <Menu.Item key={label} onClick={() => navigateToHome(path)}>
+                        <Menu.Item key={label} onClick={() => navigateTo(path as View)}>
                             {label}
                         </Menu.Item>
                     ))}
@@ -41,7 +41,7 @@ export const AdminMenu = () => {
                 {location.pathname !== NAVIGATE.DEFAULT_RENTS.path && (
                     <Menu.Item
                         leftSection={<IconRupee size={14} />}
-                        onClick={() => navigateToHome(NAVIGATE.DEFAULT_RENTS.path)}
+                        onClick={() => navigateTo(NAVIGATE.DEFAULT_RENTS.path as View)}
                     >
                         {NAVIGATE.DEFAULT_RENTS.name}
                     </Menu.Item>

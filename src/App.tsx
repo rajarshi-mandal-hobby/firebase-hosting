@@ -1,15 +1,15 @@
+import { Center, MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
-import '@mantine/notifications/styles.css';
-import { Center, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
+import '@mantine/notifications/styles.css';
 import { createBrowserRouter, RouterProvider } from 'react-router';
+import { FormStoreProvider, MembersProvider } from './contexts';
 import { AuthProvider } from './contexts/AuthContext';
+import { AdminDashboard } from './pages/admin-dashboard/AdminDashboard';
 import { NothingToShow, AppContainer } from './shared/components';
 import { theme } from './theme';
-import { AdminDashboard } from './features/admin/pages/AdminDashboard';
-import { FormStoreProvider } from './features/admin/default-rents/components/DefaultRentsPage';
-import { MembersProvider } from './data/services/membersService';
+import { DefaultRentsProvider } from './contexts/DefaultRentsProvider';
 
 const router = createBrowserRouter([
     {
@@ -26,6 +26,10 @@ const router = createBrowserRouter([
             },
             {
                 path: 'member-action',
+                element: <></>
+            },
+            {
+                path: 'member-details',
                 element: <></>
             }
         ]
@@ -46,13 +50,13 @@ export default function App() {
             <AuthProvider>
                 <Notifications position='bottom-center' containerWidth='max-content' />
                 <AppContainer>
-                    {/* <RootProvider> */}
                     <MembersProvider>
-                        <FormStoreProvider>
-                            <RouterProvider router={router} />
-                        </FormStoreProvider>
+                        <DefaultRentsProvider>
+                            <FormStoreProvider>
+                                <RouterProvider router={router} unstable_useTransitions={false} />
+                            </FormStoreProvider>
+                        </DefaultRentsProvider>
                     </MembersProvider>
-                    {/* </RootProvider> */}
                 </AppContainer>
             </AuthProvider>
         </MantineProvider>

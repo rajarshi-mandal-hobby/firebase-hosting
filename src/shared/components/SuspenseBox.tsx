@@ -1,6 +1,6 @@
-import { Suspense } from 'react';
+import { Suspense, type SuspenseProps } from 'react';
 import { LoadingBox } from './LoadingBox';
 
-export const SuspenseBox = ({ children }: { children: React.ReactNode }) => (
-    <Suspense fallback={<LoadingBox />}>{children}</Suspense>
+export const SuspenseBox = ({ children, fallback }: SuspenseProps) => (
+    <Suspense fallback={fallback || <LoadingBox message='Calculating...' />}>{children}</Suspense>
 );

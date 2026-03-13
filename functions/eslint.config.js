@@ -19,12 +19,12 @@ export default defineConfig([
         languageOptions: {
             parser: tseslint.parser,
             parserOptions: {
-                project: ['./tsconfig.json'],
+                projectService: true,
                 tsconfigRootDir: import.meta.dirname
             },
             globals: {
                 ...globals.node,
-                ...globals.es2022
+                ...globals.es2024
             }
         },
         plugins: {
@@ -32,7 +32,6 @@ export default defineConfig([
         },
         rules: {
             // Firebase specific best practices
-            'no-unused-vars': 'off', // Handled by @typescript-eslint
             '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
             '@typescript-eslint/no-explicit-any': 'warn',
             'no-console': 'off', // Cloud functions rely on console logs for logging

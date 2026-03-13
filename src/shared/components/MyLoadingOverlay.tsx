@@ -1,9 +1,5 @@
-import { LoadingOverlay, Paper, Stack, ThemeIcon, type LoadingOverlayProps } from '@mantine/core';
+import { LoadingOverlay, Paper, type LoadingOverlayProps } from '@mantine/core';
 import { LoaderSleeping } from './LoaderSleeping';
-import { IconCheck } from '../icons';
-import { DEFAULT_SVG_SIZE } from '../types';
-import { Text } from '@mantine/core';
-import { GroupIcon } from './group-helpers';
 
 const FactoryLoadingOverlay = LoadingOverlay.withProps({
     overlayProps: {
@@ -18,30 +14,15 @@ const FactoryLoadingOverlay = LoadingOverlay.withProps({
 });
 
 interface NewLoadingOverlayProps extends LoadingOverlayProps {
-    name?: string;
-    success?: boolean;
+    description?: string | null;
 }
 
-export const MyLoadingOverlay = ({ name, success, ...props }: NewLoadingOverlayProps) => (
+export const MyLoadingOverlay = ({ description, ...props }: NewLoadingOverlayProps) => (
     <FactoryLoadingOverlay
         loaderProps={{
             children: (
                 <Paper p='sm' shadow='xs'>
-                    {success ?
-                        <GroupIcon>
-                            <ThemeIcon color='green.8'>
-                                <IconCheck size={DEFAULT_SVG_SIZE} />
-                            </ThemeIcon>
-                            <Stack gap={0}>
-                                <Text size='md' fw={700}>
-                                    Success
-                                </Text>
-                                <Text size='xs' fw={700}>
-                                    {name}
-                                </Text>
-                            </Stack>
-                        </GroupIcon>
-                    :   <LoaderSleeping name={name} />}
+                    <LoaderSleeping description={description ?? undefined} />
                 </Paper>
             )
         }}

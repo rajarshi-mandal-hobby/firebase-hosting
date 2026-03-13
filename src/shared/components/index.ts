@@ -2,8 +2,6 @@
 export * from './AppContainer';
 export * from './ErrorBoundary';
 export * from './StatusIndicator';
-export * from '../../features/admin/tab-navigation/member-menagement/components/MemberDetailsList';
-export * from '../../features/admin/tab-navigation/rent-management/components/RentDetailsList';
 export * from './LoaderSleeping';
 export * from './LoadingBox';
 export * from './ErrorContainer';
@@ -16,4 +14,6 @@ export * from './FormClearButton';
 export * from './MyAlert';
 export * from './DisplayPriorityIconOnError';
 export * from './SuspenseBox';
+export * from './ContainedAccordion';
+export * from './MyThemeIcon'
 

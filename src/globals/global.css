@@ -5,7 +5,7 @@ input::-webkit-calendar-picker-indicator {
 .mantine-active {
     transition: all 100ms ease-in-out;
     &:active {
-        transform: scale(0.95);
+        transform: scale(0.9);
     }
 }
 

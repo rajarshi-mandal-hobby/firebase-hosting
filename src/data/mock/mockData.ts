@@ -6,8 +6,16 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
-import type { AdminConfig, Admin, MemberWithRentHistory } from '../../shared/types/firestore-types';
-import { type Floor, type DefaultRents, type ElectricBill, type RentHistory, Floors, BedTypes } from '../types';
+import type { AdminConfig, Admin } from '../../shared/types/firestore-types';
+import { BedTypes, type DefaultRents, Floors, type ElectricBill, type RentHistory, type Floor, type Member } from '../types';
+
+/**
+ * Utility type for member with embedded rent history.
+ * Useful for API responses that include both member data and their complete rent history.
+ */
+export interface MemberWithRentHistory extends Member {
+    rentHistory: RentHistory[];
+}
 
 // Helper to create mock Firestore Timestamps
 export const createMockTimestamp = (date?: string | Date): Timestamp => {

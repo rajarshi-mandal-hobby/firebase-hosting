@@ -1,4 +1,3 @@
-const a = true;
-const b = false;
-const c = null
-console.log(!c);
+const a = ['2025-01', '2025-03', '2025-02']
+
+console.log(a.sort().reverse())

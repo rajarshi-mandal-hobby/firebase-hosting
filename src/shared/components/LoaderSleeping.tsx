@@ -1,27 +1,22 @@
-import { type TextProps, type TitleOrder, Stack, Text, Title } from "@mantine/core";
-import classes from "../../css-modules/Loader.module.css";
+import { type TextProps, type TitleOrder, Stack, Text, Title } from '@mantine/core';
+import classes from '../../css-modules/Loader.module.css';
 
-type LoaderSleepingProps = TextProps & { name?: string };
+type LoaderSleepingProps = TextProps & { description?: string | null };
 
-export const LoaderSleeping = ({
-    size = "sm",
-    c = "gray.7",
-    name,
-    ...props
-}: LoaderSleepingProps) => {
+export const LoaderSleeping = ({ size = 'sm', c = 'gray.7', description: name, ...props }: LoaderSleepingProps) => {
     let titleOrder: TitleOrder = 4;
 
     switch (size) {
-        case "xs":
+        case 'xs':
             titleOrder = 5;
             break;
-        case "md":
+        case 'md':
             titleOrder = 3;
             break;
-        case "lg":
+        case 'lg':
             titleOrder = 2;
             break;
-        case "xl":
+        case 'xl':
             titleOrder = 1;
             break;
         default:
@@ -32,14 +27,18 @@ export const LoaderSleeping = ({
 
     return (
         <Stack align='center' justify='center' gap='xs'>
-            <Title order={titleOrder} c={c} className={classes["loader-sleeping"]}>
+            <Title order={titleOrder} c={c} className={classes['loader-sleeping']}>
                 <span className={classes.face}>(￣o￣). z Z</span>
             </Title>
             <Stack align='center' justify='center' gap={0}>
                 <Text fw={700} size={size} c={c} {...props}>
                     {message}
                 </Text>
-                {name && <Text fw={700} size={size} c={c} {...props}>{name}</Text>}
+                {name && (
+                    <Text fw={700} size={size} c={c} {...props}>
+                        {name}
+                    </Text>
+                )}
             </Stack>
         </Stack>
     );

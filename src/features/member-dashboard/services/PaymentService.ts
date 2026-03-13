@@ -1,4 +1,5 @@
-import type { UPIPaymentParams, UPIPaymentData, GlobalSettings } from '../../../shared/types/firestore-types';
+import type { DefaultRents } from '../../../data/types';
+import type { UPIPaymentParams, UPIPaymentData } from '../../../shared/types/firestore-types';
 
 /**
  * UPI app detection result
@@ -38,7 +39,7 @@ export class PaymentService {
    * Generate UPI payment URI with configurable settings from Firestore
    * Requirements: 4.1, 4.2, 4.5, 4.6
    */
-  static generateUPIUri(paymentData: UPIPaymentData, globalSettings: GlobalSettings): string {
+  static generateUPIUri(paymentData: UPIPaymentData, globalSettings: DefaultRents): string {
     // Use configurable UPI VPA from global settings (requirement 4.5)
     const upiVpa = globalSettings.upiVpa;
 

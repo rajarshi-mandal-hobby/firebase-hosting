@@ -1,7 +1,7 @@
 import { Stack, Group, ActionIcon, Title } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
 import { AdminMenu } from './AdminMenu';
 import { IconBack } from '../../../../shared/icons';
+import { useMyNavigation } from '../../../../shared/hooks';
 
 interface FormPageHeaderProps {
     title: string;
@@ -9,14 +9,14 @@ interface FormPageHeaderProps {
 }
 
 export const FormPageHeader = ({ title, children }: FormPageHeaderProps) => {
-    const navigate = useNavigate();
+    const { goBack } = useMyNavigation();
 
     return (
         <Stack gap='lg' align='stretch' justify='center' p='md'>
             {/* Header */}
             <Group justify='space-between' align='center' h={38}>
                 <Group>
-                    <ActionIcon color='gray.1' variant='filled' size={32} onClick={() => navigate(-1)} autoContrast>
+                    <ActionIcon color='gray.1' variant='filled' size={32} onClick={goBack} autoContrast>
                         <IconBack />
                     </ActionIcon>
                     <Title order={3}>{title}</Title>

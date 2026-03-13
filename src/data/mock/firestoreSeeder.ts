@@ -6,7 +6,7 @@
  */
 
 import { db } from '../../firebase';
-import { doc, setDoc, writeBatch, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, writeBatch, Timestamp, serverTimestamp } from 'firebase/firestore';
 import {
   mockGlobalSettings,
   mockAdminConfig,
@@ -188,3 +188,36 @@ export const clearEmulatorData = async () => {
   // Note: In a real scenario, you'd need to implement recursive deletion
   // For now, this is a placeholder - emulator data is cleared when restarted
 };
+
+export const seedTestData = async () => {
+    const batch = writeBatch(db);
+    const memberId = 'member-2';
+
+    // Starting from March 2026
+    let year = 2026;
+    let month = 3;
+
+    for (let i = 0; i < 24; i++) {
+        // Format ID as YYYY-MM
+        const monthStr = month.toString().padStart(2, '0');
+        const docId = `${year}-${monthStr}`;
+
+        const docRef = doc(db, 'members', memberId, 'test-history', docId);
+
+        batch.set(docRef, {
+            amount: Math.floor(Math.random() * 500) + 1000,
+            status: 'paid',
+            generatedAt: serverTimestamp() // Current server time
+        });
+
+        // Move to previous month
+        month--;
+        if (month === 0) {
+            month = 12;
+            year--;
+        }
+    }
+
+    await batch.commit();
+    console.log("Mock data for 'member-2/test-history' created successfully!");
+}

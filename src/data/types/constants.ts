@@ -33,3 +33,10 @@ export const RENT_HISTORY = {
 } as const;
 
 export const ALT_TEXT = '¯\\(°_o)/¯' as const;
+
+export const ERROR_CAUSE = {
+    DATA_MISSING: 'data-missing',
+    MAX_RETRY: 'max-retry',
+    INVALID_DATA: 'invalid-data'
+} as const;
+

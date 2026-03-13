@@ -1,11 +1,15 @@
 import { ThemeIcon } from '@mantine/core';
 import { IconCheck, IconDoneAll, IconPriorityHigh, type IconComponent } from '../icons';
-import type { PaymentStatus } from '../types/firestore-types';
+import { DEFAULT_SVG_SIZE } from '../types';
+import type { PaymentStatus } from '../../data/types';
 
 // Define the shape of each status configuration
+
+type Color = 'green' | 'green.8' | 'orange' | 'red';
+
 interface StatusConfigEntry {
     icon: IconComponent;
-    color: string;
+    color: Color;
     title: string;
     message: string;
 }
@@ -15,25 +19,25 @@ const StatusConfig: Record<PaymentStatus, StatusConfigEntry> = {
         icon: IconCheck,
         color: 'green',
         title: 'Payment Complete',
-        message: 'Your rent for this month has been paid in full.'
+        message: 'The rent for this month has been paid in full.'
     },
     Overpaid: {
         icon: IconDoneAll,
         color: 'green.8',
         title: 'Overpaid',
-        message: 'You have a credit balance that will be adjusted in future bills.'
+        message: 'There is a credit balance that will be adjusted in future bills.'
     },
     Partial: {
         icon: IconPriorityHigh,
         color: 'orange',
         title: 'Partial Payment',
-        message: 'You have made a partial payment. Please complete the remaining amount.'
+        message: 'A partial payment has been made. The outstanding amount will be adjusted in future bills.'
     },
     Due: {
         icon: IconPriorityHigh,
         color: 'red',
         title: 'Payment Due',
-        message: 'Your rent payment is pending. Please make the payment before 15th of this month.'
+        message: 'The rent payment is pending. Please make the payment before 15th of this month.'
     }
 } as const;
 
@@ -45,11 +49,11 @@ export const getStatusMessage = (status: PaymentStatus) => StatusConfig[status].
 
 // StatusBadge component
 type StatusBadgeProps = {
-    size: number;
+    size?: number;
     status: PaymentStatus;
 };
 
-export const StatusBadge = ({ size, status }: StatusBadgeProps) => {
+export const StatusBadge = ({ size = DEFAULT_SVG_SIZE, status }: StatusBadgeProps) => {
     const { icon: Icon, color } = StatusConfig[status];
     const innerIconSize = size - (size < 16 ? 2 : 4);
 
