@@ -1,6 +1,13 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator, GoogleAuthProvider } from 'firebase/auth';
+import {
+    getAuth,
+    connectAuthEmulator,
+    GoogleAuthProvider,
+    signInWithPopup,
+    onAuthStateChanged,
+    type User
+} from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
@@ -21,7 +28,6 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase services
 export const auth = getAuth(app);
 // Initialize Google Auth Provider
-export const googleProvider = new GoogleAuthProvider();
 
 // export const db = initializeFirestore(app, {
 //   localCache: persistentLocalCache({ cacheSizeBytes: 10 * 1024 * 1024 }), // 10 MB cache
@@ -30,8 +36,24 @@ export const db = getFirestore(app);
 export const functions = getFunctions(app);
 export const storage = getStorage(app);
 
+export const signInWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvider());
+
+export const getCurrentUser = (): Promise<User | null> => {
+    return new Promise((resolve, reject) => {
+        const unsubscribe = onAuthStateChanged(
+            auth,
+            (user) => {
+                unsubscribe();
+                resolve(user);
+            },
+
+            reject
+        );
+    });
+};
+
 // Connect to emulators in development
-if (import.meta.env.MODE === 'development') {
+if (import.meta.env.DEV) {
     console.log('🔥 Connecting to Firebase Emulators...');
 
     try {
@@ -66,5 +88,3 @@ if (import.meta.env.MODE === 'development') {
         console.log('Storage emulator already connected or failed to connect');
     }
 }
-
-export default app;

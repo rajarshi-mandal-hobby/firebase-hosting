@@ -7,10 +7,10 @@ import {
     GroupButtons
 } from '../../../../../shared/components';
 import { useDefaultRentsForm } from '../hooks/useDefaultRentsForm';
+import type { RentsContextType } from '../../../../../contexts';
 
-export interface DefaultRentsFormProps {
+export interface DefaultRentsFormProps extends RentsContextType {
     defaultRents: DefaultRents | null;
-    onRefresh: () => void;
 }
 
 export const DefaultRentsForm = (props: DefaultRentsFormProps) => {
@@ -19,7 +19,7 @@ export const DefaultRentsForm = (props: DefaultRentsFormProps) => {
         isPending,
         isSubmitDisabled,
         rootError,
-        actions: { handleSave, handleRefresh, getDespriction, handleResetForm }
+        actions: { handleSave, getDespriction, handleResetForm }
     } = useDefaultRentsForm(props);
 
     console.log('🎨 Rendering DefaultRentsForm');
@@ -116,19 +116,13 @@ export const DefaultRentsForm = (props: DefaultRentsFormProps) => {
                         </Alert>
                     )}
 
-                    <GroupButtons justify='space-between'>
-                        <Button variant='default' type='button' onClick={handleRefresh} disabled={isPending}>
-                            Refresh
+                    <GroupButtons mt={0}>
+                        <Button variant='transparent' onClick={handleResetForm} disabled={isSubmitDisabled}>
+                            Reset
                         </Button>
-
-                        <GroupButtons mt={0}>
-                            <Button variant='transparent' onClick={handleResetForm} disabled={isSubmitDisabled}>
-                                Reset
-                            </Button>
-                            <Button type='submit' disabled={isSubmitDisabled}>
-                                {isPending ? 'Saving...' : 'Save'}
-                            </Button>
-                        </GroupButtons>
+                        <Button type='submit' disabled={isSubmitDisabled}>
+                            {isPending ? 'Saving...' : 'Save'}
+                        </Button>
                     </GroupButtons>
                 </Stack>
             </form>

@@ -1,6 +1,6 @@
 import { notifications, type NotificationData } from '@mantine/notifications';
 import { Loader, type NotificationProps } from '@mantine/core';
-import { IconCheck, IconClose, IconDoneAll, IconInfo } from '../icons';
+import { IconCheck, IconDoneAll, IconInfo, IconPriorityHigh } from '../icons';
 
 // Configuration for notification types
 const NOTIFICATION_CONFIG = {
@@ -10,7 +10,7 @@ const NOTIFICATION_CONFIG = {
     },
     error: {
         color: 'red',
-        icon: <IconClose size={16} color='white' />
+        icon: <IconPriorityHigh size={16} color='white' />
     },
     info: {
         color: 'indigo',
@@ -96,7 +96,7 @@ export const notifySuccess = (message: string, options?: Partial<NotifyOptions>)
     notify({ message, type: 'success', ...options });
 
 export const notifyError = (message: string, options?: Partial<NotifyOptions>) =>
-    notify({ message, type: 'error', autoClose: 3000, ...options });
+    notify({ message, type: 'error', autoClose: false, ...options });
 
 export const notifyInfo = (message: string, options?: Partial<NotifyOptions>) =>
     notify({ message, type: 'info', ...options });

@@ -5,6 +5,7 @@ import { lazy } from 'react';
 export * from './notifications';
 export * from './statusUtils';
 export * from '../hooks/useGlobalFormResult';
+export * from './auth';
 
 /**
  * A utility type that makes all properties of a given type T optional, including nested properties.
@@ -169,15 +170,11 @@ export const hasTwoLetterTwoWord = (sentence: string): boolean => {
     return words.length >= 2 && words.every((word) => word.length >= 2);
 };
 
-type FormFieldUpdate<T> = {
-    [K in keyof T & string]: [K, T[K]];
-}[keyof T & string];
-
 /**
  * Updates multiple form fields with full TypeScript auto-complete.
  */
-export const setFields = <T extends Record<string, any>>(form: UseFormReturnType<T>, updates: FormFieldUpdate<T>[]) => {
-    updates.forEach(([key, value]) => {
-        form.setFieldValue(key, value);
+export const setFields = <T, K extends keyof T>(form: UseFormReturnType<T>, fields: Pick<T, K>) => {
+    Object.entries(fields).forEach(([key, value]) => {
+        form.setFieldValue(key, value as any);
     });
 };

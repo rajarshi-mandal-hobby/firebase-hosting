@@ -1,121 +1,208 @@
-import { useMyNavigation } from '../../../../shared/hooks';
-import { useMember } from '../../../../contexts';
-import { Accordion, Group, HoverCard, Stack, Title, Text, Alert, Button } from '@mantine/core';
-import { MemberDetailsList } from '../tab-navigation/member-menagement/components/MemberDetailsList';
-import { IconUpi, IconQrCode } from '../../../../shared/icons';
-import { RentDetailsList } from '../tab-navigation/rent-management/components/RentDetailsList';
-import { getStatusAlertConfig, StatusBadge } from '../../../../shared/utils';
+import { Stack, Button, Collapse, Title, Paper, Accordion, ThemeIcon, Text, ActionIcon } from '@mantine/core';
+import classesAccordion from './Accordion.module.css';
 import dayjs from 'dayjs';
-import { MyAlert } from '../../../../shared/components';
-import { useEffect, useEffectEvent, useState } from 'react';
-import type { RentHistory } from '../../../../data/types';
-import { fetchRentHistoryForMember } from '../../../../services';
+import { useState, useEffectEvent, startTransition, useEffect, useRef } from 'react';
+import { useMember } from '../../../../contexts';
+import type { Member } from '../../../../data/types';
+import { fetchHistoryPage } from '../../../../services';
+import {
+    GroupSpaceApart,
+    GroupIcon,
+    MyThemeIcon,
+    MyAlert,
+    LoadingBox,
+    NothingToShow
+} from '../../../../shared/components';
+import { useAccordionScrollToView, useMyNavigation } from '../../../../shared/hooks';
+import { IconInfo, IconPerson, IconClose, IconReceiptLong, IconHistory } from '../../../../shared/icons';
+import { getStatusAlertConfig, StatusBadge } from '../../../../shared/utils';
+import { MemberDetailsList } from '../tab-navigation/member-menagement/components/MemberDetailsList';
+import { RentDetailsList } from '../tab-navigation/rent-management/components/RentDetailsList';
 
-const useMemberDetails = () => {
-    const { memberId } = useMyNavigation();
-    // TODO: Add loading state for member
-    const member = useMember(memberId!);
+interface MemberDetailsContentProps {
+    member: Member;
+}
+
+const useMemberDetailsContent = ({ member }: MemberDetailsContentProps) => {
     const [showHistory, setShowHistory] = useState(false);
-    const [historyData, setHistoryData] = useState<RentHistory[]>([]);
+    const [rentHistory, setRentHistory] = useState<any[]>([]);
+    const cursorRef = useRef<any>(null);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
-    const [page, setPage] = useState(0);
+    const [totalCount, setTotalCount] = useState(0);
+    const [showDetails, setShowDetails] = useState(false);
+
+    const handleScrollToItem = useAccordionScrollToView();
 
     const loadHistoryEvent = useEffectEvent(async () => {
-        setLoading(true);
-        const data = await fetchRentHistoryForMember.fetch({ memberId: memberId!, page });
-        setHistoryData(data);
-        console.log(data);
-        setLoading(false);
+        if (!showHistory || loading || !hasMore) return;
 
+        startTransition(async () => {
+            setLoading(true);
+            try {
+                // We pass the current cursor to the service
+                const result = await fetchHistoryPage({
+                    memberId: member.id,
+                    lastDoc: cursorRef.current
+                });
+
+                setRentHistory((prev) => [...prev, ...result.data]);
+                cursorRef.current = result.lastDoc;
+                setHasMore(result.totalCount !== rentHistory.length + result.data.length);
+                setTotalCount((prev) => (prev === result.totalCount ? prev : result.totalCount));
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+                setShowHistory(false);
+            }
+        });
     });
 
     useEffect(() => {
-        if (showHistory) {
-            loadHistoryEvent();
-        }
+        loadHistoryEvent();
     }, [showHistory]);
 
     return {
-        memberId,
-        member,
-        showHistory,
-        setShowHistory,
-        historyData,
-        loading
+        rentHistory,
+        loading,
+        hasMore,
+        hasNoHistory: rentHistory.length === 0 && !loading,
+        totalCount,
+        showDetails,
+        status: getStatusAlertConfig(member.currentMonthRent.status),
+        currentMonthRent: member.currentMonthRent,
+        actions: {
+            handleScrollToItem,
+            handleShowHistory: () => setShowHistory((prev) => !prev),
+            handleShowDetails: () => setShowDetails((prev) => !prev)
+        }
     };
 };
 
-export const MemberDetailsPage = () => {
-    const { memberId, member, showHistory, setShowHistory, historyData, loading } = useMemberDetails();
-    if (!memberId || !member) return <div>Member Not Found</div>;
-    const currentMonthRent = member.currentMonthRent;
-    const alertConfig = getStatusAlertConfig(currentMonthRent.status);
+const MemberDetailsContent = ({ member }: MemberDetailsContentProps) => {
+    const {
+        rentHistory,
+        loading,
+        hasMore,
+        hasNoHistory,
+        totalCount,
+        showDetails,
+        status,
+        currentMonthRent,
+        actions: { handleScrollToItem, handleShowHistory, handleShowDetails }
+    } = useMemberDetailsContent({ member });
+
+    console.log('🎨 Rendering MemberDetailsContent');
 
     return (
-        <>
-            <Accordion variant='contained' key={memberId}>
-                <Accordion.Item value={memberId}>
-                    <Accordion.Control>
-                        <Title order={5}>My Details</Title>
-                    </Accordion.Control>
-                    <Accordion.Panel>
-                        <MemberDetailsList member={member} />
-                    </Accordion.Panel>
-                </Accordion.Item>
-            </Accordion>
-            <Stack gap='md'>
-                <Title order={4}>Rent for {dayjs(currentMonthRent.id).format('MMMM YYYY')}</Title>
+        <Stack gap='xl'>
+            <Stack gap='sm' mt='md'>
+                <GroupIcon>
+                    <Title order={2}>{member.name}</Title>
+                    <ActionIcon variant='transparent' size={32} onClick={handleShowDetails}>
+                        <IconInfo size={24} />
+                    </ActionIcon>
+                </GroupIcon>
 
-                <RentDetailsList rentHistory={currentMonthRent} />
+                <Collapse in={showDetails}>
+                    <Stack gap='xs'>
+                        <GroupSpaceApart>
+                            <GroupIcon>
+                                <MyThemeIcon Icon={IconPerson} size={24} />
+                                <Title order={5}>Details</Title>
+                            </GroupIcon>
 
-                {/* Status Alert with Pay Button */}
+                            <Button
+                                variant='default'
+                                onClick={handleShowDetails}
+                                aria-label='Close'
+                                size='xs'
+                                rightSection={<IconClose />}
+                            >
+                                Close
+                            </Button>
+                        </GroupSpaceApart>
+                        <Paper withBorder radius='lg' px='md'>
+                            <MemberDetailsList member={member} />
+                        </Paper>
+                    </Stack>
+                </Collapse>
+            </Stack>
 
-                <MyAlert Icon={alertConfig.icon} title={alertConfig.title} color={alertConfig.color} variant='light'>
-                    <Text size='sm'>{alertConfig.message}</Text>
-                </MyAlert>
+            <MyAlert Icon={status.icon} title={status.title} color={status.color} variant='light'>
+                <Text size='sm'>{status.message}</Text>
+            </MyAlert>
+
+            <Stack gap='xs'>
+                <GroupIcon>
+                    <MyThemeIcon Icon={IconReceiptLong} size={24} />
+                    <Title order={5}>Rent for {dayjs(currentMonthRent.id).format('MMMM YYYY')}</Title>
+                </GroupIcon>
+
+                <Paper px='sm' withBorder radius='lg'>
+                    <RentDetailsList rentHistory={member.currentMonthRent} />
+                </Paper>
             </Stack>
 
             {/* Rent History Section */}
-            {/* History Accordion with Empty State Handling (requirement 5.6) */}
-            {/* {showHistory && (
-                <>
-                    {historyData.length > 0 ?
-                        <Accordion variant='contained'>
-                            {historyData.map((history) => (
-                                <Accordion.Item key={history.id} value={history.id}>
-                                    <Accordion.Control icon={<StatusBadge status={history.status} size={16} />}>
-                                        <Group justify='space-between' pr='md'>
-                                            <Title order={5}>{formatMonthYear(history.id)}</Title>
-                                            <Text>
-                                                <CurrencyFormatter value={history.currentOutstanding} />
-                                            </Text>
-                                        </Group>
-                                    </Accordion.Control>
-                                    <Accordion.Panel>
-                                        <RentDetailsList rentHistory={history} />
-                                    </Accordion.Panel>
-                                </Accordion.Item>
-                            ))}
-                        </Accordion>
-                    : historyData.length === 0 && loading.history ?
-                        null
-                    :   <Alert color='blue' variant='light'>
-                            <Text size='sm' ta='center'>
-                                No rent history available yet. Your payment history will appear here once you have more
-                                than one month of records.
-                            </Text>
-                        </Alert>
-                    }
-                </>
-            )} */}
+            {rentHistory.length > 0 && (
+                <Stack gap='xs'>
+                    <GroupIcon>
+                        <MyThemeIcon Icon={IconHistory} size={24} />
+                        <Title order={5}>Rent History</Title>
+                    </GroupIcon>
+                    <Accordion classNames={classesAccordion}>
+                        {rentHistory.map((history, i) => (
+                            <Accordion.Item key={history.id} value={history.id}>
+                                <Accordion.Control
+                                    icon={
+                                        <ThemeIcon size='sm' variant='light' fz={10} fw={700} color='gray.9'>
+                                            {totalCount - i}
+                                        </ThemeIcon>
+                                    }
+                                    onTransitionEnd={handleScrollToItem}
+                                >
+                                    <GroupIcon>
+                                        <Title order={6}>{dayjs(history.id).format('MMMM YYYY')}</Title>
+                                        <StatusBadge status={history.status} />
+                                    </GroupIcon>
+                                </Accordion.Control>
+                                <Accordion.Panel>
+                                    <RentDetailsList rentHistory={history} />
+                                </Accordion.Panel>
+                            </Accordion.Item>
+                        ))}
+                    </Accordion>
+                </Stack>
+            )}
 
             {/* Smart History Button */}
-            <Group justify='center'>
-                <Button onClick={() => setShowHistory((prev) => !prev)}>
-                    {showHistory ? 'Hide History' : 'Load History'}
-                </Button>
-            </Group>
-        </>
+            <Button
+                leftSection={<IconHistory />}
+                onClick={handleShowHistory}
+                disabled={loading || !hasMore}
+                loading={loading}
+                fullWidth
+            >
+                {hasNoHistory ?
+                    'Show History'
+                : hasMore ?
+                    'Show More History'
+                :   'No More History'}
+            </Button>
+        </Stack>
     );
+};
+
+export const MemberDetailsPage = () => {
+    const { memberId } = useMyNavigation();
+
+    const { member, isSearching } = useMember(memberId ?? '');
+
+    if (isSearching) return <LoadingBox />;
+
+    if (!member) return <NothingToShow message='No Member ID provided' />;
+
+    return <MemberDetailsContent member={member} key={memberId} />;
 };

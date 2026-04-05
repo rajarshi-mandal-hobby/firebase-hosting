@@ -14,7 +14,7 @@ export const MyAlert = ({ title, color = 'red', Icon, children = null, ...props 
     const iconSize = title ? 20 : DEFAULT_SVG_SIZE;
     return (
         <Alert p='md' color={color} {...props}>
-            <GroupIcon mb={title ? 'md' : undefined}>
+            <GroupIcon mb={title ? 'sm' : undefined}>
                 {Icon && (
                     <Box size={iconSize}>
                         <Icon size={iconSize} color='var(--alert-color)' />
@@ -24,7 +24,7 @@ export const MyAlert = ({ title, color = 'red', Icon, children = null, ...props 
                     <Title order={5} c='var(--alert-color)'>
                         {title}
                     </Title>
-                :   <Box>{children}</Box>}
+                :   <Box c={props.c}>{children}</Box>}
             </GroupIcon>
             {isTitle && children}
         </Alert>

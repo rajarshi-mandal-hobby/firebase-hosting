@@ -13,11 +13,11 @@ import { useActivityMountedKey, useMyNavigation } from '../../../../../../shared
 import {
     IconMoreVertical,
     IconCall,
-    IconHistory,
     IconEdit,
     IconClose,
     IconCheck,
-    IconBed
+    IconBed,
+    IconWhatsapp
 } from '../../../../../../shared/icons';
 import { MemberDetailsList } from './MemberDetailsList';
 import { ReactivationModal } from './modals/ReactivationModal';
@@ -34,8 +34,9 @@ export function useMemberContentMenu({ member }: { member: Member }) {
 
     const actions = {
         setSelectedMember: () => setSelectedMember(member),
-        onEdit: () => navigateTo('member-action', { memberid: member.id, action: 'edit-member' }),
-        onAbout: () => navigateTo('member-details', { memberid: member.id })
+        handleEdit: () => navigateTo('member-action', { memberid: member.id, action: 'edit-member' }),
+        handleWhatsapp: () => window.open(`https://wa.me/${member.phone}`, '_blank'),
+        handleCall: () => window.open(`tel:${member.phone}`, '_blank')
     };
 
     return {
@@ -64,7 +65,7 @@ export const MemberContentMenu = ({
         hasDeleteError,
         hasDeactivateError,
         hasError,
-        actions: { setSelectedMember, onEdit, onAbout },
+        actions: { setSelectedMember, handleEdit, handleWhatsapp, handleCall },
         key
     } = useMemberContentMenu({ member });
 
@@ -82,20 +83,22 @@ export const MemberContentMenu = ({
                 </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
-                <Menu.Label c='var(--mantine-text-color)' fz='sm' tt='full-width'>
+                <Menu.Label c='dimmed' fz='sm' tt='full-width'>
                     {member.name.split(' ')[0]}
                 </Menu.Label>
                 <Menu.Divider />
-                <Menu.Item leftSection={<IconCall />} onClick={() => (window.location.href = `tel:${member.phone}`)}>
+                <Menu.Label>Contact</Menu.Label>
+                <Menu.Item leftSection={<IconCall />} onClick={handleCall}>
                     Call
                 </Menu.Item>
-                <Menu.Item leftSection={<IconHistory />} onClick={onAbout}>
-                    About
+                <Menu.Item leftSection={<IconWhatsapp />} onClick={handleWhatsapp}>
+                    Whatsapp
                 </Menu.Item>
                 <Menu.Divider />
+                <Menu.Label>Actions</Menu.Label>
                 {member.isActive ?
                     <>
-                        <Menu.Item leftSection={<IconEdit />} onClick={onEdit}>
+                        <Menu.Item leftSection={<IconEdit />} onClick={handleEdit}>
                             Edit
                         </Menu.Item>
                         <Menu.Item

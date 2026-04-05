@@ -8,13 +8,14 @@ import {
     ContainedAccordion,
     MyAvatar
 } from '../../../../../../shared/components';
-import { useActivityMountedKey } from '../../../../../../shared/hooks';
+import { useActivityMountedKey, useMyNavigation } from '../../../../../../shared/hooks';
 import {
     IconMoreVertical,
     IconWhatsapp,
     IconShare,
     IconUniversalCurrency,
-    IconMoneyBag
+    IconMoneyBag,
+    IconHistory
 } from '../../../../../../shared/icons';
 import { StatusBadge, toIndianLocale } from '../../../../../../shared/utils';
 import { type MessagesPlatform, type DerivedRents, useRentManagementContent } from '../hooks/useRentManagementContent';
@@ -28,6 +29,8 @@ const useRentContentMenu = ({ member }: { member: Member }) => {
     const hasErrorForAddExpense = hasErrorForMemberAndForm(member.id, 'add-expense');
     const hasErrorForMember = hasErrorForRecordPayment || hasErrorForAddExpense;
 
+    const { navigateTo } = useMyNavigation();
+
     const key = useActivityMountedKey('rent-activity');
 
     return {
@@ -35,7 +38,8 @@ const useRentContentMenu = ({ member }: { member: Member }) => {
         hasErrorForRecordPayment,
         hasErrorForAddExpense,
         setSelectedMember,
-        key
+        key,
+        handleHistory: () => navigateTo('member-details', { memberid: member.id })
     };
 };
 
@@ -47,19 +51,19 @@ interface RentContentMenuProps {
 }
 
 const RentContentMenu = ({ member, handleShareRent, openRecordPayment, openAddExpense }: RentContentMenuProps) => {
-    const { hasErrorForMember, hasErrorForRecordPayment, hasErrorForAddExpense, setSelectedMember, key } =
-        useRentContentMenu({ member });
+    const {
+        hasErrorForMember,
+        hasErrorForRecordPayment,
+        hasErrorForAddExpense,
+        setSelectedMember,
+        key,
+        handleHistory
+    } = useRentContentMenu({ member });
 
     return (
         <Menu key={key}>
             <Menu.Target>
-                <ActionIcon
-                    variant='white'
-                    autoContrast
-                    size={ACTION_BUTTON_SIZE}
-                    bdrs={'0 var(--mantine-radius-md) var(--mantine-radius-md) 0'}
-                    c={hasErrorForMember ? 'red' : undefined}
-                >
+                <ActionIcon variant='white' size={ACTION_BUTTON_SIZE} c={hasErrorForMember ? 'red' : undefined}>
                     <IconMoreVertical size={ACTION_ICON_SIZE} />
                 </ActionIcon>
             </Menu.Target>
@@ -76,6 +80,7 @@ const RentContentMenu = ({ member, handleShareRent, openRecordPayment, openAddEx
                     Share
                 </Menu.Item>
                 <Menu.Divider />
+                <Menu.Label>Actions</Menu.Label>
                 <Menu.Item
                     leftSection={<IconMoneyBag />}
                     rightSection={<DisplayPriorityIconOnError showIcon={hasErrorForRecordPayment} />}
@@ -95,6 +100,10 @@ const RentContentMenu = ({ member, handleShareRent, openRecordPayment, openAddEx
                     }}
                 >
                     Add Expense
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item leftSection={<IconHistory />} onClick={handleHistory}>
+                    History
                 </Menu.Item>
             </Menu.Dropdown>
         </Menu>
@@ -137,7 +146,10 @@ interface RentManagementContentProps {
 }
 
 export const RentManagementContent = ({ members }: RentManagementContentProps) => {
-    const { derivedRents, handleShareRent } = useRentManagementContent(members);
+    const {
+        derivedRents,
+        actions: { handleScrollToItem, handleShareRent }
+    } = useRentManagementContent(members);
     const [recordPaymentModalOpened, { open: openRecordPayment, close: closeRecordPayment }] = useDisclosure(false);
     const [addExpenseModalOpened, { open: openAddExpense, close: closeAddExpense }] = useDisclosure(false);
 
@@ -152,7 +164,7 @@ export const RentManagementContent = ({ members }: RentManagementContentProps) =
                     return (
                         <Accordion.Item key={member.id + '_rent'} value={member.id + '_rent'}>
                             <Center>
-                                <Accordion.Control aria-label={member.name}>
+                                <Accordion.Control aria-label={member.name} onTransitionEnd={handleScrollToItem}>
                                     <Group wrap='nowrap' mr='xs'>
                                         <MyAvatar name={member.name} size='md' />
                                         <Stack gap={0}>

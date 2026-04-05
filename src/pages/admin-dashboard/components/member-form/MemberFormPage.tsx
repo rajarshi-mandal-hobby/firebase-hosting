@@ -1,94 +1,72 @@
-import { useState, useEffectEvent, useEffect } from 'react';
-import { useMembers, useDefaultRents } from '../../../../contexts';
-import type { DefaultRents, Member } from '../../../../data/types';
-import { LoadingBox, ErrorContainer, NothingToShow, ErrorBoundary, SuspenseBox } from '../../../../shared/components';
-import { type MemberAction, useRefreshKey, useMyNavigation } from '../../../../shared/hooks';
+import { use } from 'react';
+import { useMember, useRents, type RentsResult } from '../../../../contexts';
+import type { DefaultRents } from '../../../../data/types';
+import { LoadingBox, NothingToShow, ErrorBoundary, SuspenseBox } from '../../../../shared/components';
+import { useMyNavigation, useRefreshKey, type MemberAction } from '../../../../shared/hooks';
 import { MemberForm } from './components/MemberForm';
 
 export interface MemberContainerProps {
     memberId: string | null;
+    rentPromise: () => Promise<RentsResult>;
     memberAction: MemberAction;
+    handleResetBoundary: () => void;
 }
 
 export interface MemberFormProps {
     memberAction: MemberAction;
     memberId: string;
     defaultRents: DefaultRents;
+    handleResetBoundary: () => void;
 }
 
-const useMember = (memberid: string, memberAction: MemberAction) => {
-    const {
-        members,
-        isLoading,
-        error,
-        handleRefresh: refresh
-    } = useMembers(memberAction === 'reactivate-member' ? 'inactive' : 'active');
-    const [member, setMember] = useState<Member | null>(null);
+const MemberEditForm = ({ memberAction, defaultRents, memberId, handleResetBoundary }: MemberFormProps) => {
+    const { member, isSearching } = useMember(memberId);
 
-    const event = useEffectEvent(() => {
-        if (isLoading || error) return;
-        const member = members.find((member) => member.id === memberid) ?? null;
-        setMember(member);
-    });
+    if (isSearching) return <LoadingBox message='Searching...' />;
 
-    useEffect(() => {
-        event();
-    }, [memberid, isLoading]);
+    if (!member) return <NothingToShow message='Member not found' />;
 
-    return { member, isLoading, error, refresh };
+    return <MemberForm {...{ defaultRents, member, memberAction, handleResetBoundary }} />;
 };
 
-const MemberActionForm = ({ memberAction, defaultRents, memberId }: MemberFormProps) => {
-    const { member, isLoading, error, refresh } = useMember(memberId, memberAction);
-    if (isLoading || !member) return <LoadingBox />;
-
-    if (error) return <ErrorContainer error={error} onRetry={refresh} />;
-
-    return <MemberForm defaultRents={defaultRents} member={member} memberAction={memberAction} />;
-};
-
-const MemberFormContainer = ({ memberAction, memberId }: MemberContainerProps) => {
-    if (memberAction !== 'add-member' && !memberId) {
-        throw new Error(`Member ID is required for "${memberAction}" action`);
+const MemberFormContainer = ({ memberAction, memberId, handleResetBoundary, rentPromise }: MemberContainerProps) => {
+    const rentsResult = use(rentPromise());
+    if (!rentsResult.success) {
+        throw rentsResult.error;
     }
+    const rents = rentsResult.data;
+    const isAddMember = memberAction === 'add-member' && memberId === null;
 
-    const { defaultRents, isLoading, error, actions } = useDefaultRents();
-
-    if (isLoading) {
-        return <LoadingBox />;
-    }
-
-    if (error) {
-        return <ErrorContainer error={error} onRetry={actions.handleRefresh} />;
-    }
-
-    if (defaultRents) {
-        const key = JSON.stringify({ memberAction, memberId, defaultRents });
-
-        return memberAction === 'add-member' ?
-                <MemberForm defaultRents={defaultRents} member={null} memberAction={memberAction} key={key} />
-            :   <MemberActionForm
-                    defaultRents={defaultRents}
-                    memberAction={memberAction}
-                    memberId={memberId!}
-                    key={key}
-                />;
-    }
-
-    return <NothingToShow />;
-};
-
-export function MemberFormPage() {
-    const [refreshKey, setRefreshKey] = useRefreshKey();
-    const { memberAction, memberId } = useMyNavigation();
-
-    console.log('🎨 Rendering MemberFormPage', memberAction, memberId);
+    if (!rents) return <NothingToShow message='No Default Rents found. Please add the default rents first...' />;
 
     return (
-        <ErrorBoundary onRetry={setRefreshKey} key={memberAction + '_' + memberId}>
+        isAddMember ? <MemberForm defaultRents={rents} member={null} {...{ memberAction, handleResetBoundary }} />
+        : memberId ? <MemberEditForm defaultRents={rents} {...{ memberAction, memberId, handleResetBoundary }} />
+        : <NothingToShow message={`Member ID is required for "${memberAction}" action`} />
+    );
+};
+
+export const MemberFormPage = () => {
+    const { memberAction, memberId } = useMyNavigation();
+    const [refreshKey, updateKey] = useRefreshKey();
+    const { promise: rentPromise, clearCache: clearRentsCache } = useRents();
+
+    const handleRefresh = () => {
+        updateKey();
+        clearRentsCache();
+    };
+
+    if (!memberAction) return <NothingToShow message='Member action is required' />;
+
+    return (
+        <ErrorBoundary onRetry={handleRefresh}>
             <SuspenseBox>
-                <MemberFormContainer memberAction={memberAction} memberId={memberId} key={refreshKey} />
+                <MemberFormContainer
+                    key={refreshKey}
+                    handleResetBoundary={handleRefresh}
+                    {...{ memberAction, memberId, rentPromise }}
+                />
             </SuspenseBox>
         </ErrorBoundary>
     );
-}
+};

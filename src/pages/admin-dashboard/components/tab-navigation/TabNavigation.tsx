@@ -49,7 +49,7 @@ export const TabNavigation = () => {
         <>
             <SegmentedControl value={activeTab} onChange={handleTabChange} data={TAB_DATA} />
 
-            <Collapse in={hasGlobalErrors}>
+            <Collapse expanded={hasGlobalErrors}>
                 <MyAlert
                     color='red'
                     variant='outline'

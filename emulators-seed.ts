@@ -10,15 +10,15 @@ import { seedFirestoreEmulator, seedTestData } from './src/data/mock/firestoreSe
 // Seed the emulator
 console.log('🚀 Starting emulator seeding process...');
 
-// seedFirestoreEmulator()
-//   .then(() => {
-//     console.log('🎉 Emulator seeding completed successfully!');
-//     process.exit(0);
-//   })
-//   .catch((error) => {
-//     console.error('💥 Emulator seeding failed:', error);
-//     process.exit(1);
-//   });
+seedFirestoreEmulator()
+  .then(() => {
+    console.log('🎉 Emulator seeding completed successfully!');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('💥 Emulator seeding failed:', error);
+    process.exit(1);
+  });
 
 seedTestData()
     .then(() => {
@@ -29,4 +29,3 @@ seedTestData()
         console.error('💥 Test data seeding failed:', error);
         process.exit(1);
     });
-

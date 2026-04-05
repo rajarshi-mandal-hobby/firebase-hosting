@@ -4,7 +4,7 @@ import { DEFAULT_SVG_SIZE } from '../types';
 
 // Define the structure for the props the output SVG will accept
 interface CustomSvgProps extends SVGProps<SVGSVGElement> {
-    size?: number;
+    size?: number | string;
 }
 
 // Type for the icon component
@@ -15,7 +15,7 @@ const useIconColor = (color?: string) => {
     return color ? getThemeColor(color, theme) : 'currentColor';
 };
 
-const createCustomSvg = (svg: ReactElement<CustomSvgProps, 'svg'>, displayName: string): IconComponent => {
+export const createCustomSvg = (svg: ReactElement<CustomSvgProps, 'svg'>, displayName: string): IconComponent => {
     // Extract and clone path elements to avoid prop conflicts
     const pathElements =
         Children.map(svg.props.children, (child) => {
@@ -33,6 +33,7 @@ const createCustomSvg = (svg: ReactElement<CustomSvgProps, 'svg'>, displayName: 
     const CustomIcon = ({ size = DEFAULT_SVG_SIZE, color, style, ...others }: CustomSvgProps) => {
         // Return the new SVG element with our custom props and the extracted paths.
         const iconColor = useIconColor(color);
+
         return (
             <svg
                 xmlns='http://www.w3.org/2000/svg'
@@ -290,7 +291,7 @@ export const IconShare = createCustomSvg(
     'Share'
 );
 
-export const IconUpi = ({ size = 24 }: { size?: number }) => (
+export const IconUpi = ({ size = DEFAULT_SVG_SIZE }: { size?: number }) => (
     <svg
         xmlns='http://www.w3.org/2000/svg'
         width={size}
@@ -315,7 +316,7 @@ export const IconUpi = ({ size = 24 }: { size?: number }) => (
     </svg>
 );
 
-export const IconFirebase = ({ size = 24 }: { size?: number }) => (
+export const IconFirebase = ({ size = DEFAULT_SVG_SIZE }: { size?: number }) => (
     <svg
         xmlns='http://www.w3.org/2000/svg'
         width={size}

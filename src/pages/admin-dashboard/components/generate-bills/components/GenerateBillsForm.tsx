@@ -19,11 +19,12 @@ import {
     MyAlert,
     MyThemeIcon
 } from '../../../../../shared/components';
-import { IconInfo, IconPerson, IconUniversalCurrency } from '../../../../../shared/icons';
+import { IconClose, IconInfo, IconPerson, IconUndo, IconUniversalCurrency } from '../../../../../shared/icons';
 import { toIndianLocale } from '../../../../../shared/utils';
 import type { GenerateBillsData } from '../hooks/useBillsData';
-import { useBillsForm } from '../hooks/useBillsForm';
+import { useBillsForm, type BillFormData } from './hooks/useBillsForm';
 import { GenerateBillsConfirmModal } from './GenerateBillsConfirmModal';
+import type { UseFormReturnType } from '@mantine/form';
 
 export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsData }) {
     const {
@@ -38,7 +39,31 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
         modalActions
     } = useBillsForm(billingData);
 
-    console.log('🎨 Rendering GenerateBillsFormContent');
+    const getCloseIconProps = <T,>(
+        form: UseFormReturnType<T>,
+        field: Parameters<UseFormReturnType<T>['isDirty']>[0]
+    ) => {
+        if (!field) return {};
+
+        const initialValues = form.getInitialValues();
+        const initialValue = (initialValues as any)[field];
+        const isDirty = form.isDirty(field);
+
+        return {
+            rightSection:
+                isDirty ?
+                    initialValue ? <IconUndo />
+                    :   <IconClose />
+                :   undefined,
+            rightSectionWidth: 34,
+            rightSectionProps: {
+                onClick: () => form.setFieldValue(field, initialValue),
+                style: { cursor: 'pointer' }
+            }
+        };
+    };
+
+    console.log('🎨 Rendering GenerateBillsFormContent', form.getInitialValues());
 
     return (
         <>
@@ -48,7 +73,7 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                     <Stack gap='lg'>
                         <SegmentedControl
                             data={segmentedControlData}
-                            value={form.values.selectedBillingMonth}
+                            value={form.getValues().selectedBillingMonth}
                             key={form.key('selectedBillingMonth')}
                             {...form.getInputProps('selectedBillingMonth')}
                         />
@@ -56,11 +81,11 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                         <MyAlert
                             my='md'
                             Icon={IconInfo}
-                            color={form.values.isUpdatingBills ? 'orange' : 'green'}
+                            color={form.getValues().isUpdatingBills ? 'orange.0' : 'green.0'}
                             p='xs'
                         >
                             <Text fw={700}>
-                                {form.values.isUpdatingBills ? 'Updating previous bills' : 'Generating new bills'}
+                                {form.getValues().isUpdatingBills ? 'Updating previous bills' : 'Generating new bills'}
                             </Text>
                         </MyAlert>
 
@@ -74,9 +99,9 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                                     placeholder='1400'
                                     flex={2}
                                     inputWrapperOrder={['label', 'input', 'description', 'error']}
-                                    rightSection={<FormClearButton field='secondFloorElectricityBill' form={form} />}
                                     key={form.key('secondFloorElectricityBill')}
                                     {...form.getInputProps('secondFloorElectricityBill')}
+                                    {...getCloseIconProps(form, 'secondFloorElectricityBill')}
                                 />
                                 <NumberInput
                                     required
@@ -85,8 +110,9 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                                     flex={1}
                                     allowNegative={false}
                                     hideControls
-                                    key={form.key('activeMemberCounts.2nd')}
-                                    {...form.getInputProps('activeMemberCounts.2nd')}
+                                    key={form.key('secondFloorActiveMemberCount')}
+                                    {...form.getInputProps('secondFloorActiveMemberCount')}
+                                    {...getCloseIconProps(form, 'secondFloorActiveMemberCount')}
                                 />
                             </Group>
 
@@ -106,9 +132,9 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                                     flex={2}
                                     allowNegative={false}
                                     hideControls
-                                    rightSection={<FormClearButton field='thirdFloorElectricityBill' form={form} />}
                                     key={form.key('thirdFloorElectricityBill')}
                                     {...form.getInputProps('thirdFloorElectricityBill')}
+                                    {...getCloseIconProps(form, 'thirdFloorElectricityBill')}
                                 />
                                 <NumberInput
                                     required
@@ -117,8 +143,9 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                                     flex={1}
                                     allowNegative={false}
                                     hideControls
-                                    key={form.key('activeMemberCounts.3rd')}
-                                    {...form.getInputProps('activeMemberCounts.3rd')}
+                                    key={form.key('thirdFloorActiveMemberCount')}
+                                    {...form.getInputProps('thirdFloorActiveMemberCount')}
+                                    {...getCloseIconProps(form, 'thirdFloorActiveMemberCount')}
                                 />
                             </Group>
 
@@ -134,27 +161,26 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                         <Stack gap='xs'>
                             <Group align='flex-start' justify='center'>
                                 <MultiSelect
-                                    required={!!form.values.wifiCharges.wifiMonthlyCharge}
+                                    required={!!form.getValues().wifiMonthlyCharge}
                                     label='Members'
                                     data={memberOptions}
-                                    placeholder={
-                                        !form.values.wifiCharges.wifiMemberIds.length ? 'Select members' : undefined
-                                    }
+                                    placeholder={!form.getValues().wifiMemberIds.length ? 'Select members' : undefined}
                                     flex={2}
-                                    key={form.key('wifiCharges.wifiMemberIds')}
-                                    {...form.getInputProps('wifiCharges.wifiMemberIds')}
+                                    key={form.key('wifiMemberIds')}
+                                    {...form.getInputProps('wifiMemberIds')}
                                 />
 
                                 <NumberInputWithCurrency
-                                    required={!!form.values.wifiCharges.wifiMemberIds.length}
+                                    required={!!form.getValues().wifiMemberIds.length}
                                     label='Amount'
                                     placeholder='600'
                                     flex={1}
                                     step={50}
                                     hideControls
                                     allowNegative={false}
-                                    key={form.key('wifiCharges.wifiMonthlyCharge')}
-                                    {...form.getInputProps('wifiCharges.wifiMonthlyCharge')}
+                                    key={form.key('wifiMonthlyCharge')}
+                                    {...form.getInputProps('wifiMonthlyCharge')}
+                                    {...getCloseIconProps(form, 'wifiMonthlyCharge')}
                                 />
                             </Group>
                             <DisplayChargesPerHead chargesPerHead={derivedState.wifiChargesPerHead} />
@@ -163,12 +189,12 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                         <Divider label='Additional Charges' mt='lg' />
 
                         <Switch
-                            label={`Select all ${form.values.activeMemberCounts['2nd']} members on 2nd floor`}
+                            label={`Select all ${form.getValues().secondFloorActiveMemberCount} members on 2nd floor`}
                             checked={toggleState['2nd']}
                             onChange={(event) => toggleFloorExpense('2nd', event.currentTarget.checked)}
                         />
                         <Switch
-                            label={`Select all ${form.values.activeMemberCounts['3rd']} members on 3rd floor`}
+                            label={`Select all ${form.getValues().thirdFloorActiveMemberCount} members on 3rd floor`}
                             checked={toggleState['3rd']}
                             onChange={(event) => toggleFloorExpense('3rd', event.currentTarget.checked)}
                         />
@@ -176,27 +202,26 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                         <Stack gap='xs'>
                             <Group align='flex-start' justify='center'>
                                 <MultiSelect
-                                    required={!!form.values.additionalExpenses.addExpenseAmount}
+                                    required={!!form.getValues().addExpenseAmount}
                                     label='Members'
                                     data={memberOptions}
                                     placeholder={
-                                        !form.values.additionalExpenses.addExpenseMemberIds.length ?
-                                            'Select members'
-                                        :   undefined
+                                        !form.getValues().addExpenseMemberIds.length ? 'Select members' : undefined
                                     }
                                     flex={2}
-                                    key={form.key('additionalExpenses.addExpenseMemberIds')}
-                                    {...form.getInputProps('additionalExpenses.addExpenseMemberIds')}
+                                    key={form.key('addExpenseMemberIds')}
+                                    {...form.getInputProps('addExpenseMemberIds')}
                                 />
                                 <NumberInputWithCurrency
-                                    required={!!form.values.additionalExpenses.addExpenseMemberIds.length}
+                                    required={!!form.getValues().addExpenseMemberIds.length}
                                     label='Amount'
                                     placeholder='100'
                                     allowNegative={true}
                                     hideControls
                                     flex={1}
-                                    key={form.key('additionalExpenses.addExpenseAmount')}
-                                    {...form.getInputProps('additionalExpenses.addExpenseAmount')}
+                                    key={form.key('addExpenseAmount')}
+                                    {...form.getInputProps('addExpenseAmount')}
+                                    {...getCloseIconProps(form, 'addExpenseAmount')}
                                 />
                             </Group>
                             <DisplayChargesPerHead chargesPerHead={derivedState.additionalChargesPerHead} />
@@ -204,23 +229,18 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
 
                         <Textarea
                             required={
-                                !!form.values.additionalExpenses.addExpenseMemberIds.length ||
-                                !!form.values.additionalExpenses.addExpenseAmount
+                                !!form.getValues().addExpenseMemberIds.length || !!form.getValues().addExpenseAmount
                             }
                             label='Description'
                             placeholder='Enter expense description'
                             disabled={
-                                !form.values.additionalExpenses.addExpenseMemberIds.length &&
-                                !form.values.additionalExpenses.addExpenseAmount
+                                !form.getValues().addExpenseMemberIds.length && !form.getValues().addExpenseAmount
                             }
                             autosize
                             minRows={1}
-                            rightSection={
-                                <FormClearButton field='additionalExpenses.addExpenseDescription' form={form} />
-                            }
-                            rightSectionPointerEvents='auto'
-                            key={form.key('additionalExpenses.addExpenseDescription')}
-                            {...form.getInputProps('additionalExpenses.addExpenseDescription')}
+                            key={form.key('addExpenseDescription')}
+                            {...form.getInputProps('addExpenseDescription')}
+                            {...getCloseIconProps(form, 'addExpenseDescription')}
                         />
 
                         <Group justify='flex-end' align='center' mt='xl'>
@@ -229,7 +249,7 @@ export function GenerateBillsForm({ billingData }: { billingData: GenerateBillsD
                                     Reset
                                 </Button>
                                 <Button type='submit' disabled={!form.isDirty() || isFetching}>
-                                    {form.values.isUpdatingBills ? 'Update' : 'Generate'}
+                                    {form.getValues().isUpdatingBills ? 'Update' : 'Generate'}
                                 </Button>
                             </Group>
                         </Group>

@@ -6,22 +6,36 @@ import {
     getDocs,
     limit,
     orderBy,
-    Query,
     query,
     QueryDocumentSnapshot,
-    startAfter,
-    type DocumentData
+    startAfter
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { createFetcher, createKeyedFetcher } from './fetcherFactories';
-import { DEFAULT_RENTS, ELECTRICITY, ERROR_CAUSE, MEMBERS } from '../data/types/constants';
-import type { DefaultRents, ElectricBill, RentHistory } from '../data/types';
+import { createFetcher, createKeyedFetcher, createNewFetcher } from './fetcherFactories';
+import { DEFAULT_RENTS, ELECTRICITY, ERROR_CAUSE } from '../data/types/constants';
+import type { DefaultRents, ElectricBill } from '../data/types';
+import { simulateNetworkDelay, simulateRandomError } from '../data/utils/serviceUtils';
 
 export const fetchDefaultRents = createFetcher(async () => {
+    simulateRandomError();
+    await simulateNetworkDelay();
     const docRef = doc(db, DEFAULT_RENTS.COL, DEFAULT_RENTS.DOC);
     const docSnapshot = await getDoc(docRef);
     if (!docSnapshot.exists()) {
-        throw new Error('Default Rents not found', { cause: ERROR_CAUSE.DATA_MISSING });
+        return null;
+    }
+
+    const data = docSnapshot.data() as DefaultRents;
+    return data;
+});
+
+export const fetchDefaultRentsWithCache = createNewFetcher(async () => {
+    simulateRandomError();
+    await simulateNetworkDelay(1500);
+    const docRef = doc(db, DEFAULT_RENTS.COL, DEFAULT_RENTS.DOC);
+    const docSnapshot = await getDoc(docRef);
+    if (!docSnapshot.exists()) {
+        return null;
     }
 
     const data = docSnapshot.data() as DefaultRents;
@@ -52,49 +66,43 @@ export const fetchElectricBillForMonth = createKeyedFetcher(async (month: string
     return data;
 });
 
-// 1. We need a way to store cursors outside the fetch function 
-// so that Page 2 knows where Page 1 ended.
-const pageCursors = new Map<string, QueryDocumentSnapshot<DocumentData>>();
+export interface PaginationResult<T> {
+    data: T[];
+    lastDoc: QueryDocumentSnapshot | null;
+    hasMore: boolean;
+    totalCount: number;
+}
 
-// 2. Define a Key that includes the page number
-type MemberPageKey = { memberId: string; page: number };
+// The actual Firestore logic
+export const fetchHistoryPage = createKeyedFetcher(
+    async ({
+        memberId,
+        lastDoc,
+        pageSize = 13
+    }: {
+        memberId: string;
+        lastDoc: any;
+        pageSize?: number;
+    }): Promise<PaginationResult<any>> => {
+        const colRef = collection(db, 'members', memberId, 'rent-history');
 
-export const fetchRentHistoryForMember = createKeyedFetcher(async (key: MemberPageKey, refresh: boolean) => {
-    const { memberId, page } = key;
-    const collectionRef = collection(db, 'members', memberId, 'test-history');
-    const limitValue = 12;
+        const countSnapshot = await getCountFromServer(colRef);
+        const totalCount = countSnapshot.data().count;
 
-    // Handle Refresh: Clear cursors for this member if starting over
-    if (refresh && page === 0) {
-        // Clear all cursors for this specific member
-        for (const k of pageCursors.keys()) {
-            if (k.startsWith(`${memberId}_`)) pageCursors.delete(k);
+        let q = query(colRef, orderBy('generatedAt', 'desc'), limit(pageSize));
+        if (lastDoc) {
+            q = query(colRef, orderBy('generatedAt', 'desc'), startAfter(lastDoc), limit(pageSize));
         }
+
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
+
+        return {
+            data,
+            lastDoc: lastVisible,
+            hasMore: data.length >= pageSize,
+            totalCount
+        };
     }
-
-    // Identify the cursor from the PREVIOUS page
-    // Page 0 has no cursor. Page 1 needs the cursor from Page 0.
-    const prevPageKey = `${memberId}_${page - 1}`;
-    const lastVisible = page > 0 ? pageCursors.get(prevPageKey) : null;
-
-    let q: Query<DocumentData>;
-    if (!lastVisible) {
-        q = query(collectionRef, orderBy('generatedAt', 'desc'), limit(limitValue));
-    } else {
-        q = query(collectionRef, orderBy('generatedAt', 'desc'), startAfter(lastVisible), limit(limitValue));
-    }
-
-    const docSnapshot = await getDocs(q);
-
-    // Store the last document of THIS page for the NEXT page to use
-    if (docSnapshot.docs.length > 0) {
-        const currentPageKey = `${memberId}_${page}`;
-        pageCursors.set(currentPageKey, docSnapshot.docs[docSnapshot.docs.length - 1]);
-    }
-
-    // Return the data
-    return docSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-    })) as RentHistory[];
-});
+);

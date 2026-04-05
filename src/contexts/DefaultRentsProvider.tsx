@@ -1,7 +1,22 @@
-import { createContext, use, useEffect, useEffectEvent, useReducer, useState } from 'react';
-import type { DefaultRents } from '../data/types';
-import { fetchDefaultRents } from '../services';
+import {
+    createContext,
+    startTransition,
+    use,
+    useEffect,
+    useEffectEvent,
+    useReducer,
+    useRef,
+    useState,
+    useTransition
+} from 'react';
+import { DEFAULT_RENTS, type DefaultRents, type ReactChildren } from '../data/types';
+import { fetchDefaultRents, fetchDefaultRentsWithCache } from '../services';
 import { MaxRetryError } from '../shared/components';
+import type { FetcherResult } from '../services/fetcherFactories';
+import { doc, getDoc } from 'firebase/firestore';
+import { value } from 'valibot';
+import { db } from '../firebase';
+import { simulateRandomError } from '../data/utils/serviceUtils';
 
 interface State {
     isLoading: boolean;
@@ -9,10 +24,11 @@ interface State {
     defaultRents: DefaultRents | null;
     refetch: boolean;
     refetchCount: number;
+    isCacheCleared: boolean;
 }
 
 interface Action {
-    type: 'success' | 'error' | 'loading' | 'refetch';
+    type: 'success' | 'error' | 'loading' | 'refetch' | 'clearCache';
     payload?: DefaultRents | Error | null;
 }
 
@@ -24,7 +40,8 @@ const reducer = (state: State, action: Action): State => {
                 isLoading: true,
                 error: null,
                 defaultRents: null,
-                refetch: false
+                refetch: false,
+                isCacheCleared: false
             };
         case 'success':
             return {
@@ -47,6 +64,16 @@ const reducer = (state: State, action: Action): State => {
                 refetch: true,
                 refetchCount: state.refetchCount + 1
             };
+        case 'clearCache':
+            return {
+                ...state,
+                defaultRents: null,
+                error: null, // Clear error too
+                isLoading: false,
+                isCacheCleared: true,
+                refetch: false
+            };
+
         default:
             return { ...state };
     }
@@ -59,18 +86,20 @@ const useFetchDefaultRents = (loadData: boolean) => {
         error: null,
         defaultRents: null,
         refetchCount: 0,
-        refetch: false
+        refetch: false,
+        isCacheCleared: false
     });
 
-    const fetchDefaultValuesEvent = useEffectEvent(async () => {
-        if (!loadData || state.isLoading) return;
+    const fn = fetchDefaultRents;
 
-        const shouldFetch = state.refetch || (!state.defaultRents && !state.error);
+    const fetchDefaultValuesEvent = useEffectEvent(async () => {
+        const shouldFetch = state.refetch || state.isCacheCleared || (!state.defaultRents && !state.error);
+
         if (!shouldFetch) return;
 
         dispatch({ type: 'loading' });
         try {
-            const data = await fetchDefaultRents(state.refetch);
+            const data = await fn.get(state.refetch);
             dispatch({ type: 'success', payload: data });
         } catch (error) {
             const isMaxRetry = state.refetchCount >= 3;
@@ -83,19 +112,23 @@ const useFetchDefaultRents = (loadData: boolean) => {
 
     useEffect(() => {
         fetchDefaultValuesEvent();
-    }, [state.refetch, loadData]); // Triggers when refetched OR when first 'activated'
+    }, [state.refetch, loadData]);
 
     return {
         ...state,
         actions: {
-            handleRefresh: () => dispatch({ type: 'refetch' })
+            handleRefresh: () => dispatch({ type: 'refetch' }),
+            clearCache: () => {
+                fn.clearCache();
+                dispatch({ type: 'clearCache' });
+            }
         }
     };
 };
 
 // 2. Define the Context Type properly
 type DefaultRentsContextType = ReturnType<typeof useFetchDefaultRents> & {
-    activate: () => void;
+    activateFetch: () => void;
 };
 
 const DefaultRentsContext = createContext<DefaultRentsContextType | null>(null);
@@ -103,17 +136,21 @@ const DefaultRentsContext = createContext<DefaultRentsContextType | null>(null);
 // 3. Update the Provider
 export const DefaultRentsProvider = ({ children }: { children: React.ReactNode }) => {
     const [hasRequested, setHasRequested] = useState(false);
-
-    // We pass the "lazy" flag into your hook
     const hookValues = useFetchDefaultRents(hasRequested);
 
-    // Stable activation function
-    const activate = () => setHasRequested(true);
+    // Wrap the hook's clearCache to also flip the local toggle
+    const clearCacheAndStop = () => {
+        hookValues.actions.clearCache(); // Clears the singleton/reducer
+        setHasRequested(false); // Stops the useEffect trigger
+    };
 
-    // Merge hook values with activate function
     const contextValue = {
         ...hookValues,
-        activate
+        activateFetch: () => setHasRequested(true),
+        actions: {
+            ...hookValues.actions,
+            clearCache: clearCacheAndStop
+        }
     };
 
     return <DefaultRentsContext value={contextValue}>{children}</DefaultRentsContext>;
@@ -128,8 +165,61 @@ export const useDefaultRents = () => {
 
     // This triggers the first fetch only when a component actually uses the hook
     useEffect(() => {
-        context.activate();
-    }, [context]);
+        context.activateFetch();
+    }, [context, context.isCacheCleared]);
 
+    return context;
+};
+
+export type RentsResult =
+    | {
+          success: true;
+          data: DefaultRents | null;
+      }
+    | { success: false; error: Error };
+
+export interface RentsContextType {
+    promise: () => Promise<RentsResult>;
+    clearCache: () => void;
+}
+
+const RentsContext = createContext<RentsContextType | null>(null);
+
+export const RentsProvider = ({ children }: ReactChildren) => {
+    const cache = useRef<Promise<RentsResult> | null>(null);
+
+    const promise = () => {
+        if (!cache.current) {
+            const newPromise: Promise<RentsResult> = (async () => {
+                try {
+                    const docRef = doc(db, DEFAULT_RENTS.COL, DEFAULT_RENTS.DOC);
+                    const docSnapshot = await getDoc(docRef);
+                    simulateRandomError();
+                    return docSnapshot.exists() ?
+                            { success: true, data: docSnapshot.data() as DefaultRents }
+                        :   { success: true, data: null };
+                } catch (error) {
+                    return { success: false, error: error as Error };
+                }
+            })();
+
+            cache.current = newPromise;
+        }
+
+        return cache.current;
+    };
+
+    const clearCache = () => {
+        cache.current = null;
+    };
+
+    return <RentsContext value={{ promise, clearCache }}>{children}</RentsContext>;
+};
+
+export const useRents = (): RentsContextType => {
+    const context = use(RentsContext);
+    if (!context) {
+        throw new Error('useRents must be used within RentsProvider');
+    }
     return context;
 };

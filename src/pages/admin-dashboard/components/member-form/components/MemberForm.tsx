@@ -41,9 +41,10 @@ export interface MemberDetailsFormProps {
     defaultRents: DefaultRents;
     memberAction: MemberAction;
     member: Member | null;
+    handleResetBoundary: () => void;
 }
 
-export const MemberForm = ({ defaultRents, member, memberAction }: MemberDetailsFormProps) => {
+export const MemberForm = ({ defaultRents, member, memberAction, handleResetBoundary }: MemberDetailsFormProps) => {
     const currentDefaultRent =
         member ? (defaultRents.bedRents[member.floor] as Record<BedType, number>)[member.bedType] : 0;
     if (currentDefaultRent === undefined) {
@@ -66,7 +67,7 @@ export const MemberForm = ({ defaultRents, member, memberAction }: MemberDetails
         summary,
         defaultFormValues: { secondFloorSelectData, thirdFlSelectData, minDate, maxDate },
         actions
-    } = useMemberDetailsForm({ defaultRents, member, currentDefaultRent, memberAction });
+    } = useMemberDetailsForm({ defaultRents, member, currentDefaultRent, memberAction, handleResetBoundary });
 
     console.log('Rendering MemberDetailsForm');
 

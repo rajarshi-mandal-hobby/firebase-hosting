@@ -1,34 +1,58 @@
-import { LoadingBox, ErrorContainer, NothingToShow, ErrorBoundary, SuspenseBox } from '../../../../shared/components';
+import { use } from 'react';
+import { useRents, type RentsResult } from '../../../../contexts';
+import type { DefaultRents } from '../../../../data/types';
+import { ErrorBoundary, SuspenseBox, NothingToShow } from '../../../../shared/components';
+import { useRefreshKey } from '../../../../shared/hooks';
 import { GenerateBillsForm } from './components/GenerateBillsForm';
 import { useBillsData } from './hooks/useBillsData';
-import { useRefreshKey } from '../../../../shared/hooks';
 
-const GenerateBills = () => {
-    const { isLoading, error, billingData, handleRefetch } = useBillsData();
+export const GenerateBillsPage = () => {
+    const [refreshKey, changeRefreshKey] = useRefreshKey();
+    const { promise, clearCache } = useRents();
 
-    if (isLoading) {
-        return <LoadingBox />;
+    const handleResetBoundary = () => {
+        clearCache();
+        changeRefreshKey();
+    };
+
+    return (
+        <ErrorBoundary onRetry={handleResetBoundary}>
+            <SuspenseBox>
+                <PromiseContainer rentsPromise={promise} key={refreshKey} />
+            </SuspenseBox>
+        </ErrorBoundary>
+    );
+};
+
+interface PromiseContainerProps {
+    rentsPromise: () => Promise<RentsResult>;
+}
+
+function PromiseContainer({ rentsPromise }: PromiseContainerProps) {
+    const rentsResult = use(rentsPromise());
+    if (!rentsResult.success) {
+        throw rentsResult.error;
     }
 
-    if (error) {
-        return <ErrorContainer error={error.error} onRetry={handleRefetch} />;
+    const rents = rentsResult.data;
+
+    if (!rents) {
+        return <NothingToShow message='Please add Default Rents first...' />;
     }
+
+    return <Bills rents={rents} />;
+}
+
+interface BillsProps {
+    rents: DefaultRents;
+}
+
+function Bills({ rents }: BillsProps) {
+    const billingData = useBillsData(rents);
 
     if (billingData) {
         return <GenerateBillsForm billingData={billingData} />;
     }
 
-    return <NothingToShow />;
-};
-
-export const GenerateBillsPage = () => {
-    const [refreshKey, changeRefreshKey] = useRefreshKey()
-
-    return (
-        <ErrorBoundary onRetry={changeRefreshKey}>
-            <SuspenseBox>
-                <GenerateBills key={refreshKey} />
-            </SuspenseBox>
-        </ErrorBoundary>
-    );
-};
+    return <NothingToShow message='Please add members first...' />;
+}

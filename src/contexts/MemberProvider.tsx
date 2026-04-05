@@ -1,11 +1,6 @@
 import type { Unsubscribe } from 'firebase/auth';
-import {
-    collection,
-    query,
-    orderBy,
-    onSnapshot
-} from 'firebase/firestore';
-import { createContext, use, useSyncExternalStore } from 'react';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { createContext, use, useEffect, useEffectEvent, useState, useSyncExternalStore, useTransition } from 'react';
 import { db } from '../firebase';
 import type { Member } from '../data/types';
 
@@ -42,8 +37,17 @@ export const membersStore = {
                 { includeMetadataChanges: false },
                 (snapshot) => {
                     const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Member);
+                    const inactive: Member[] = [];
+                    const active: Member[] = [];
+                    all.forEach((member) => {
+                        if (member.isActive) {
+                            active.push(member);
+                        } else {
+                            inactive.push(member);
+                        }
+                    });
                     membersStore.state = {
-                        data: { all, active: all.filter((m) => m.isActive), inactive: all.filter((m) => !m.isActive) },
+                        data: { all, active, inactive },
                         isLoading: false,
                         error: null
                     };
@@ -101,6 +105,19 @@ export function useMember(memberId: string) {
     const state = use(MembersContext);
     if (!state) throw new Error('useMember must be used within MembersProvider');
 
-    return state.data.all.find((m) => m.id === memberId) ?? null;
-}
+    const [member, setMember] = useState<Member | null>(null);
+    const [isSearching, startTransition] = useTransition();
 
+    const serchEvent = useEffectEvent(() => {
+        startTransition(() => {
+            const member = state.data.all.find((m) => m.id === memberId) ?? null;
+            setMember(member);
+        });
+    });
+
+    useEffect(() => {
+        serchEvent();
+    }, [memberId]);
+
+    return { member, isSearching };
+}

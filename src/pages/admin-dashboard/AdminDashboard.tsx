@@ -1,43 +1,53 @@
 import { Menu, ActionIcon, Stack, Title, Text } from '@mantine/core';
-import { Activity } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { Activity, useEffect } from 'react';
 import { ACTION_BUTTON_SIZE, ACTION_ICON_SIZE } from '../../data/types';
-import { LoadingBox, GroupSpaceApart, GroupIcon, MyAvatar, ErrorBoundary, SuspenseBox } from '../../shared/components';
-import { type View, Views, useMyNavigation } from '../../shared/hooks/useNavigation';
+import { GroupSpaceApart, GroupIcon, MyAvatar, ErrorBoundary, SuspenseBox } from '../../shared/components';
+import { useMyNavigation, type Path } from '../../shared/hooks/useNavigation';
 import { useRefreshKey } from '../../shared/hooks/useRefreshKey';
 import { IconMoreVertical, IconRupee, IconLogout, IconBack, IconReceiptLong, IconPersonAdd } from '../../shared/icons';
-import { lazyImport } from '../../shared/utils';
 import { TabNavigation } from './components/tab-navigation/TabNavigation';
+import { Link, Outlet, replace, useSubmit } from 'react-router';
+import { onAuthStateChanged } from 'firebase/auth';
+import { FormStoreProvider, MembersProvider, RentsProvider, useUser } from '../../contexts';
+import { auth } from '../../firebase';
 
-// Lazy Imports
-const DefaultRentsPage = lazyImport(() => import('./components/default-rents/DefaultRentsPage'), 'DefaultRentsPage');
-const GenerateBillsPage = lazyImport(
-    () => import('./components/generate-bills/GenerateBillsPage'),
-    'GenerateBillsPage'
-);
-const MemberFormPage = lazyImport(() => import('./components/member-form/MemberFormPage'), 'MemberFormPage');
-const MemberDetailsPage = lazyImport(() => import('./components/member-details/MemberDetails'), 'MemberDetailsPage');
+export const Titles: Record<Path, string> = {
+    '/': 'Rajarshi Mess',
+    'member-action': 'Add Member',
+    'generate-bills': 'Generate Bills',
+    'default-rents': 'Default Rents',
+    'member-details': 'Member Details'
+} as const;
 
-interface AdminMenuProps {
-    view: View;
-    navigateTo: (newView: View) => void;
-}
+export type Title = keyof typeof Titles;
 
-const getIcon = (label: View) => {
-    switch (label) {
-        case 'generate-bills':
-            return <IconReceiptLong />;
-        case 'member-action':
-            return <IconPersonAdd />;
-        case 'default-rents':
-            return <IconRupee />;
-        default:
-            return null;
-    }
+const useAdminMenu = (path: Path) => {
+    const submit = useSubmit();
+    const handleLogout = async () => submit({ intent: 'logout' }, { method: 'post', action: '/signin', replace: true });
+
+    const entries = Object.entries(Titles);
+    const menuItems = entries.filter(
+        ([p]) => p !== '/' && p !== 'member-details' && p !== 'default-rents' && p !== path
+    ) as [Path, string][];
+
+    const getIcon = (path: Path) => {
+        switch (path) {
+            case 'generate-bills':
+                return <IconReceiptLong />;
+            case 'member-action':
+                return <IconPersonAdd />;
+            case 'default-rents':
+                return <IconRupee />;
+            default:
+                return null;
+        }
+    };
+
+    return { menuItems, handleLogout, getIcon };
 };
 
-const AdminMenu = ({ view, navigateTo }: AdminMenuProps) => {
-    const { logout } = useAuth();
+const AdminMenu = ({ path }: { path: Path }) => {
+    const { menuItems, handleLogout, getIcon } = useAdminMenu(path);
 
     return (
         <Menu>
@@ -47,25 +57,24 @@ const AdminMenu = ({ view, navigateTo }: AdminMenuProps) => {
                 </ActionIcon>
             </Menu.Target>
 
-            <Menu.Dropdown>
-                {Object.entries(Views)
-                    .filter(([path]) => view !== path && path !== 'default-rents' && path !== 'home')
-                    .map(([path, label]) => (
-                        <Menu.Item
-                            key={path}
-                            leftSection={getIcon(path as View)}
-                            onClick={() => navigateTo(path as View)}
-                        >
-                            {label}
-                        </Menu.Item>
-                    ))}
+            <Menu.Dropdown onTransitionEnd={() => console.log('I am clicked')}>
+                {menuItems.map(([p, label]) => (
+                    <Menu.Item key={p} leftSection={getIcon(p)} component={Link} to={p} replace={path !== '/'}>
+                        {label}
+                    </Menu.Item>
+                ))}
                 <Menu.Divider />
-                {view !== 'default-rents' && (
-                    <Menu.Item leftSection={getIcon('default-rents')} onClick={() => navigateTo('default-rents')}>
-                        {Views['default-rents']}
+                {path !== 'default-rents' && (
+                    <Menu.Item
+                        leftSection={getIcon('default-rents')}
+                        component={Link}
+                        to='default-rents'
+                        replace={path !== '/'}
+                    >
+                        {Titles['default-rents']}
                     </Menu.Item>
                 )}
-                <Menu.Item color='red' onClick={logout} leftSection={<IconLogout />}>
+                <Menu.Item onClick={handleLogout} leftSection={<IconLogout color='red' />}>
                     Sign Out
                 </Menu.Item>
             </Menu.Dropdown>
@@ -74,49 +83,50 @@ const AdminMenu = ({ view, navigateTo }: AdminMenuProps) => {
 };
 
 export const AdminDashboardContainer = () => {
-    const { user, loading } = useAuth();
-    const { view, getMode, goBack, navigateTo, memberAction } = useMyNavigation();
+    const user = useUser();
+    const [refreshKey, setRefreshKey] = useRefreshKey();
+    const { path, getMode, goBack, memberAction } = useMyNavigation();
     const viewTitle =
         memberAction === 'edit-member' ? 'Edit Member'
         : memberAction === 'reactivate-member' ? 'Reactivate Member'
-        : Views[view];
-
-    if (loading) return <LoadingBox />;
+        : Titles[path];
 
     console.log('🎨 Rendering AdminDashboard');
 
     return (
-        <Stack p='md'>
-            <GroupSpaceApart h={48}>
-                <GroupIcon gap='md'>
-                    {view === 'home' ?
-                        <>
-                            <MyAvatar name={user?.displayName || 'Admin'} src={user?.photoURL} size='md' />
-                            <Stack gap={0}>
-                                <Title order={4}>{user?.displayName || 'Admin'}</Title>
-                                <Text size='xs' c='dimmed'>
-                                    {user?.email}
-                                </Text>
-                            </Stack>
-                        </>
-                    :   <>
-                            <ActionIcon color='gray.1' variant='filled' size={ACTION_BUTTON_SIZE} onClick={goBack}>
-                                <IconBack size={ACTION_ICON_SIZE} />
-                            </ActionIcon>
-                            <Title order={3}>{viewTitle}</Title>
-                        </>
-                    }
-                </GroupIcon>
-                <AdminMenu view={view} navigateTo={navigateTo} />
-            </GroupSpaceApart>
+        <>
+            <title>{viewTitle.toString()}</title>
+            <Stack p='md'>
+                <GroupSpaceApart h={48}>
+                    <GroupIcon gap='md'>
+                        {path === '/' ?
+                            <>
+                                <MyAvatar name={user?.displayName || 'Admin'} src={user?.photoURL} size='md' />
+                                <Stack gap={0}>
+                                    <Title order={4}>{user?.displayName || 'Admin'}</Title>
+                                    <Text size='xs' c='dimmed'>
+                                        {user?.email}
+                                    </Text>
+                                </Stack>
+                            </>
+                        :   <>
+                                <ActionIcon color='gray.1' variant='filled' size={ACTION_BUTTON_SIZE} onClick={goBack}>
+                                    <IconBack size={ACTION_ICON_SIZE} />
+                                </ActionIcon>
+                                <Title order={3}>{viewTitle}</Title>
+                            </>
+                        }
+                    </GroupIcon>
+                    <AdminMenu path={path} />
+                </GroupSpaceApart>
 
-            {/* Components stay alive because they are always in the DOM */}
+                {/* Components stay alive because they are always in the DOM */}
 
-            <Activity mode={getMode('home')}>
-                <TabNavigation />
-            </Activity>
+                <Activity mode={getMode(path)}>
+                    <TabNavigation />
+                </Activity>
 
-            <Activity mode={getMode('default-rents')}>
+                {/* <Activity mode={getMode('default-rents')}>
                 <DefaultRentsPage />
             </Activity>
 
@@ -130,17 +140,44 @@ export const AdminDashboardContainer = () => {
 
             <Activity mode={getMode('member-details')}>
                 <MemberDetailsPage />
-            </Activity>
-        </Stack>
+            </Activity> */}
+
+                {/* <DefaultRentsProvider> */}
+                    <RentsProvider>
+                        <ErrorBoundary onRetry={setRefreshKey}>
+                            <SuspenseBox>
+                                <Outlet key={refreshKey} />
+                            </SuspenseBox>
+                        </ErrorBoundary>
+                    </RentsProvider>
+                {/* </DefaultRentsProvider> */}
+            </Stack>
+        </>
     );
 };
 
 export const AdminDashboard = () => {
     const [refreshKey, setRefreshKey] = useRefreshKey();
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                replace('/signin');
+            }
+        });
+        return () => {
+            unsubscribe();
+        };
+    }, []);
+
     return (
         <ErrorBoundary onRetry={setRefreshKey}>
             <SuspenseBox>
-                <AdminDashboardContainer key={refreshKey} />
+                <MembersProvider>
+                    <FormStoreProvider>
+                        <AdminDashboardContainer key={refreshKey} />
+                    </FormStoreProvider>
+                </MembersProvider>
             </SuspenseBox>
         </ErrorBoundary>
     );

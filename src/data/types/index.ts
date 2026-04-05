@@ -1,6 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { AdminConfig } from '../shemas/AdminConfig';
 import type { FlatErrors } from 'valibot';
+import type { ReactNode } from 'react';
 
 export * from './constants';
 
@@ -130,3 +131,7 @@ export type SaveResult =
           success: false;
           errors: ValidationError;
       };
+
+export interface ReactChildren {
+    children: ReactNode;
+}

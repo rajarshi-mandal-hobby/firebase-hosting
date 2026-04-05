@@ -5,6 +5,7 @@ import { parse } from 'valibot';
 import { useGlobalFormStore } from '../../../../../contexts';
 import { DefaultRentsSchema } from '../utils/DefaultRentsSchema';
 import type { DefaultRentsFormProps } from '../components/DefaultRentsForm';
+import { setFields } from '../../../../../shared/utils';
 
 export interface DefaultRentsFormValues {
     secondBed: string | number;
@@ -17,7 +18,7 @@ export interface DefaultRentsFormValues {
     upiVpa: string;
 }
 
-export function useDefaultRentsForm({ defaultRents, onRefresh }: DefaultRentsFormProps) {
+export function useDefaultRentsForm({ defaultRents, clearCache }: DefaultRentsFormProps) {
     const { bedRents, securityDeposit, wifiMonthlyCharge, upiVpa } = defaultRents ?? {
         bedRents: {
             '2nd': {
@@ -45,32 +46,40 @@ export function useDefaultRentsForm({ defaultRents, onRefresh }: DefaultRentsFor
 
     const form = useForm<DefaultRentsFormValues>({
         mode: 'uncontrolled',
+        initialValues: {
+            secondBed: bedRents['2nd'].Bed,
+            secondRoom: bedRents['2nd'].Room,
+            secondSpecial: bedRents['2nd'].Special,
+            thirdBed: bedRents['3rd'].Bed,
+            thirdRoom: bedRents['3rd'].Room,
+            securityDeposit: securityDeposit,
+            wifiMonthlyCharge: wifiMonthlyCharge,
+            upiVpa: upiVpa
+        },
         validate: valibotResolver(DefaultRentsSchema),
         validateInputOnBlur: true,
         transformValues: (values) => parse(DefaultRentsSchema, values)
     });
 
+    // Watch for changes in secondBed and update other fields accordingly
+    form.watch('secondBed', ({ value }) => {
+        if (typeof value !== 'number') return;
+        const doubleRent = value * 2;
+        setFields(form, {
+            secondRoom: doubleRent,
+            thirdBed: value,
+            thirdRoom: doubleRent
+        });
+    });
+
     const formSaveEvent = useEffectEvent(() => {
-        if (defaultRents && !form.initialized) {
-            form.initialize({
-                secondBed: bedRents['2nd'].Bed,
-                secondRoom: bedRents['2nd'].Room,
-                secondSpecial: bedRents['2nd'].Special,
-                thirdBed: bedRents['3rd'].Bed,
-                thirdRoom: bedRents['3rd'].Room,
-                securityDeposit: securityDeposit,
-                wifiMonthlyCharge: wifiMonthlyCharge,
-                upiVpa: upiVpa
-            });
-
-            return;
-        }
-
-        if (!values || !defaultRents) return;
+        if (!values) return;
 
         const formValues = form.getTransformedValues();
 
-        const isDifferent = JSON.stringify(formValues) !== JSON.stringify(values);
+        const isDifferent = Object.entries(formValues).some(
+            ([key, value]) => value !== values[key as keyof DefaultRentsFormValues]
+        );
         console.log('Are default rents values different', isDifferent);
 
         if (isDifferent) {
@@ -83,7 +92,7 @@ export function useDefaultRentsForm({ defaultRents, onRefresh }: DefaultRentsFor
             console.log('Result success');
             onResetState();
             form.resetDirty();
-            onRefresh();
+            clearCache();
         } else if (saveResult?.errors.nested) {
             form.setErrors(saveResult.errors.nested);
         } else if (saveResult?.errors.root || saveResult?.errors.other) {
@@ -93,20 +102,16 @@ export function useDefaultRentsForm({ defaultRents, onRefresh }: DefaultRentsFor
 
     useEffect(() => {
         formSaveEvent();
-    }, [saveResult, error, defaultRents]);
+    }, [isPending, error]);
 
     return {
         form,
-        isPending,
+        isPending: isPending || form.submitting,
         isSubmitDisabled: !form.isDirty() || isPending,
         rootError,
         actions: {
             handleSave: (values: DefaultRentsFormValues) => {
                 startTransition(async () => await dispatcher(values));
-            },
-            handleRefresh: () => {
-                onResetState();
-                onRefresh();
             },
             getDespriction: (inputKey: keyof DefaultRentsFormValues, defaultDespriction: string) => {
                 const errors = form.errors;

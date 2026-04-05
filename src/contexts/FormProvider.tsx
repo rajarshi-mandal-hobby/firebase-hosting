@@ -1,4 +1,4 @@
-import { createContext, use, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, use, useActionState, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import type { SaveResult } from '../data/types';
 import { httpsCallable } from 'firebase/functions';
 import { simulateNetworkDelay } from '../data/utils/serviceUtils';
@@ -14,7 +14,8 @@ const FormKeys = {
     'edit-member': 'editMember',
     'delete-member': 'deleteMember',
     'deactivate-member': 'deactivateMember',
-    'reactivate-member': 'reactivateMember'
+    'reactivate-member': 'reactivateMember',
+    'generate-bills': 'generateBill'
 } as const;
 
 type FormKey = keyof typeof FormKeys;
@@ -27,7 +28,8 @@ export const FormNames = {
     'edit-member': 'Edit Member',
     'delete-member': 'Delete Member',
     'deactivate-member': 'Deactivate Member',
-    'reactivate-member': 'Reactivate Member'
+    'reactivate-member': 'Reactivate Member',
+    'generate-bills': 'Generate Bill'
 } as const;
 
 const listeners = new Set<() => void>();
@@ -184,7 +186,6 @@ export const useGlobalFormStore = <T,>(key: FormKey) => {
         });
 
         try {
-            await simulateNetworkDelay();
             const fn = httpsCallable(functions, FormKeys[key]);
             const res = await fn(values);
             const saveResult = res.data as unknown as SaveResult;

@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import { useState, useEffectEvent, useEffect, startTransition } from 'react';
 import type { Member } from '../../../../../../data/types';
 import { toIndianLocale, notifyError } from '../../../../../../shared/utils';
+import { useAccordionScrollToView } from '../../../../../../shared/hooks';
 
 export type MessagesPlatform = 'whatsapp' | 'share';
 
@@ -27,6 +28,7 @@ const InitialRents = {
 
 export const useRentManagementContent = (members: Member[]) => {
     const [derivedRents, setDerivedRents] = useState<DerivedRents>({ ...InitialRents });
+    const handleScrollToItem = useAccordionScrollToView();
 
     const updateDerivedRents = useEffectEvent(() => {
         if (!members.length) return;
@@ -97,6 +99,9 @@ export const useRentManagementContent = (members: Member[]) => {
 
     return {
         derivedRents,
-        handleShareRent
+        actions: {
+            handleScrollToItem,
+            handleShareRent
+        }
     };
 };

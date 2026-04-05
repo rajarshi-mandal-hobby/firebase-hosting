@@ -11,9 +11,9 @@ interface GroupIconProps {
     color?: string;
 }
 
-export function MyThemeIcon({ children, Icon, size = 20, color = 'gray' }: GroupIconProps) {
+export function MyThemeIcon({ children, Icon, size = 20, color = 'violet' }: GroupIconProps) {
     // Define icon size
-    let iconSize = size - 6;
+    let iconSize = size - 4;
     if (size <= DEFAULT_SVG_SIZE) iconSize = size - 2;
     // Define colors
     let userColor = color.split('.')[0];

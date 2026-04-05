@@ -38,9 +38,16 @@ export const useMemberDetailsForm = ({
     defaultRents,
     member,
     currentDefaultRent,
-    memberAction
+    memberAction,
+    handleResetBoundary
 }: UseMemberDetailsFormProps) => {
-    const initialValues = getInitialValues({ defaultRents, member, memberAction, currentDefaultRent });
+    const initialValues = getInitialValues({
+        defaultRents,
+        member,
+        memberAction,
+        currentDefaultRent,
+        handleResetBoundary
+    });
     const isAddAction = memberAction === 'add-member';
     const isEditAction = member && memberAction === 'edit-member';
     const isReactivateAction = member && memberAction === 'reactivate-member';
@@ -68,12 +75,12 @@ export const useMemberDetailsForm = ({
                 // Handle Floor Change
                 if (floor !== previous.floor) {
                     console.log('Floor changed');
-                    setFields(form, [
-                        ['bedType', null],
-                        ['rentAmount', ''],
-                        ['advanceDeposit', ''],
-                        ['amountPaid', '']
-                    ]);
+                    setFields(form, {
+                        bedType: null,
+                        rentAmount: '',
+                        advanceDeposit: '',
+                        amountPaid: ''
+                    });
                 }
 
                 // Set Default Rent Amount and Advance Deposit when BedType and Floor changed
@@ -86,13 +93,13 @@ export const useMemberDetailsForm = ({
                     const sum = calculateTotalDeposit(newRent, securityDeposit, newRent);
                     const out = isEditAction && bedType ? sum - member.totalAgreedDeposit : 0;
 
-                    setFields(form, [
-                        ['rentAmount', newRent],
-                        ['advanceDeposit', newRent],
-                        ['amountPaid', isEditAction ? sum : ''],
-                        ['outstandingAmount', out],
-                        ['shouldForwardOutstanding', out !== 0]
-                    ]);
+                    setFields(form, {
+                        rentAmount: newRent,
+                        advanceDeposit: newRent,
+                        amountPaid: isEditAction ? sum : '',
+                        outstandingAmount: out,
+                        shouldForwardOutstanding: out !== 0
+                    });
 
                     setSummary({
                         total: sum,
@@ -104,10 +111,10 @@ export const useMemberDetailsForm = ({
                     console.log('Amount paid changed');
                     const sum = calculateTotalDeposit(rentAmount, securityDeposit, advanceDeposit);
                     const out = typeof amountPaid !== 'number' ? 0 : sum - amountPaid;
-                    setFields(form, [
-                        ['outstandingAmount', out],
-                        ['shouldForwardOutstanding', out !== 0]
-                    ]);
+                    setFields(form, {
+                        outstandingAmount: out,
+                        shouldForwardOutstanding: out !== 0
+                    });
 
                     setSummary({
                         total: sum,
@@ -117,11 +124,11 @@ export const useMemberDetailsForm = ({
 
                 if (securityDeposit !== previous.securityDeposit) {
                     if (!securityDeposit) {
-                        setFields(form, [
-                            ['amountPaid', ''],
-                            ['outstandingAmount', 0],
-                            ['shouldForwardOutstanding', false]
-                        ]);
+                        setFields(form, {
+                            amountPaid: '',
+                            outstandingAmount: 0,
+                            shouldForwardOutstanding: false
+                        });
                         setSummary({
                             total: 0,
                             outstanding: 0
@@ -131,10 +138,10 @@ export const useMemberDetailsForm = ({
 
                     const sum = calculateTotalDeposit(rentAmount, securityDeposit, advanceDeposit);
                     const out = typeof amountPaid !== 'number' ? 0 : sum - amountPaid;
-                    setFields(form, [
-                        ['outstandingAmount', out],
-                        ['shouldForwardOutstanding', out !== 0]
-                    ]);
+                    setFields(form, {
+                        outstandingAmount: out,
+                        shouldForwardOutstanding: out !== 0
+                    });
                     setSummary({
                         total: sum,
                         outstanding: out
@@ -213,7 +220,7 @@ export const useMemberDetailsForm = ({
     const isRentMismatch = member ? member.currentRent !== currentDefaultRent : false;
     const isSecurityDepositMismatch = member ? member.securityDeposit !== defaultRents.securityDeposit : false;
     const shouldDisplayMismatchAlert = isRentMismatch || isSecurityDepositMismatch;
-    const isButtonDisabled = !form.isDirty() && (isAddAction || isEditAction) || isPending ;
+    const isButtonDisabled = (!form.isDirty() && (isAddAction || isEditAction)) || isPending;
 
     const generateNote = (values: MemberDetailsFormData) => {
         const dateText = '#' + dayjs().format('DD-MM-YYYY') + ' — ';

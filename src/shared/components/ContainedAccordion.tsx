@@ -5,12 +5,7 @@ export const ContainedAccordion = ({ children, ...props }: AccordionProps) => {
     return (
         <Accordion
             variant='contained'
-            classNames={{
-                item: classesAccordion['accordion-item'],
-                control: classesAccordion['accordion-control'],
-                chevron: classesAccordion['accordion-chevron'],
-                label: classesAccordion['accordion-label']
-            }}
+            classNames={classesAccordion}
             {...props}
         >
             {children}

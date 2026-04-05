@@ -23,7 +23,7 @@ interface TableRowProps {
 
 const TableRow = ({ heading, value, icon, withBorder = true, boldFont = false }: TableRowProps) => (
     <Table.Tr style={withBorder ? undefined : { borderBottom: 'none' }}>
-        <Table.Th pl={0} fw={500} w={140}>
+        <Table.Th pl={0} fw={500} w={180}>
             <GroupIcon>
                 {icon}
                 {heading}
@@ -90,7 +90,11 @@ export const RentDetailsList = ({ rentHistory }: RentDetailsListProps) => {
                 )}
 
                 {previousOutstanding > 0 && (
-                    <TableRow heading='Previous Outstanding' value={toIndianLocale(previousOutstanding)} icon={<IconRupee />} />
+                    <TableRow
+                        heading='Previous Outstanding'
+                        value={toIndianLocale(previousOutstanding)}
+                        icon={<IconRupee />}
+                    />
                 )}
 
                 <TableRow heading='Total Charges' value={toIndianLocale(totalCharges)} icon={<IconPayments />} />
