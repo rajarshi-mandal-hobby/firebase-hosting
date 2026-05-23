@@ -1,27 +1,15 @@
-import {
-    createContext,
-    startTransition,
-    use,
-    useEffect,
-    useEffectEvent,
-    useReducer,
-    useRef,
-    useState,
-    useTransition
-} from 'react';
-import { DEFAULT_RENTS, type DefaultRents, type ReactChildren } from '../data/types';
-import { fetchDefaultRents, fetchDefaultRentsWithCache } from '../services';
+import { createContext, use, useEffect, useEffectEvent, useReducer, useRef, useState } from 'react';
+import { DEFAULT_VALUES, type DefaultValues, type ReactChildren } from '../data/types';
+import { fetchDefaultRents } from '../services';
 import { MaxRetryError } from '../shared/components';
-import type { FetcherResult } from '../services/fetcherFactories';
 import { doc, getDoc } from 'firebase/firestore';
-import { value } from 'valibot';
 import { db } from '../firebase';
 import { simulateRandomError } from '../data/utils/serviceUtils';
 
 interface State {
     isLoading: boolean;
     error: Error | null;
-    defaultRents: DefaultRents | null;
+    defaultRents: DefaultValues | null;
     refetch: boolean;
     refetchCount: number;
     isCacheCleared: boolean;
@@ -29,7 +17,7 @@ interface State {
 
 interface Action {
     type: 'success' | 'error' | 'loading' | 'refetch' | 'clearCache';
-    payload?: DefaultRents | Error | null;
+    payload?: DefaultValues | Error | null;
 }
 
 const reducer = (state: State, action: Action): State => {
@@ -47,7 +35,7 @@ const reducer = (state: State, action: Action): State => {
             return {
                 ...state,
                 isLoading: false,
-                defaultRents: action.payload as DefaultRents,
+                defaultRents: action.payload as DefaultValues,
                 refetchCount: 0
             };
         case 'error':
@@ -174,7 +162,7 @@ export const useDefaultRents = () => {
 export type RentsResult =
     | {
           success: true;
-          data: DefaultRents | null;
+          data: DefaultValues | null;
       }
     | { success: false; error: Error };
 
@@ -192,11 +180,11 @@ export const RentsProvider = ({ children }: ReactChildren) => {
         if (!cache.current) {
             const newPromise: Promise<RentsResult> = (async () => {
                 try {
-                    const docRef = doc(db, DEFAULT_RENTS.COL, DEFAULT_RENTS.DOC);
+                    const docRef = doc(db, DEFAULT_VALUES.COL, DEFAULT_VALUES.DOC);
                     const docSnapshot = await getDoc(docRef);
                     simulateRandomError();
                     return docSnapshot.exists() ?
-                            { success: true, data: docSnapshot.data() as DefaultRents }
+                            { success: true, data: docSnapshot.data() as DefaultValues }
                         :   { success: true, data: null };
                 } catch (error) {
                     return { success: false, error: error as Error };

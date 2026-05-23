@@ -21,7 +21,7 @@ export const useBillsConfirmModal = (formData: BillsConfirmModalFormData | null,
 
     const memberLookup = formData.submittedMembers.floorIdNameMap;
 
-    const expenseMemberIds = formData.additionalExpenses.addExpenseMemberIds;
+    const expenseMemberIds = formData.addExpenseMemberIds;
     const expenseMembers = expenseMemberIds.reduce<Record<Floor, string[]>>(
         (acc, memberId) => {
             const memberSecond = memberLookup['2nd'][memberId];
@@ -38,17 +38,17 @@ export const useBillsConfirmModal = (formData: BillsConfirmModalFormData | null,
     );
 
     const wifiChargesPerHead = computePerHeadBill(
-        formData.wifiCharges.wifiMonthlyCharge,
-        formData.wifiCharges.wifiMemberIds.length
+        formData.wifiMonthlyCharge,
+        formData.wifiMemberIds.length
     );
 
-    const wifiMembers = formData.wifiCharges.wifiMemberIds
+    const wifiMembers = formData.wifiMemberIds
         .flatMap((memberId) => memberLookup['2nd'][memberId] ?? memberLookup['3rd'][memberId])
         .filter(Boolean);
 
     const additionalExpensesPerHead = computePerHeadBill(
-        formData.additionalExpenses.addExpenseAmount,
-        formData.additionalExpenses.addExpenseMemberIds.length
+        formData.addExpenseAmount,
+        formData.addExpenseMemberIds.length
     );
 
     return { expenseMembers, additionalExpensesPerHead, wifiMembers, wifiChargesPerHead };

@@ -33,7 +33,7 @@ export default defineConfig([
         rules: {
             // Firebase specific best practices
             '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-            '@typescript-eslint/no-explicit-any': 'warn',
+            '@typescript-eslint/no-explicit-any': 'off',
             'no-console': 'off', // Cloud functions rely on console logs for logging
 
             // Node 24 / ESM enforcement

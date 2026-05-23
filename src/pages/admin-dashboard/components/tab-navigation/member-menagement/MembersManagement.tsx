@@ -12,36 +12,50 @@ import {
     Input,
     Text
 } from '@mantine/core';
-import { DEFAULT_SVG_SIZE } from '../../../../../data/types';
+import {
+    DEFAULT_SVG_SIZE,
+    FLOOR_LABEL,
+    MEMBER_STATUS_LABEL,
+    type FloorAndAll,
+    type MemberStatusLabel
+} from '../../../../../data/types';
 import { LoadingBox, ErrorContainer, SuspenseBox, NothingToShow } from '../../../../../shared/components';
 import { IconFilter, IconSearch } from '../../../../../shared/icons';
-import { lazyImport } from '../../../../../shared/utils';
+import { convertToFloorOrdinal, lazyImport } from '../../../../../shared/utils';
 import { type FiltersType, useMembersManagement } from './hooks/useMembersManagement';
-import { useActivityMountedKey } from '../../../../../shared/hooks';
+import type { Tab } from '../TabNavigation';
 
 const MembersContent = lazyImport(() => import('./components/MembersContent'), 'MembersContent');
 
 interface FilterPopoverProps {
     isDefaultFilterState: boolean;
     memberFilter: FiltersType;
-    handleStatusChange: (e: React.MouseEvent<HTMLInputElement, MouseEvent>) => void;
-    handleFloorChange: (e: React.MouseEvent<HTMLInputElement, MouseEvent>) => void;
-    handleWifiOptChange: () => void;
-    resetFilters: () => void;
+    onStatusChange: (e: React.MouseEvent<HTMLInputElement, MouseEvent>) => void;
+    onFloorChange: (e: React.MouseEvent<HTMLInputElement, MouseEvent>) => void;
+    onWifiOptChange: () => void;
+    onResetFilters: () => void;
 }
 
 const FilterPopover = ({
     isDefaultFilterState,
     memberFilter,
-    handleStatusChange,
-    handleFloorChange,
-    handleWifiOptChange,
-    resetFilters
+    onStatusChange,
+    onFloorChange,
+    onWifiOptChange,
+    onResetFilters
 }: FilterPopoverProps) => {
-    const key = useActivityMountedKey('member-management-activity');
+    const createChips = (
+        entries: Record<string, string>,
+        onClick: (e: React.MouseEvent<HTMLInputElement, MouseEvent>) => void
+    ) =>
+        Object.entries(entries).map(([key, value]) => (
+            <Chip key={key} value={key} onClick={onClick}>
+                {value}
+            </Chip>
+        ));
 
     return (
-        <Popover width='350' withArrow key={key}>
+        <Popover width={350} withArrow>
             <Popover.Target>
                 <Button
                     variant={isDefaultFilterState ? 'filled' : 'default'}
@@ -58,15 +72,7 @@ const FilterPopover = ({
                             Status:
                         </Text>
                         <Chip.Group value={memberFilter.accountStatus}>
-                            <Chip value='active' onClick={handleStatusChange}>
-                                Active
-                            </Chip>
-                            <Chip value='inactive' onClick={handleStatusChange}>
-                                Inactive
-                            </Chip>
-                            <Chip value='all' onClick={handleStatusChange}>
-                                All
-                            </Chip>
+                            {createChips(MEMBER_STATUS_LABEL, onStatusChange)}
                         </Chip.Group>
                     </Group>
 
@@ -76,32 +82,20 @@ const FilterPopover = ({
                         <Text size='sm' fw={500}>
                             Floor:
                         </Text>
-                        <Chip.Group value={memberFilter.floor}>
-                            <Chip value='All' onClick={handleFloorChange}>
-                                All
-                            </Chip>
-                            <Chip value='2nd' onClick={handleFloorChange}>
-                                2nd
-                            </Chip>
-                            <Chip value='3rd' onClick={handleFloorChange}>
-                                3rd
-                            </Chip>
-                        </Chip.Group>
+                        <Chip.Group value={memberFilter.floor}>{createChips(FLOOR_LABEL, onFloorChange)}</Chip.Group>
                     </Group>
 
                     <Divider />
 
-                    <Group gap='xs'>
-                        <Checkbox
-                            checked={memberFilter.optedForWifi}
-                            onChange={handleWifiOptChange}
-                            fw={500}
-                            labelPosition='left'
-                            label='Opted for Wi-Fi'
-                        />
-                    </Group>
+                    <Checkbox
+                        checked={memberFilter.optedForWifi}
+                        onChange={onWifiOptChange}
+                        fw={500}
+                        labelPosition='left'
+                        label='Opted for Wi-Fi'
+                    />
 
-                    <Button size='xs' disabled={isDefaultFilterState} onClick={resetFilters} mt='sm'>
+                    <Button size='xs' disabled={isDefaultFilterState} onClick={onResetFilters} mt='sm'>
                         Clear All Filters
                     </Button>
                 </Stack>
@@ -116,25 +110,23 @@ interface MembersCountProgressProps {
     totalCount: number;
 }
 
-const useMembersCountProgress = ({ activeCount, inactiveCount, totalCount }: MembersCountProgressProps) => ({
-    active: {
-        count: activeCount,
-        total: totalCount,
-        color: 'gray.4',
-        labelColor: 'gray.7',
-        percentage: (activeCount / (totalCount || 1)) * 100
-    },
-    inactive: {
-        count: inactiveCount,
-        total: totalCount,
-        color: 'red',
-        labelColor: 'red.1',
-        percentage: (inactiveCount / (totalCount || 1)) * 100
-    }
-});
-
 const MembersCountProgress = ({ activeCount, inactiveCount, totalCount }: MembersCountProgressProps) => {
-    const { active, inactive } = useMembersCountProgress({ activeCount, inactiveCount, totalCount });
+    const { active, inactive } = {
+        active: {
+            count: activeCount,
+            total: totalCount,
+            color: 'gray.4',
+            labelColor: 'gray.7',
+            percentage: (activeCount / (totalCount || 1)) * 100
+        },
+        inactive: {
+            count: inactiveCount,
+            total: totalCount,
+            color: 'red',
+            labelColor: 'red.1',
+            percentage: (inactiveCount / (totalCount || 1)) * 100
+        }
+    };
 
     return (
         <Progress.Root size='xl'>
@@ -148,7 +140,7 @@ const MembersCountProgress = ({ activeCount, inactiveCount, totalCount }: Member
     );
 };
 
-export const MembersManagement = () => {
+export const MembersManagement = ({ activeTab }: { activeTab: Tab }) => {
     // Use independent members management hook
     const {
         // Data
@@ -165,11 +157,8 @@ export const MembersManagement = () => {
             handleFloorChange,
             handleWifiOptChange,
             resetFilters,
-            // Data Actions
-            handleRefresh
-        },
-        // Search Actions
-        searchActions: { handleSearchQueryChange }
+            handleSearchQueryChange
+        }
     } = useMembersManagement();
 
     if (isLoading) {
@@ -177,7 +166,7 @@ export const MembersManagement = () => {
     }
 
     if (error) {
-        return <ErrorContainer error={error} onRetry={handleRefresh} />;
+        return <ErrorContainer error={error} />;
     }
 
     console.log('🎨 Rendering MembersManagement');
@@ -192,9 +181,11 @@ export const MembersManagement = () => {
                                 {memberFilter.accountStatus.charAt(0).toUpperCase() +
                                     memberFilter.accountStatus.slice(1)}
                             </span>{' '}
-                            • Floor: <span style={{ fontWeight: 700 }}>{memberFilter.floor}</span> • Wifi:{' '}
+                            • Floor:{' '}
+                            <span style={{ fontWeight: 700 }}>{convertToFloorOrdinal(memberFilter.floor)}</span> • Wifi:{' '}
                             <span style={{ fontWeight: 700 }}>{memberFilter.optedForWifi ? 'Yes' : 'No'}</span>
                         </Text>
+
                         <MembersCountProgress
                             activeCount={filteredMembers.counts.active}
                             inactiveCount={filteredMembers.counts.inactive}
@@ -205,10 +196,11 @@ export const MembersManagement = () => {
                     <FilterPopover
                         isDefaultFilterState={isDefaultFilterState}
                         memberFilter={memberFilter}
-                        handleStatusChange={handleStatusChange}
-                        handleFloorChange={handleFloorChange}
-                        handleWifiOptChange={handleWifiOptChange}
-                        resetFilters={resetFilters}
+                        onStatusChange={handleStatusChange}
+                        onFloorChange={handleFloorChange}
+                        onWifiOptChange={handleWifiOptChange}
+                        onResetFilters={resetFilters}
+                        key={activeTab === 'members' ? undefined : activeTab}
                     />
                 </Group>
 
@@ -229,7 +221,7 @@ export const MembersManagement = () => {
 
             {filteredMembers.members.length > 0 ?
                 <SuspenseBox>
-                    <MembersContent members={filteredMembers.members} />
+                    <MembersContent members={filteredMembers.members} activeTab={activeTab} />
                 </SuspenseBox>
             :   <NothingToShow message='No members found matching the criteria.' />}
         </>

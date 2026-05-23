@@ -1,6 +1,9 @@
 import { useState, useEffectEvent, useEffect, useRef } from 'react';
 
 type ActivityName = 'defualt-rents-activity' | 'rent-activity' | 'member-management-activity' | 'not_mounted';
+/**
+ * @deprecated
+ */
 export const useActivityMountedKey = (activityName: ActivityName) => {
     const [key, setKey] = useState('not_mounted');
     const isMountedRef = useRef(false);
@@ -8,7 +11,7 @@ export const useActivityMountedKey = (activityName: ActivityName) => {
     const evt = useEffectEvent(() => {
         const mounted = isMountedRef.current ? '_mounted' : '_unmounted';
         const newKey = activityName + mounted;
-        if (newKey === key) return
+        if (newKey === key) return;
         setKey(newKey);
     });
 

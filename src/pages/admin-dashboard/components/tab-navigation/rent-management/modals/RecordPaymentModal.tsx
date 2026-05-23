@@ -23,11 +23,11 @@ export const RecordPaymentModal = ({ opened, onClose }: GlobalModalProps) => {
         actions: { resetForm, handleRecordPayment }
     } = useRecordPaymentModal({ opened, onClose });
 
-    const { totalCharges, amountPaid, note, currentOutstanding } = selectedMember?.currentMonthRent || {
+    const { totalCharges, amountPaid, note, outstanding } = selectedMember?.currentMonthRent || {
         totalCharges: 0,
         amountPaid: 0,
         note: '',
-        currentOutstanding: 0
+        outstanding: 0
     };
 
     const isButtonDisabled = isPending || !form.isDirty() || !selectedMember;
@@ -100,7 +100,7 @@ export const RecordPaymentModal = ({ opened, onClose }: GlobalModalProps) => {
                                     <IconRupee />
                                     <Text>Current outstanding</Text>
                                 </GroupIcon>
-                                <Text fw={500}>{toIndianLocale(currentOutstanding)}</Text>
+                                <Text fw={500}>{toIndianLocale(outstanding)}</Text>
                             </GroupSpaceApart>
 
                             <Divider color={currentColor} />

@@ -1,4 +1,4 @@
-$ports = 4000, 5000, 5001, 8080, 9000, 9099, 9199, 9499, 5173
+$ports = 9099, 5002, 4000, 5001, 9299, 9001, 8080, 9199, 5000, 8085
 $ports | ForEach-Object {
     Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue | ForEach-Object {
         try {

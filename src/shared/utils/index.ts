@@ -1,6 +1,7 @@
 import type { UseFormReturnType } from '@mantine/form';
 import dayjs from 'dayjs';
 import { lazy } from 'react';
+import type { FloorLabel, FloorAndAll } from '../../data/types';
 
 export * from './notifications';
 export * from './statusUtils';
@@ -15,11 +16,14 @@ export type DeepPartial<T> = {
     [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
-export const toNumber = (value: unknown): number => {
+export const toNumber = (value: unknown) => {
     if (!value) return 0;
-    if (typeof value === 'number') return value;
-    const num = Number(value);
-    return isNaN(num) ? 0 : num;
+    if (typeof value === 'number' && isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const num = Number(value);
+        return isNaN(num) ? 0 : num;
+    }
+    return 0;
 };
 
 /**
@@ -41,7 +45,7 @@ export const toIndianLocale = (number: unknown, isCurrency = true): string => {
                 currency: 'INR',
                 currencyDisplay: 'symbol',
                 minimumFractionDigits: hasDecimal ? 2 : 0,
-                maximumFractionDigits: hasDecimal ? 2 : 0
+                maximumFractionDigits: hasDecimal ? 2 : 0,
             }
         :   undefined;
 
@@ -55,7 +59,7 @@ const suffixes = new Map([
     ['one', 'st'],
     ['two', 'nd'],
     ['few', 'rd'],
-    ['other', 'th']
+    ['other', 'th'],
 ]);
 
 /**
@@ -178,3 +182,16 @@ export const setFields = <T, K extends keyof T>(form: UseFormReturnType<T>, fiel
         form.setFieldValue(key, value as any);
     });
 };
+
+/**
+ * Get Formatted Floor Number
+ */
+export const convertToFloorOrdinal = (floor: FloorAndAll): FloorLabel =>
+    floor === 'second' ? '2nd'
+    : floor === 'third' ? '3rd'
+    : 'All';
+
+export const convertToFloor = (floor: FloorLabel): FloorAndAll =>
+    floor === '2nd' ? 'second'
+    : floor === '3rd' ? 'third'
+    : 'all';

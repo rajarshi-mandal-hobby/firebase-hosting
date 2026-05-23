@@ -1,14 +1,15 @@
-import { getThemeColor, useMantineTheme } from '@mantine/core';
-import { type ReactElement, type SVGProps, type ComponentType, Children, cloneElement, isValidElement } from 'react';
+import { useMantineTheme } from '@mantine/core';
+import type { SVGProps, FunctionComponent, ReactElement } from 'react';
 import { DEFAULT_SVG_SIZE } from '../types';
 
-// Define the structure for the props the output SVG will accept
-interface CustomSvgProps extends SVGProps<SVGSVGElement> {
+export interface CustomSvgProps extends SVGProps<SVGSVGElement> {
     size?: number | string;
+    color?: string;
 }
 
-// Type for the icon component
-export type IconComponent = ComponentType<CustomSvgProps>;
+export type IconComponent = FunctionComponent<CustomSvgProps>;
+
+const getThemeColor = (color: string, theme: any) => theme.colors?.[color] || color;
 
 const useIconColor = (color?: string) => {
     const theme = useMantineTheme();
@@ -16,40 +17,35 @@ const useIconColor = (color?: string) => {
 };
 
 export const createCustomSvg = (svg: ReactElement<CustomSvgProps, 'svg'>, displayName: string): IconComponent => {
-    // Extract and clone path elements to avoid prop conflicts
-    const pathElements =
-        Children.map(svg.props.children, (child) => {
-            if (isValidElement(child) && child.type === 'path') {
-                // ✅ Clone paths and remove conflicting props
-                return cloneElement(child as ReactElement<SVGProps<SVGPathElement>>, {
-                    fill: undefined,
-                    stroke: undefined
-                });
-            }
-            return null;
-        })?.filter(Boolean) || [];
-
-    // Return a new functional component that renders the customized SVG.
     const CustomIcon = ({ size = DEFAULT_SVG_SIZE, color, style, ...others }: CustomSvgProps) => {
-        // Return the new SVG element with our custom props and the extracted paths.
         const iconColor = useIconColor(color);
+
+        const { viewBox, children, style: originalStyle, width: _width, height: _height, ...originalProps } = svg.props;
 
         return (
             <svg
                 xmlns='http://www.w3.org/2000/svg'
                 height={size}
                 width={size}
-                // Retain original viewBox if no new viewBox is provided.
-                viewBox={svg.props.viewBox || '0 0 24 24'}
-                fill={iconColor} // Use currentColor to inherit the parent color.
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', ...style }}
+                viewBox={viewBox || '0 0 24 24'}
+                style={
+                    {
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        ['--theme-icon-color' as any]: iconColor,
+                        ...originalStyle,
+                        ...style
+                    } as React.CSSProperties
+                }
+                {...originalProps}
                 {...others}
             >
-                {pathElements}
+                <g style={{ fill: 'var(--theme-icon-color, currentColor)' }}>{children}</g>
             </svg>
         );
     };
-    // Add the displayName property to the CustomIcon component after its definition.
+
     CustomIcon.displayName = displayName;
     return CustomIcon;
 };

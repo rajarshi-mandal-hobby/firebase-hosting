@@ -14,11 +14,18 @@ import {
     List,
     Divider,
     Paper,
-    Space
+    Space,
+    Collapse
 } from '@mantine/core';
 import { MonthPickerInput } from '@mantine/dates';
 import { type DefaultRents, type Member, type BedType } from '../../../../../data/types';
-import { MyLoadingOverlay, NumberInputWithCurrency, GroupIcon, MyAlert } from '../../../../../shared/components';
+import {
+    MyLoadingOverlay,
+    NumberInputWithCurrency,
+    GroupIcon,
+    MyAlert,
+    formCloseIconProps
+} from '../../../../../shared/components';
 import type { MemberAction } from '../../../../../shared/hooks';
 import {
     IconUndo,
@@ -53,9 +60,11 @@ export const MemberForm = ({ defaultRents, member, memberAction, handleResetBoun
 
     const {
         form,
+        members,
         formValues,
         isPending,
         rootError,
+        isMoveInDateDisabled,
         isConfirmModalOpen,
         shouldDisplayMismatchAlert,
         isRentMismatch,
@@ -95,7 +104,7 @@ export const MemberForm = ({ defaultRents, member, memberAction, handleResetBoun
             )}
 
             {rootError && (
-                <MyAlert title='There are form errors' Icon={IconPriorityHigh}>
+                <MyAlert title='There are form errors' Icon={IconPriorityHigh} mb='xl'>
                     {rootError}
                 </MyAlert>
             )}
@@ -111,79 +120,66 @@ export const MemberForm = ({ defaultRents, member, memberAction, handleResetBoun
                     <Divider label='Personal Information' />
                     <TextInput
                         label='Full Name'
-                        pattern='[A-Za-z\s]+'
-                        placeholder={member ? member.name : 'John Doe'}
-                        rightSection={
-                            form.isDirty('name') ?
-                                member ?
-                                    <IconUndo />
-                                :   <IconClose />
-                            :   null
-                        }
-                        rightSectionProps={{
-                            onClick: () =>
-                                member ? form.setFieldValue('name', member.name) : form.setFieldValue('name', ''),
-                            style: { cursor: 'pointer' }
-                        }}
-                        rightSectionWidth={34}
+                        pattern='[A-Za-z0-9\s]+'
+                        placeholder={member ? member.name : 'Enter full name'}
                         autoCapitalize='words'
+                        list='name-list'
                         required
                         key={form.key('name')}
                         {...form.getInputProps('name')}
+                        {...formCloseIconProps(form, 'name')}
                     />
 
-                    <Group grow preventGrowOverflow={false} wrap='nowrap'>
+                    <datalist id='name-list'>
+                        {members.map((member) => (
+                            <option key={member.id} value={member.name} />
+                        ))}
+                    </datalist>
+
+                    <Group align='flex-start'>
                         <MonthPickerInput
+                            readOnly={isMoveInDateDisabled}
                             valueFormat='MMM YYYY'
                             label='Join Month'
                             placeholder='Pick date'
                             minDate={minDate}
                             maxDate={maxDate}
-                            rightSection={
-                                member &&
-                                form.isDirty('moveInDate') && (
-                                    <IconUndo
-                                        onClick={() => form.setFieldValue('moveInDate', getSafeDate(member.moveInDate))}
-                                        style={{ cursor: 'pointer' }}
-                                    />
-                                )
-                            }
                             required
-                            clearable={member || !form.isDirty('moveInDate') ? false : true}
                             leftSection={<IconCalendarMonth />}
-                            disabled={memberAction === 'reactivate-member'}
                             flex={1}
-                            miw={130}
+                            miw={150}
                             key={form.key('moveInDate')}
                             {...form.getInputProps('moveInDate')}
+                            {...(isMoveInDateDisabled ?
+                                { rightSection: <IconEditOff />, rightSectionWidth: 34 }
+                            :   formCloseIconProps(form, 'moveInDate'))}
                         />
                         <TextInput
                             label='Phone Number'
                             type='tel'
                             placeholder='10-digit number'
                             inputMode='numeric'
-                            rightSection={
-                                form.isDirty('phone') ?
-                                    member ?
-                                        <IconUndo />
-                                    :   <IconClose />
-                                :   null
-                            }
-                            rightSectionProps={{
-                                onClick: () =>
-                                    member ?
-                                        form.setFieldValue('phone', formatPhoneNumber(member.phone))
-                                    :   form.setFieldValue('phone', ''),
-                                style: { cursor: 'pointer' }
-                            }}
-                            rightSectionWidth={34}
                             leftSection={<Text fz='sm'>+91</Text>}
                             required
+                            list='phone-list'
                             flex={2}
                             key={form.key('phone')}
                             {...form.getInputProps('phone')}
+                            {...formCloseIconProps(form, 'phone')}
                         />
+                        <datalist id='phone-list'>
+                            {members.map((member) => (
+                                <option key={member.id} value={member.phone.replaceAll(/(\+91)(\d{5})(\d{5})/g, '$1 $2 $3')} />
+                            ))}
+                        </datalist>
                     </Group>
+
+                    {form.getValues().isPreviousMonth && (
+                        <MyAlert Icon={IconPriorityHigh} color='orange'>
+                            Previous month has been selected which is an expensive database operation.{' '}
+                            <strong>Please verify the details.</strong>
+                        </MyAlert>
+                    )}
 
                     {/* Additional Details */}
                     {/* <Space h="xs" /> */}
@@ -264,41 +260,19 @@ export const MemberForm = ({ defaultRents, member, memberAction, handleResetBoun
                         <NumberInputWithCurrency
                             label='Security Deposit'
                             placeholder={defaultRents.securityDeposit.toString()}
-                            rightSection={
-                                form.isDirty('securityDeposit') ?
-                                    member ?
-                                        <IconUndo />
-                                    :   <IconClose />
-                                :   null
-                            }
-                            rightSectionProps={{
-                                onClick: () =>
-                                    member ?
-                                        form.setFieldValue('securityDeposit', member.securityDeposit)
-                                    :   form.setFieldValue('securityDeposit', defaultRents.securityDeposit),
-                                style: {
-                                    cursor: 'pointer'
-                                }
-                            }}
-                            rightSectionWidth={34}
                             required
                             key={form.key('securityDeposit')}
                             {...form.getInputProps('securityDeposit')}
+                            {...formCloseIconProps(form, 'securityDeposit')}
                         />
 
                         {!!member && (
                             <NumberInputWithCurrency
                                 label='Rent at Joining'
-                                placeholder='Enter current rent'
-                                rightSection={form.isDirty('rentAtJoining') ? <IconUndo /> : null}
-                                rightSectionProps={{
-                                    onClick: () => form.setFieldValue('rentAtJoining', member.rentAtJoining),
-                                    style: { cursor: 'pointer' }
-                                }}
-                                rightSectionWidth={34}
                                 required
                                 key={form.key('rentAtJoining')}
                                 {...form.getInputProps('rentAtJoining')}
+                                {...formCloseIconProps(form, 'rentAtJoining')}
                             />
                         )}
                     </SimpleGrid>
@@ -342,18 +316,10 @@ export const MemberForm = ({ defaultRents, member, memberAction, handleResetBoun
                                             label='Amount Paying Now'
                                             placeholder={summary.total.toString()}
                                             required
-                                            readOnly={!!member && memberAction === 'edit-member'}
                                             disabled={!form.values.advanceDeposit || !form.values.securityDeposit}
-                                            rightSection={
-                                                member ? <IconEditOff /> : form.isDirty('amountPaid') && <IconClose />
-                                            }
-                                            rightSectionProps={{
-                                                onClick: () => !member && form.setFieldValue('amountPaid', ''),
-                                                style: { cursor: !member ? 'pointer' : 'default' }
-                                            }}
-                                            rightSectionWidth={34}
                                             key={form.key('amountPaid')}
                                             {...form.getInputProps('amountPaid')}
+                                            {...formCloseIconProps(form, 'amountPaid')}
                                         />
                                     </SimpleGrid>
                                     <Checkbox
@@ -368,14 +334,7 @@ export const MemberForm = ({ defaultRents, member, memberAction, handleResetBoun
                                         key={form.key('shouldForwardOutstanding')}
                                         {...form.getInputProps('shouldForwardOutstanding', { type: 'checkbox' })}
                                     />
-                                    {/* <VisuallyHidden> */}
-                                    <NumberInput
-                                        hidden
-                                        readOnly
-                                        key={form.key('outstandingAmount')}
-                                        {...form.getInputProps('outstandingAmount')}
-                                    />
-                                    {/* </VisuallyHidden> */}
+
                                     <Textarea
                                         label={
                                             <GroupIcon>
@@ -407,6 +366,23 @@ export const MemberForm = ({ defaultRents, member, memberAction, handleResetBoun
                             </Paper>
                         </Stack>
                     </MyAlert>
+
+                    {/* <VisuallyHidden> */}
+                    <NumberInput
+                        label='Outstanding Amount'
+                        hidden
+                        readOnly
+                        key={form.key('outstandingAmount')}
+                        {...form.getInputProps('outstandingAmount')}
+                    />
+                    <Checkbox
+                        label='Has Date Changed'
+                        hidden
+                        readOnly
+                        key={form.key('isPreviousMonth')}
+                        {...form.getInputProps('isPreviousMonth', { type: 'checkbox' })}
+                    />
+                    {/* </VisuallyHidden> */}
 
                     {/* Actions */}
                     <Group justify='flex-end' mt='xl'>

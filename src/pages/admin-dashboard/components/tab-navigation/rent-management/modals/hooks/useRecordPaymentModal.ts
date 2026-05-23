@@ -1,9 +1,9 @@
 import { useForm } from '@mantine/form';
 import { useState, startTransition } from 'react';
 import { useGlobalFormStore } from '../../../../../../../contexts';
-import type { Member, PaymentStatus } from '../../../../../../../data/types';
+import type { PaymentStatus, RentHistory } from '../../../../../../../data/types';
 import type { GlobalModalProps } from '../../../../../../../shared/components/GlobalModal';
-import { getStatusColor, getStatusTitle, toNumber, useGlobalFormResult } from '../../../../../../../shared/utils';
+import { getStatusAlertConfig, getStatusColor, toNumber, useGlobalFormResult } from '../../../../../../../shared/utils';
 
 interface RecordPaymentFormData {
     amountPaid: string | number;
@@ -11,6 +11,8 @@ interface RecordPaymentFormData {
 }
 
 type CurrentTitle = 'No payment' | 'Paying in full' | 'Paying partially' | 'Paying over';
+
+type Rent = Pick<RentHistory, 'amountPaid' | 'note' | 'totalCharges'>;
 
 interface PaymentDetails {
     currentStatus: PaymentStatus;
@@ -24,34 +26,36 @@ const DefaultPaymentDetails: PaymentDetails = {
     currentColor: getStatusColor('Due')
 } as const;
 
-const getPaymentDetails = (amountPaid: number, rent: Member['currentMonthRent']): PaymentDetails => {
-    if (amountPaid === 0)
-        return {
-            currentStatus: 'Due',
-            currentTitle: 'No payment',
-            currentColor: getStatusColor('Due')
-        };
-    if (amountPaid === rent.totalCharges)
-        return {
-            currentStatus: 'Paid',
-            currentTitle: 'Paying in full',
-            currentColor: getStatusColor('Paid')
-        };
-    if (amountPaid > 0 && amountPaid < rent.totalCharges)
-        return {
-            currentStatus: 'Partial',
-            currentTitle: 'Paying partially',
-            currentColor: getStatusColor('Partial')
-        };
-    if (amountPaid > rent.totalCharges)
-        return {
-            currentStatus: 'Overpaid',
-            currentTitle: 'Paying over',
-            currentColor: getStatusColor('Overpaid')
-        };
-    return DefaultPaymentDetails;
+const getPaymentDetails = (amountPaid: number, rent: Rent): PaymentDetails => {
+    switch (true) {
+        case amountPaid === 0:
+            return {
+                currentStatus: 'Due',
+                currentTitle: 'No payment',
+                currentColor: getStatusColor('Due')
+            };
+        case amountPaid === rent.totalCharges:
+            return {
+                currentStatus: 'Paid',
+                currentTitle: 'Paying in full',
+                currentColor: getStatusColor('Paid')
+            };
+        case amountPaid > 0 && amountPaid < rent.totalCharges:
+            return {
+                currentStatus: 'Partial',
+                currentTitle: 'Paying partially',
+                currentColor: getStatusColor('Partial')
+            };
+        case amountPaid > rent.totalCharges:
+            return {
+                currentStatus: 'Overpaid',
+                currentTitle: 'Paying over',
+                currentColor: getStatusColor('Overpaid')
+            };
+        default:
+            return DefaultPaymentDetails;
+    }
 };
-
 
 export const useRecordPaymentModal = ({ opened, onClose }: GlobalModalProps) => {
     const {
@@ -61,15 +65,17 @@ export const useRecordPaymentModal = ({ opened, onClose }: GlobalModalProps) => 
         onResetState
     } = useGlobalFormStore<RecordPaymentFormData>('record-payment');
 
-    const rent = selectedMember?.currentMonthRent || { totalCharges: 0, amountPaid: 0, note: '' };
+    const rent: Rent = selectedMember?.currentMonthRent || {
+        totalCharges: 0,
+        amountPaid: 0,
+        note: ''
+    };
     const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>(DefaultPaymentDetails);
 
     const form = useForm<RecordPaymentFormData>({
         initialValues: { amountPaid: '', note: '' },
         onValuesChange: ({ amountPaid }) => {
-            startTransition(() =>
-                setPaymentDetails(getPaymentDetails(toNumber(amountPaid), rent as Member['currentMonthRent']))
-            );
+            startTransition(() => setPaymentDetails(getPaymentDetails(toNumber(amountPaid), rent)));
         },
         validate: {
             amountPaid: (val) =>
@@ -105,8 +111,9 @@ export const useRecordPaymentModal = ({ opened, onClose }: GlobalModalProps) => 
 
     const formAmountPaid = toNumber(form.values.amountPaid);
     const isPaymentBelowOutstanding = formAmountPaid > 0 && formAmountPaid < rent.totalCharges;
-    const prevStatusColor = getStatusColor(selectedMember?.currentMonthRent.status || 'Due');
-    const prevStatusTitle = getStatusTitle(selectedMember?.currentMonthRent.status || 'Due');
+    const { color: prevStatusColor, title: prevStatusTitle } = getStatusAlertConfig(
+        selectedMember?.currentMonthRent.status || 'Due'
+    );
 
     return {
         form,

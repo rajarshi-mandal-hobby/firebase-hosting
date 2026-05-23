@@ -1,5 +1,6 @@
 import { Stack, Title, Paper, Button, Text } from '@mantine/core';
 import { GroupButtons } from '.';
+import { clearFirestoreCache } from '../../firebase';
 
 export const MaxRetryError = new Error('Maximum retry attempts reached. Refresh the page to try again.', {
     cause: 'max-retries'
@@ -32,7 +33,13 @@ export const ErrorContainer = ({ error, onRetry, isErrorBoundary = false }: Erro
                 </Text>
 
                 <GroupButtons justify='space-between'>
-                    <Button variant='default' onClick={() => window.location.reload()}>
+                    <Button
+                        variant='default'
+                        onClick={() => {
+                            clearFirestoreCache();
+                            window.location.reload();
+                        }}
+                    >
                         Refresh
                     </Button>
                     {onRetry && (

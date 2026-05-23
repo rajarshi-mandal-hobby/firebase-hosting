@@ -6,18 +6,14 @@ export const GroupSpaceApart = ({ children, ...props }: GroupProps) => (
     </Group>
 );
 
-export const GroupIcon = ({ children, ...props }: GroupProps) => {
-    return (
-        <Group gap='xs' wrap='nowrap' {...props}>
-            {children}
-        </Group>
-    );
-};
+export const GroupIcon = ({ children, ...props }: GroupProps) => (
+    <Group gap='xs' wrap='nowrap' {...props}>
+        {children}
+    </Group>
+);
 
-export const GroupButtons = ({ children, ...props }: GroupProps) => {
-    return (
-        <Group justify='flex-end' mt='xl' {...props}>
-            {children}
-        </Group>
-    );
-};
+export const GroupButtons = ({ children, ...props }: GroupProps) => (
+    <Group justify='flex-end' mt='xl' {...props}>
+        {children}
+    </Group>
+);

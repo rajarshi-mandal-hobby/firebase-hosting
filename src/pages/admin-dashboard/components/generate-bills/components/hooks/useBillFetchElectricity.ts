@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { ELECTRICITY, ERROR_CAUSE, type ElectricBill, type Floor } from '../../../../../../data/types';
+import { BILLS, ERROR_CAUSE, type ElectricBill, type Floor } from '../../../../../../data/types';
 import type { BillFormData } from './useBillsForm';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../../../../firebase';
@@ -17,7 +17,7 @@ export const fetchElectricity = async (
     const monthId = date.format('YYYY-MM');
 
     // 2. Fetch Data
-    const docRef = doc(db, ELECTRICITY.COL, monthId);
+    const docRef = doc(db, BILLS.COL, monthId);
     const docSnapshot = await getDoc(docRef);
 
     if (!docSnapshot.exists()) {

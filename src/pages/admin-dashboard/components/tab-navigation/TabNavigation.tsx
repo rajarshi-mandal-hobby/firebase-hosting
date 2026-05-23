@@ -6,7 +6,7 @@ import { useGlobalErrorData } from '../../../../contexts';
 import { MembersManagement } from './member-menagement/MembersManagement';
 import { MyAlert } from '../../../../shared/components';
 
-type Tab = 'rent' | 'members';
+export type Tab = 'rent' | 'members';
 
 const TAB_DATA: { value: Tab; label: string }[] = [
     { value: 'rent', label: 'Rent' },
@@ -65,11 +65,11 @@ export const TabNavigation = () => {
             </Collapse>
 
             <Activity mode={getMode('rent')}>
-                <RentManagement />
+                <RentManagement activeTab={activeTab} />
             </Activity>
 
             <Activity mode={getMode('members')}>
-                <MembersManagement />
+                <MembersManagement activeTab={activeTab} />
             </Activity>
         </>
     );

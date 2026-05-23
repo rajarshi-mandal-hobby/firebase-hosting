@@ -1,7 +1,6 @@
-import { createContext, use, useActionState, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, use, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import type { SaveResult } from '../data/types';
 import { httpsCallable } from 'firebase/functions';
-import { simulateNetworkDelay } from '../data/utils/serviceUtils';
 import { functions } from '../firebase';
 import { notifySuccess, notifyError } from '../shared/utils';
 import type { Member } from '../data/types';
@@ -186,6 +185,7 @@ export const useGlobalFormStore = <T,>(key: FormKey) => {
         });
 
         try {
+            console.log(FormKeys[key]);
             const fn = httpsCallable(functions, FormKeys[key]);
             const res = await fn(values);
             const saveResult = res.data as unknown as SaveResult;
@@ -212,7 +212,9 @@ export const useGlobalFormStore = <T,>(key: FormKey) => {
                 error,
                 membercontext: currentMember
             });
-            notifyError(`Failed: ${error}`, { title: currentMemberName });
+            notifyError(`Failed: ${error}`, {
+                title: currentMember ? `${FormNames[key]} - ${currentMemberName}` : FormNames[key]
+            });
         }
     };
 

@@ -65,7 +65,7 @@ export const GenerateBillsConfirmModal = ({ opened, close, formData, onConfirm }
                                 </Text>
                                 {/* Show list of members if WiFi charges are being applied */}
                                 <List size='sm'>
-                                    {formData.wifiMemberIds.map((memberName, index) => (
+                                    {wifiMembers.map((memberName, index) => (
                                         <List.Item key={index + memberName}>{memberName}</List.Item>
                                     ))}
                                 </List>
@@ -82,21 +82,21 @@ export const GenerateBillsConfirmModal = ({ opened, close, formData, onConfirm }
                                 </Text>
                                 {/* Show members by floor */}
                                 <Text fw={700} mt='md'>
-                                    2nd Floor Members: {formData.addExpenseMemberIds.length || 'None'}
+                                    2nd Floor Members: {expenseMembers['2nd'].length || 'None'}
                                 </Text>
-                                {formData.addExpenseMemberIds.length > 0 && (
+                                {expenseMembers['2nd'].length > 0 && (
                                     <List size='sm'>
-                                        {formData.addExpenseMemberIds.map((name, index) => (
+                                        {expenseMembers['2nd'].map((name, index) => (
                                             <List.Item key={index + name}>{name}</List.Item>
                                         ))}
                                     </List>
                                 )}
                                 <Text fw={700} mt='md'>
-                                    3rd Floor Members: {formData.addExpenseMemberIds.length || 'None'}
+                                    3rd Floor Members: {expenseMembers['3rd'].length || 'None'}
                                 </Text>
-                                {formData.addExpenseMemberIds.length > 0 && (
+                                {expenseMembers['3rd'].length > 0 && (
                                     <List size='sm'>
-                                        {formData.addExpenseMemberIds.map((name, index) => (
+                                        {expenseMembers['3rd'].map((name, index) => (
                                             <List.Item key={index + name}>{name}</List.Item>
                                         ))}
                                     </List>

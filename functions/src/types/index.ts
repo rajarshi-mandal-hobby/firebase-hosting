@@ -110,36 +110,38 @@ export type DefaultValues = {
 /**
  * Action
  */
-export const Actions = {
-	add: "add",
-	edit: "edit",
-	reactivate: "reactivate"
+export const MemberAction = {
+	add: "add-member",
+	edit: "edit-member",
+	reactivate: "reactivate-member"
 } as const;
 
-export type Action = (typeof Actions)[keyof typeof Actions];
+export type MemberAction = (typeof MemberAction)[keyof typeof MemberAction];
 
 /**
  * Member
  */
 export interface Member {
-	id: string; // Firestore document ID
-	name: string;
-	phone: string;
-	floor: Floor;
-	bedType: BedType;
-	moveInDate: Timestamp;
-	securityDeposit: number;
-	rentAtJoining: number;
-	advanceDeposit: number;
-	currentRent: number;
-	totalAgreedDeposit: number;
-	isActive: boolean;
-	optedForWifi: boolean;
-	note?: string;
-	leaveDate?: Timestamp;
-	ttlExpiry?: Timestamp;
-	firebaseUid?: string;
-	fcmToken?: string;
+	generatedAt: Timestamp;
+	id: string;
+    name: string;
+    phone: string;
+    floor: Floor;
+    bedType: BedType;
+    moveInDate: Timestamp;
+    securityDeposit: number;
+    rentAtJoining: number;
+    advanceDeposit: number;
+    currentRent: number;
+    currentMonthRent: RentHistory; // Optional embedded current month rent
+    totalAgreedDeposit: number;
+    isActive: boolean;
+    optedForWifi: boolean;
+    note: string;
+    leaveDate?: Timestamp;
+    ttlExpiry?: Timestamp;
+    firebaseUid?: string;
+    fcmToken?: string;
 }
 
 /**
@@ -165,42 +167,42 @@ export interface Expense {
  * Rent History
  */
 export interface RentHistory {
-	id: string; // YYYY-MM
-	generatedAt: Timestamp;
-	rent: number;
-	electricity: number;
-	wifi: number;
-	expenses: Expense[];
-	totalCharges: number;
-	amountPaid: number;
-	currentOutstanding: number;
-	status: PaymentStatus;
+    id: string; // YYYY-MM
+    generatedAt: Timestamp;
+    rent: number;
+    electricity: number;
+    wifi: number;
+    previousOutstanding: number;
+    expenses: Expense[];
+    totalCharges: number;
+    amountPaid: number;
+    currentOutstanding: number;
+    status: PaymentStatus;
+    note?: string;
 }
 
 /**
  * Electric Bill
  */
 export interface ElectricBill {
-	id: string;
-	floorCosts: {
-		[K in Floor]: {
-			bill: number;
-			members: {
-				name: string;
-				id: string;
-			}[];
-		};
-	};
-	appliedBulkExpenses: {
-		members: {
-			name: string;
-			id: string;
-		}[];
-		amount: number;
-		description: string;
-	};
 	generatedAt: Timestamp;
-	lastUpdated: Timestamp;
+    id: string;
+    floorCosts: {
+        [K in Floor]: {
+            bill: number;
+            members: string[];
+        };
+    };
+    expenses: {
+        members: string[];
+        amount: number;
+        description: string;
+    };
+    wifi: {
+        members: string[];
+        amount: number;
+    };
+    floorIdNameMap: Record<Floor, Record<string, string>>;
 }
 
 // Response types

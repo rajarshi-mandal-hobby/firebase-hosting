@@ -1,6 +1,6 @@
+import { Loader } from '@mantine/core';
 import { notifications, type NotificationData } from '@mantine/notifications';
-import { Loader, type NotificationProps } from '@mantine/core';
-import { IconCheck, IconDoneAll, IconInfo, IconPriorityHigh } from '../icons';
+import { IconCheck, IconPriorityHigh, IconInfo, IconDoneAll } from '../icons';
 
 // Configuration for notification types
 const NOTIFICATION_CONFIG = {
@@ -28,83 +28,72 @@ const NOTIFICATION_CONFIG = {
 
 export type NotifyType = keyof typeof NOTIFICATION_CONFIG;
 
-type NotifyOptions = {
-    message: string;
-    autoClose?: number | false;
-    type?: NotifyType;
-    iconColor?: string;
-} & Omit<NotificationProps, 'color'>;
-
 const DEFAULT_AUTO_CLOSE = 2000;
+
+export const notifyCloseAll = () => notifications.clean();
 
 /**
  * Displays a notification. If an `id` is provided, it updates the existing notification.
  */
-export const notify = ({
-    id,
-    message,
-    title,
-    icon,
-    iconColor,
-    autoClose = DEFAULT_AUTO_CLOSE,
-    type = 'success',
-    ...props
-}: NotifyOptions): string => {
-    const config = NOTIFICATION_CONFIG[type];
-    const color = iconColor || config.color;
-    const iconNode = icon || config.icon;
-
-    const notificationProps: NotificationData = {
-        color,
-        title,
-        message,
-        icon: iconNode,
+export const notify = ({ autoClose = DEFAULT_AUTO_CLOSE, ...props }: NotificationData): string =>
+    notifications.show({
         autoClose,
-        withCloseButton: type !== 'loading',
+        withCloseButton: false,
+        bg: 'gray.0',
         ...props
-    };
-
-    if (id) {
-        notifications.update({
-            id,
-            ...notificationProps
-        });
-        return id;
-    }
-
-    return notifications.show(notificationProps);
-};
+    });
 
 /**
  * Updates an existing notification.
  */
-export const notifyUpdate = (id: string, message: string, options: Partial<NotifyOptions> = {}): string => {
-    return notify({
+export const notifyUpdate = ({
+    id,
+    autoClose = DEFAULT_AUTO_CLOSE,
+    ...props
+}: Omit<NotificationData, 'id'> & { id: string }) =>
+    notifications.update({
         id,
-        message,
-        type: 'doneAll',
-        autoClose: DEFAULT_AUTO_CLOSE,
-        ...options
+        autoClose,
+        withCloseButton: false,
+        bg: 'gray.0',
+        ...props
     });
+
+export const notifyClose = (id: string) => notifications.hide(id);
+
+const notifyFactory = (type: NotifyType) => {
+    const { color: configColor, icon: configIcon } = NOTIFICATION_CONFIG[type];
+    return (
+        message: string,
+        config?: {
+            id?: string;
+            update?: boolean;
+            showIcon?: boolean;
+        }
+    ) => {
+        const id = config?.id;
+        const update = config?.update;
+        const isLoading = type === 'loading';
+
+        const notificationData: NotificationData = {
+            id,
+            message,
+            color: configColor,
+            icon: config?.showIcon ?? configIcon,
+            loading: isLoading,
+            withCloseButton: type === 'error',
+            autoClose: type !== 'error' && type !== 'loading'
+        };
+        return !!id && !!update ? notifyUpdate({ id, ...notificationData }) : notify(notificationData);
+    };
 };
 
-export const notifyClose = (id: string) => {
-    notifications.hide(id);
-};
+export const notifySuccess = notifyFactory('success');
 
-export const notifySuccess = (message: string, options?: Partial<NotifyOptions>) =>
-    notify({ message, type: 'success', ...options });
+export const notifyError = notifyFactory('error');
 
-export const notifyError = (message: string, options?: Partial<NotifyOptions>) =>
-    notify({ message, type: 'error', autoClose: false, ...options });
+export const notifyInfo = notifyFactory('info');
 
-export const notifyInfo = (message: string, options?: Partial<NotifyOptions>) =>
-    notify({ message, type: 'info', ...options });
+export const notifyLoading = notifyFactory('loading');
 
-export const notifyLoading = (message: string, options?: Partial<NotifyOptions>) =>
-    notify({
-        message,
-        type: 'loading',
-        autoClose: false,
-        ...options
-    });
+export const notifyDoneAll = notifyFactory('doneAll');

@@ -1,13 +1,15 @@
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import dayjs from 'dayjs';
-import { useTransition, useState, useRef, startTransition } from 'react';
+import { useTransition, useState, useRef, startTransition, useEffect, useEffectEvent } from 'react';
 import type { Floor } from '../../../../../../data/types';
 import { notifyError } from '../../../../../../shared/utils';
 import type { BillsConfirmModalFormData } from '../../hooks/useBillsConfirmModal';
 import type { GenerateBillsData } from '../../hooks/useBillsData';
 import { computePerHeadBill, computeToggleState } from '../utils/utils';
 import { fetchElectricity } from './useBillFetchElectricity';
+import { useGlobalFormStore } from '../../../../../../contexts';
+import type { DefaultRentsFormValues } from '../../../default-rents/hooks/useDefaultRentsForm';
 
 type DerivedUIState = {
     floorBills: { [F in Floor]: number };
@@ -204,12 +206,51 @@ export const useBillsForm = ({ floorIdNameMap, billingMonths, wifiCharges, membe
         openConfirmModal();
     };
 
+    const {
+        state: { saveResult, isPending, values, error },
+        dispatcher,
+        onResetState
+    } = useGlobalFormStore<BillFormData>('generate-bills');
+
     // Submit form data
     const handleConfirm = () => {
         if (submittedFormData) {
             closeConfirmModal();
+            dispatcher(submittedFormData);
         }
     };
+
+        const formSaveEvent = useEffectEvent(() => {
+            if (!values) return;
+    
+            const formValues = form.getTransformedValues();
+    
+            const isDifferent = Object.entries(formValues).some(
+                ([key, value]) => value !== values[key as keyof BillFormData]
+            );
+            console.log('Are default rents values different', isDifferent);
+    
+            if (isDifferent) {
+                console.log('Default rents values are different');
+                form.setValues(values);
+                if (saveResult?.success === false || !!error) form.setInitialValues(form.getInitialValues());
+            }
+    
+            if (saveResult?.success === true) {
+                console.log('Result success');
+                onResetState();
+                form.resetDirty();
+               
+            } else if (saveResult?.errors.nested) {
+                form.setErrors(saveResult.errors.nested);
+            } else if (saveResult?.errors.root || saveResult?.errors.other) {
+                // setRootError(saveResult.errors.root?.[0] || saveResult.errors.other?.[0] || null);
+            }
+        });
+    
+        useEffect(() => {
+            formSaveEvent();
+        }, [isPending, error]);
 
     const segmentedControlData = Object.values(billingMonths).map((month) => ({
         label: dayjs(month.toDate()).format('MMMM YYYY'),

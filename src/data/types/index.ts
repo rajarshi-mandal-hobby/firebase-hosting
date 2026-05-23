@@ -1,94 +1,57 @@
 import type { Timestamp } from 'firebase/firestore';
-import type { AdminConfig } from '../shemas/AdminConfig';
 import type { FlatErrors } from 'valibot';
 import type { ReactNode } from 'react';
+import type { BED_LABEL, FLOOR_LABEL, MEMBER_STATUS_LABEL, MEMBER_STATUS, FLOOR, BED } from './constants';
 
 export * from './constants';
 
-/**
- * Payment status for rent history
- */
+export type MemberStatus = keyof typeof MEMBER_STATUS;
+
+export type MemberStatusLabel = (typeof MEMBER_STATUS_LABEL)[MemberStatus];
+
 export type PaymentStatus = 'Due' | 'Paid' | 'Partial' | 'Overpaid';
 
-/**
- * General status type that extends payment status for broader use
- * Includes member activity statuses in addition to payment statuses
- */
-export type GeneralStatus = PaymentStatus | 'active' | 'inactive';
+export type FloorAndAll = keyof typeof FLOOR;
 
-export interface ConfigCollection {
-    globalSettings: DefaultRents | null;
-    admins: AdminConfig | null;
-}
+export type Floor = Exclude<FloorAndAll, 'all'>;
 
-export const Floors = {
-    second: '2nd',
-    third: '3rd'
-} as const;
-export type Floor = (typeof Floors)[keyof typeof Floors];
+export type FloorLabel = (typeof FLOOR_LABEL)[FloorAndAll];
 
-export const BedTypes = {
-    bed: 'Bed',
-    room: 'Room',
-    special: 'Special'
-} as const;
-export type BedType = (typeof BedTypes)[keyof typeof BedTypes];
+export type Bed = keyof typeof BED;
 
-/**
- * Bed Rents
- */
+export type BedLabel = (typeof BED_LABEL)[Bed];
+
 export type BedRents = {
-    [F in Floor]: F extends '2nd' ? Record<BedType, number> : Record<Exclude<BedType, 'Special'>, number>;
+    [F in Floor]: F extends 'second' ? Record<Bed, number> : Record<Exclude<Bed, 'special'>, number>;
 };
 
-/**
- * Default Values
- */
-export interface DefaultRents {
-    // replaced invalid syntax with the explicit BedTypes mapping
-    bedRents: BedRents;
+export interface DefaultValues {
+    rents: BedRents;
+    wifiCharge: number;
     securityDeposit: number;
-    wifiMonthlyCharge: number;
-    upiVpa: string;
-    currentBillingMonth: Timestamp;
-    nextBillingMonth: Timestamp;
+    billDates: {
+        prevMonth: Timestamp;
+        currentMonth: Timestamp;
+    };
 }
 
 export interface Member {
     id: string; // Firestore document ID
+    moveInDate: Timestamp;
     name: string;
     phone: string;
     floor: Floor;
-    bedType: BedType;
-    moveInDate: Timestamp;
-    securityDeposit: number;
+    bed: Bed;
+    rent: number;
     rentAtJoining: number;
+    securityDeposit: number;
     advanceDeposit: number;
-    currentRent: number;
-    currentMonthRent: RentHistory; // Optional embedded current month rent
     totalAgreedDeposit: number;
     isActive: boolean;
     optedForWifi: boolean;
     note: string;
+    currentMonthRent: RentHistory;
     leaveDate?: Timestamp;
-    ttlExpiry?: Timestamp;
-    firebaseUid?: string;
-    fcmToken?: string;
-}
-
-export interface RentHistory {
-    id: string; // YYYY-MM
-    generatedAt: Timestamp;
-    rent: number;
-    electricity: number;
-    wifi: number;
-    previousOutstanding: number;
-    expenses: Expense[];
-    totalCharges: number;
-    amountPaid: number;
-    currentOutstanding: number;
-    status: PaymentStatus;
-    note?: string;
 }
 
 export interface Expense {
@@ -96,27 +59,38 @@ export interface Expense {
     description: string;
 }
 
-/**
- * Electric Bill for a specific month
- * Collection: electric-bills
- * Document: YYYY-MM
- */
-export interface ElectricBill {
+export interface RentHistory {
     id: string;
-    floorCosts: {
+    generatedAt: Timestamp;
+    rent: number;
+    electricity: number;
+    wifi: number;
+    prevOutstanding: number;
+    expenses: Expense[];
+    totalCharges: number;
+    amountPaid: number;
+    outstanding: number;
+    note: string;
+    status: PaymentStatus;
+}
+
+export interface Bill {
+    id: string;
+    generatedAt: Timestamp;
+    electric: {
         [K in Floor]: {
-            bill: number;
+            totalAmount: number;
             members: string[];
         };
     };
     expenses: {
         members: string[];
-        amount: number;
+        totalAmount: number;
         description: string;
     };
     wifi: {
         members: string[];
-        amount: number;
+        totalAmount: number;
     };
     floorIdNameMap: Record<Floor, Record<string, string>>;
 }

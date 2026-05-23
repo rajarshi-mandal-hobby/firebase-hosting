@@ -1,41 +1,45 @@
-import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import react from 'eslint-plugin-react';
+import eslintJs from '@eslint/js';
+import { defineConfig } from 'eslint/config'; // New ESLint 10 native helper
+import eslintReact from '@eslint-react/eslint-plugin';
 import reactHooks from 'eslint-plugin-react-hooks';
-import globals from 'globals';
-import { defineConfig } from 'eslint/config';
+import tseslint from 'typescript-eslint';
 
 export default defineConfig([
     {
-        ignores: ['dist', 'functions', 'node_modules']
+        ignores: ['dist/**', 'node_modules/**', '.vscode/'],
     },
-    js.configs.recommended,
-    reactHooks.configs.flat.recommended,
-    ...tseslint.configs.recommended,
+    eslintJs.configs.recommended,
+    tseslint.configs.recommended,
+    eslintReact.configs['recommended-typescript'],
+    reactHooks.configs.flat['recommended-latest'],
     {
         files: ['**/*.{ts,tsx}'],
-        languageOptions: {
-            globals: { ...globals.browser, ...globals.es2022 }
-            // React 19 + TS handles JSX/parsing automatically via tseslint
-        },
         plugins: {
-            react,
-            'react-hooks': reactHooks
+            'react-hooks': reactHooks,
         },
         rules: {
-            ...react.configs.recommended.rules,
-            ...react.configs['jsx-runtime'].rules,
-            ...reactHooks.configs.recommended.rules, // Standard hooks rules
+            ...reactHooks.configs.flat['recommended-latest'].rules,
 
-            // TypeScript/General Overrides
-            '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+            '@typescript-eslint/no-unused-vars': [
+                'warn',
+                {
+                    args: 'all',
+                    argsIgnorePattern: '^_',
+                    caughtErrors: 'all',
+                    caughtErrorsIgnorePattern: '^_',
+                    destructuredArrayIgnorePattern: '^_',
+                    varsIgnorePattern: '^_',
+                    ignoreRestSiblings: true,
+                },
+            ],
             '@typescript-eslint/no-explicit-any': 'off',
             'no-console': ['warn', { allow: ['warn', 'error', 'log'] }],
-            'react/react-in-jsx-scope': 'off',
-            'react/prop-types': 'off' // Not needed in TS
+            'react/prop-types': 'off',
         },
         settings: {
-            react: { version: 'detect' }
-        }
-    }
+            react: {
+                version: '19',
+            },
+        },
+    },
 ]);

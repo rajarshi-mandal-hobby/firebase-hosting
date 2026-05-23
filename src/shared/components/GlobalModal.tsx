@@ -59,7 +59,7 @@ export const GlobalModal = ({
         >
             <MyLoadingOverlay visible={isPending} description={selectedMember?.name} />
             <Stack gap='lg'>
-                <Collapse in={hasGlobalErrors}>
+                <Collapse expanded={hasGlobalErrors}>
                     <Alert
                         color='red'
                         p='xs'

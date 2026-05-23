@@ -2,81 +2,108 @@ import type { Unsubscribe } from 'firebase/auth';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { createContext, use, useEffect, useEffectEvent, useState, useSyncExternalStore, useTransition } from 'react';
 import { db } from '../firebase';
-import type { Member } from '../data/types';
-
-export type MemberStatus = 'active' | 'inactive' | 'all';
-
-// Define the full state shape for the snapshot
+import type { Member, MemberStatus } from '../data/types';
 
 interface StoreState {
-    data: Record<MemberStatus, Member[]>;
+    snapshot: Record<MemberStatus, Member[]>;
     isLoading: boolean;
     error: Error | null;
 }
 
-// --- Store Implementation ---
-// membersStore.ts
-export const membersStore = {
-    state: {
-        data: { active: [], inactive: [], all: [] },
-        isLoading: true,
-        error: null
-    } as StoreState,
+const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes
 
+export const membersStore = {
+    state: { snapshot: { active: [], inactive: [], all: [] }, isLoading: true, error: null } as StoreState,
     unsubscribe: null as Unsubscribe | null,
     listeners: new Set<() => void>(),
+    inactivityTimeout: null as ReturnType<typeof setTimeout> | null,
 
-    subscribe: (onStoreChange: () => void) => {
-        membersStore.listeners.add(onStoreChange);
+    // Core cleanup logic moved to a central function
+    stopFirestore: () => {
+        if (membersStore.unsubscribe) {
+            membersStore.unsubscribe();
+            membersStore.unsubscribe = null;
+            // Reset to loading so it fresh-starts when the user returns
+            membersStore.state = { ...membersStore.state, isLoading: true };
+            membersStore.notify();
+        }
+    },
 
+    startFirestore: () => {
         if (!membersStore.unsubscribe) {
             const q = query(collection(db, 'members'), orderBy('name', 'asc'));
-            // FIX: includeMetadataChanges: false avoids the "double-render" sync
+
             membersStore.unsubscribe = onSnapshot(
                 q,
-                { includeMetadataChanges: false },
                 (snapshot) => {
-                    const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Member);
                     const inactive: Member[] = [];
                     const active: Member[] = [];
-                    all.forEach((member) => {
-                        if (member.isActive) {
-                            active.push(member);
-                        } else {
-                            inactive.push(member);
-                        }
+                    const all = snapshot.docs.map((doc) => {
+                        const data = { id: doc.id, ...doc.data() } as Member;
+                        if (data.isActive) active.push(data);
+                        else inactive.push(data);
+                        return data;
                     });
+
                     membersStore.state = {
-                        data: { all, active, inactive },
+                        snapshot: { all, active, inactive },
                         isLoading: false,
-                        error: null
+                        error: null,
                     };
                     membersStore.notify();
                 },
                 (err) => {
                     membersStore.state = { ...membersStore.state, error: err, isLoading: false };
                     membersStore.notify();
-                }
+                },
             );
         }
+    },
+
+    subscribe: (onStoreChange: () => void) => {
+        membersStore.listeners.add(onStoreChange);
+
+        // Cancel any pending "off-screen" unsubscribe if someone is looking at the app
+        if (membersStore.inactivityTimeout) {
+            clearTimeout(membersStore.inactivityTimeout);
+            membersStore.inactivityTimeout = null;
+        }
+
+        membersStore.startFirestore();
 
         return () => {
             membersStore.listeners.delete(onStoreChange);
-            if (membersStore.listeners.size === 0 && membersStore.unsubscribe) {
-                membersStore.unsubscribe();
-                membersStore.unsubscribe = null;
+            if (membersStore.listeners.size === 0) {
+                membersStore.stopFirestore();
             }
         };
     },
 
     getSnapshot: () => membersStore.state,
-    notify: () => membersStore.listeners.forEach((l) => l()),
-
-    forceRefresh: () => {
-        membersStore.state = { ...membersStore.state, isLoading: true, error: null };
-        membersStore.notify();
-    }
+    notify: () => Array.from(membersStore.listeners).forEach((l) => l()),
 };
+
+// Global Visibility Listener
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        // Start 15-minute countdown when user leaves the tab
+        membersStore.inactivityTimeout = setTimeout(() => {
+            membersStore.stopFirestore();
+        }, INACTIVITY_LIMIT);
+    } else {
+        // Cancel timer and restart if user returns before 15 mins
+        if (membersStore.inactivityTimeout) {
+            clearTimeout(membersStore.inactivityTimeout);
+            membersStore.inactivityTimeout = null;
+        }
+        // If it already unsubscribed, restart it now that they are back
+        if (membersStore.listeners.size > 0) {
+            membersStore.startFirestore();
+        }
+    }
+});
+
+// --- Store Implementation ---
 
 const MembersContext = createContext<StoreState | null>(null);
 
@@ -94,10 +121,9 @@ export function useMembers(status: MemberStatus = 'active') {
 
     // React Compiler will memoize this slice automatically
     return {
-        members: state.data[status] ?? [],
+        members: state.snapshot[status] ?? [],
         isLoading: state.isLoading,
         error: state.error,
-        handleRefresh: () => membersStore.unsubscribe?.() // Optional trigger
     };
 }
 
@@ -109,14 +135,12 @@ export function useMember(memberId: string) {
     const [isSearching, startTransition] = useTransition();
 
     const serchEvent = useEffectEvent(() => {
-        startTransition(() => {
-            const member = state.data.all.find((m) => m.id === memberId) ?? null;
-            setMember(member);
-        });
+        const member = state.snapshot.all.find((m) => m.id === memberId) ?? null;
+        setMember(member);
     });
 
     useEffect(() => {
-        serchEvent();
+        startTransition(serchEvent);
     }, [memberId]);
 
     return { member, isSearching };

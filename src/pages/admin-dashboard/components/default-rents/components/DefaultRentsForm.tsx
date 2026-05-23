@@ -1,5 +1,5 @@
 import { Box, Stack, Divider, SimpleGrid, Space, TextInput, Button, Alert } from '@mantine/core';
-import type { DefaultRents } from '../../../../../data/types';
+import type { DefaultValues } from '../../../../../data/types';
 import {
     MyLoadingOverlay,
     NumberInputWithCurrency,
@@ -10,7 +10,7 @@ import { useDefaultRentsForm } from '../hooks/useDefaultRentsForm';
 import type { RentsContextType } from '../../../../../contexts';
 
 export interface DefaultRentsFormProps extends RentsContextType {
-    defaultRents: DefaultRents | null;
+    defaultRents: DefaultValues | null;
 }
 
 export const DefaultRentsForm = (props: DefaultRentsFormProps) => {

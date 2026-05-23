@@ -3,24 +3,20 @@ import { FormNames } from '../../contexts';
 
 export type Path = '/' | 'member-action' | 'generate-bills' | 'default-rents' | 'member-details';
 
-
-
 export type MemberAction = keyof Pick<typeof FormNames, 'add-member' | 'edit-member' | 'reactivate-member'>;
 
 export const useMyNavigation = () => {
     const navigate = useNavigate();
-   
     const [searchParams] = useSearchParams();
     const navigation = useNavigation();
     const isNavigating = navigation.state === 'loading';
 
-     const location = useLocation();
-     const path = location.pathname === '/' ? '/' : location.pathname.slice(1) as Path;
-
+    const location = useLocation();
+    const path = location.pathname === '/' ? '/' : (location.pathname.slice(1) as Path);
 
     // 1. Cleaner path detection
 
-    const memberAction = (searchParams.get('action') ?? 'add-member') as MemberAction;
+    const memberAction = (searchParams.get('action')) as MemberAction | null;
     const memberId = searchParams.get('id');
 
     const navigateTo = (
@@ -31,7 +27,7 @@ export const useMyNavigation = () => {
         const nextParams = new URLSearchParams(searchParams);
 
         const params = {
-            action: action ?? 'add-member',
+            action: action ?? null,
             id: memberid ?? null
         };
 
@@ -39,12 +35,10 @@ export const useMyNavigation = () => {
         const isMemberDetails = newPath === 'member-details';
 
         if (isMemberAction || isMemberDetails) {
-            if (isMemberAction) nextParams.set('action', params.action);
-            if (params.id) {
-                nextParams.set('id', params.id);
-            } else {
-                nextParams.delete('id');
-            }
+            if (params.id) nextParams.set('id', params.id);
+            else nextParams.delete('id');
+            if (params.action) nextParams.set('action', params.action);
+            else nextParams.delete('action');
         } else {
             // Optional: Clear member params when leaving 'add-member'
             nextParams.delete('id');
@@ -64,7 +58,6 @@ export const useMyNavigation = () => {
     };
 
     const goBack = () => navigate(-1);
-    const getMode = (path: Path) => (path === '/' ? 'visible' : 'hidden');
 
-    return { navigateTo, path, goBack, getMode, memberAction, memberId, isNavigating };
+    return { navigateTo, path, goBack, memberAction, memberId, isNavigating, key: location.key };
 };

@@ -133,7 +133,7 @@ export const AddExpenseModal = ({ opened, onClose }: GlobalModalProps) => {
                         </GroupIcon>
 
                         {/* Check if initialExpenses are removed */}
-                        <Collapse in={isRemoved}>
+                        <Collapse expanded={isRemoved}>
                             <Paper p='xs' mt='sm'>
                                 <GroupIcon>
                                     <Text size='xs'>

@@ -11,7 +11,8 @@ interface FormExpenses {
 
 export const useAddExpenseModal = ({ opened, onClose }: GlobalModalProps) => {
     const {
-        state: { saveResult, values, error, isPending },
+        state: { saveResult, values, error },
+        isPending,
         selectedMember,
         dispatcher,
         onResetState

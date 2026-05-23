@@ -1,28 +1,34 @@
-import { useForm } from '@mantine/form';
+import { schemaResolver, useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import dayjs from 'dayjs';
 import { calculateTotalDeposit, getInitialValues, MemberFormSchema, normalizeNameInput } from '../utils/utils';
 import { useState, startTransition, type ChangeEvent, type FocusEvent, useEffect, useEffectEvent } from 'react';
 import { BedTypes, type Floor, type BedType, Floors } from '../../../../../data/types';
-import { formatPhoneNumber, getSafeDate, setFields, toIndianLocale } from '../../../../../shared/utils';
+import {
+    formatPhoneNumber,
+    getSafeDate,
+    normalizePhoneInput,
+    setFields,
+    toIndianLocale
+} from '../../../../../shared/utils';
 import type { MemberDetailsFormProps } from '../components/MemberForm';
-import { useGlobalFormStore } from '../../../../../contexts';
+import { useGlobalFormStore, useMembers } from '../../../../../contexts';
 import type { MemberAction } from '../../../../../shared/hooks';
-import { valibotResolver } from 'mantine-form-valibot-resolver';
 import { parse } from 'valibot';
 
 export type MemberDetailsFormData = {
     id?: string;
+    moveInDate: string;
+    isPreviousMonth: boolean;
     name: string;
     phone: string;
     floor: Floor | null;
     bedType: BedType | null;
     rentAmount: number | string;
-    rentAtJoining?: number | string;
+    rentAtJoining: number;
     securityDeposit: number | string;
     advanceDeposit: number | string;
     isOptedForWifi: boolean;
-    moveInDate: string;
     note: string;
     amountPaid: number | string;
     shouldForwardOutstanding: boolean;
@@ -41,6 +47,7 @@ export const useMemberDetailsForm = ({
     memberAction,
     handleResetBoundary
 }: UseMemberDetailsFormProps) => {
+    const { members } = useMembers('all');
     const initialValues = getInitialValues({
         defaultRents,
         member,
@@ -72,9 +79,9 @@ export const useMemberDetailsForm = ({
         onValuesChange(values, previous) {
             startTransition(() => {
                 const { floor, bedType, rentAmount, securityDeposit, advanceDeposit, amountPaid } = values;
+
                 // Handle Floor Change
                 if (floor !== previous.floor) {
-                    console.log('Floor changed');
                     setFields(form, {
                         bedType: null,
                         rentAmount: '',
@@ -149,24 +156,17 @@ export const useMemberDetailsForm = ({
                 }
             });
         },
-        validate: valibotResolver(MemberFormSchema(member)),
-        transformValues: (values) => parse(MemberFormSchema(member), values),
+        // validate: schemaResolver(MemberFormSchema(member, members, memberAction)),
+        // transformValues: (values) => parse(MemberFormSchema(member, members, memberAction), values),
         enhanceGetInputProps: (payload) => {
             if (payload.field === 'phone') {
-                const originalOnBlur = payload.inputProps.onBlur;
                 const originalOnChange = payload.inputProps.onChange;
                 return {
                     onChange: (event: ChangeEvent<HTMLInputElement, Element>) => {
                         const val = event.currentTarget.value;
                         const numericOnly = val.replaceAll(/\D/g, '');
-                        event.currentTarget.value = numericOnly;
-                        originalOnChange?.(event);
-                    },
-                    onBlur: (event: FocusEvent<HTMLInputElement, Element>) => {
-                        const val = event.currentTarget.value;
-                        const formattedValue = formatPhoneNumber(val);
+                        const formattedValue = formatPhoneNumber(numericOnly);
                         event.currentTarget.value = formattedValue;
-                        originalOnBlur?.(event);
                         originalOnChange?.(event);
                     }
                 };
@@ -190,6 +190,19 @@ export const useMemberDetailsForm = ({
         }
     });
 
+    form.watch('moveInDate', ({ value }) => {
+        const dateToCompare =
+            member && memberAction !== 'reactivate-member' ? member.moveInDate : defaultRents.currentBillingMonth;
+        const isSame = dayjs(value).isSame(dayjs(getSafeDate(dateToCompare)));
+        form.setFieldValue('isPreviousMonth', !isSame);
+    });
+
+    // Disable move in date if the member's move in date is not same as current billing month
+    const isMoveInDateDisabled =
+        !!member?.moveInDate &&
+        memberAction !== 'reactivate-member' &&
+        !dayjs(getSafeDate(member.moveInDate)).isSame(dayjs(getSafeDate(defaultRents.currentBillingMonth)), 'month');
+
     const saveEvent = useEffectEvent(() => {
         if (!values) return;
 
@@ -204,12 +217,16 @@ export const useMemberDetailsForm = ({
 
         if (saveResult?.success === true) {
             console.log('Result success');
-            form.reset();
+            form.resetDirty();
             onResetState();
-        } else if (saveResult?.errors.nested) {
-            form.setErrors(saveResult.errors.nested);
-        } else if (saveResult?.errors.root || saveResult?.errors.other) {
-            setRootError(saveResult.errors.root?.[0] || saveResult.errors.other?.[0] || null);
+            setRootError(null);
+        } else {
+            console.log('Result failed', saveResult);
+            if (saveResult?.errors.nested) {
+                form.setErrors(saveResult.errors.nested);
+            } else if (saveResult?.errors.root || saveResult?.errors.other) {
+                setRootError(saveResult.errors.root?.[0] || saveResult.errors.other?.[0] || null);
+            }
         }
     });
 
@@ -241,7 +258,8 @@ export const useMemberDetailsForm = ({
                     field !== 'shouldForwardOutstanding' &&
                     field !== 'outstandingAmount' &&
                     field !== 'note' &&
-                    field !== 'memberAction'
+                    field !== 'memberAction' &&
+                    field !== 'isPreviousMonth'
                 ) {
                     const memberKey =
                         field === 'amountPaid' ? 'totalAgreedDeposit'
@@ -275,14 +293,16 @@ export const useMemberDetailsForm = ({
     };
 
     const handleOnSave = (values: MemberDetailsFormData) => {
+        console.log('values', values);
         const note = generateNote(values);
         setFormValues({ ...values, note });
         openConfirmModal();
     };
 
     const handleConfirm = (values: MemberDetailsFormData) => {
+        console.log('values', values);
         closeConfirmModal();
-        startTransition(async () => await dispatcher(values));
+        // startTransition(async () => await dispatcher(values));
     };
 
     const handleFormReset = () => {
@@ -301,11 +321,15 @@ export const useMemberDetailsForm = ({
         onHandleReset: handleFormReset
     };
 
+    const currentBillingMonth = defaultRents.currentBillingMonth.toDate();
+
     return {
         form,
         summary,
+        members,
         formValues,
         isPending,
+        isMoveInDateDisabled,
         isConfirmModalOpen,
         isRentMismatch,
         isSecurityDepositMismatch,
@@ -325,8 +349,8 @@ export const useMemberDetailsForm = ({
                 label: value,
                 disabled: form.getValues().floor === Floors.third && value === BedTypes.special
             })),
-            minDate: dayjs(initialValues.moveInDate).subtract(1, 'month').toDate(),
-            maxDate: dayjs(initialValues.moveInDate).add(1, 'month').toDate()
+            minDate: dayjs(currentBillingMonth).subtract(1, 'month').toDate(),
+            maxDate: dayjs(currentBillingMonth).toDate()
         },
         actions
     };

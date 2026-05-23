@@ -1,20 +1,13 @@
-import { Stack, Button, Collapse, Title, Paper, Accordion, ThemeIcon, Text, ActionIcon } from '@mantine/core';
+import { Stack, Button, Collapse, Title, Paper, Accordion, ActionIcon, type CSSProperties, Badge } from '@mantine/core';
 import classesAccordion from './Accordion.module.css';
 import dayjs from 'dayjs';
-import { useState, useEffectEvent, startTransition, useEffect, useRef } from 'react';
+import { useState, startTransition, useRef } from 'react';
 import { useMember } from '../../../../contexts';
 import type { Member } from '../../../../data/types';
 import { fetchHistoryPage } from '../../../../services';
-import {
-    GroupSpaceApart,
-    GroupIcon,
-    MyThemeIcon,
-    MyAlert,
-    LoadingBox,
-    NothingToShow
-} from '../../../../shared/components';
-import { useAccordionScrollToView, useMyNavigation } from '../../../../shared/hooks';
-import { IconInfo, IconPerson, IconClose, IconReceiptLong, IconHistory } from '../../../../shared/icons';
+import { GroupSpaceApart, GroupIcon, MyThemeIcon, LoadingBox, NothingToShow } from '../../../../shared/components';
+import { useMyNavigation } from '../../../../shared/hooks';
+import { IconInfo, IconClose, IconReceiptLong, IconHistory } from '../../../../shared/icons';
 import { getStatusAlertConfig, StatusBadge } from '../../../../shared/utils';
 import { MemberDetailsList } from '../tab-navigation/member-menagement/components/MemberDetailsList';
 import { RentDetailsList } from '../tab-navigation/rent-management/components/RentDetailsList';
@@ -24,7 +17,6 @@ interface MemberDetailsContentProps {
 }
 
 const useMemberDetailsContent = ({ member }: MemberDetailsContentProps) => {
-    const [showHistory, setShowHistory] = useState(false);
     const [rentHistory, setRentHistory] = useState<any[]>([]);
     const cursorRef = useRef<any>(null);
     const [loading, setLoading] = useState(false);
@@ -32,36 +24,27 @@ const useMemberDetailsContent = ({ member }: MemberDetailsContentProps) => {
     const [totalCount, setTotalCount] = useState(0);
     const [showDetails, setShowDetails] = useState(false);
 
-    const handleScrollToItem = useAccordionScrollToView();
+    const loadHistory = async () => {
+        if (loading || !hasMore) return;
 
-    const loadHistoryEvent = useEffectEvent(async () => {
-        if (!showHistory || loading || !hasMore) return;
+        setLoading(true);
+        try {
+            // We pass the current cursor to the service
+            const result = await fetchHistoryPage({
+                memberId: member.id,
+                lastDoc: cursorRef.current
+            });
 
-        startTransition(async () => {
-            setLoading(true);
-            try {
-                // We pass the current cursor to the service
-                const result = await fetchHistoryPage({
-                    memberId: member.id,
-                    lastDoc: cursorRef.current
-                });
-
-                setRentHistory((prev) => [...prev, ...result.data]);
-                cursorRef.current = result.lastDoc;
-                setHasMore(result.totalCount !== rentHistory.length + result.data.length);
-                setTotalCount((prev) => (prev === result.totalCount ? prev : result.totalCount));
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-                setShowHistory(false);
-            }
-        });
-    });
-
-    useEffect(() => {
-        loadHistoryEvent();
-    }, [showHistory]);
+            setRentHistory((prev) => [...prev, ...result.data]);
+            cursorRef.current = result.lastDoc;
+            setHasMore(result.totalCount !== rentHistory.length + result.data.length);
+            setTotalCount((prev) => (prev === result.totalCount ? prev : result.totalCount));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return {
         rentHistory,
@@ -73,12 +56,18 @@ const useMemberDetailsContent = ({ member }: MemberDetailsContentProps) => {
         status: getStatusAlertConfig(member.currentMonthRent.status),
         currentMonthRent: member.currentMonthRent,
         actions: {
-            handleScrollToItem,
-            handleShowHistory: () => setShowHistory((prev) => !prev),
+            handleShowHistory: () => startTransition(loadHistory),
             handleShowDetails: () => setShowDetails((prev) => !prev)
         }
     };
 };
+
+const getStyle = (showDetails: boolean): CSSProperties => ({
+    visibility: showDetails ? 'hidden' : 'visible',
+    transform: showDetails ? 'scale(0)' : 'scale(1)',
+    opacity: showDetails ? 0 : 1,
+    transition: 'opacity 150ms ease-out, transform 150ms ease-out, visibility 150ms ease-out'
+});
 
 const MemberDetailsContent = ({ member }: MemberDetailsContentProps) => {
     const {
@@ -90,7 +79,7 @@ const MemberDetailsContent = ({ member }: MemberDetailsContentProps) => {
         showDetails,
         status,
         currentMonthRent,
-        actions: { handleScrollToItem, handleShowHistory, handleShowDetails }
+        actions: { handleShowHistory, handleShowDetails }
     } = useMemberDetailsContent({ member });
 
     console.log('🎨 Rendering MemberDetailsContent');
@@ -98,47 +87,61 @@ const MemberDetailsContent = ({ member }: MemberDetailsContentProps) => {
     return (
         <Stack gap='xl'>
             <Stack gap='sm' mt='md'>
-                <GroupIcon>
-                    <Title order={2}>{member.name}</Title>
-                    <ActionIcon variant='transparent' size={32} onClick={handleShowDetails}>
-                        <IconInfo size={24} />
-                    </ActionIcon>
-                </GroupIcon>
+                <GroupSpaceApart>
+                    <GroupIcon>
+                        <Title order={2}>{member.name}</Title>
+                        <ActionIcon
+                            variant='transparent'
+                            size={32}
+                            onClick={handleShowDetails}
+                            style={getStyle(showDetails)}
+                        >
+                            <IconInfo size={24} />
+                        </ActionIcon>
+                    </GroupIcon>
+                    <Button
+                        variant='transparent'
+                        onClick={handleShowDetails}
+                        aria-label='Close'
+                        size='xs'
+                        rightSection={<IconClose />}
+                        style={getStyle(!showDetails)}
+                    >
+                        Close
+                    </Button>
+                </GroupSpaceApart>
 
-                <Collapse in={showDetails}>
-                    <Stack gap='xs'>
-                        <GroupSpaceApart>
-                            <GroupIcon>
-                                <MyThemeIcon Icon={IconPerson} size={24} />
-                                <Title order={5}>Details</Title>
-                            </GroupIcon>
-
-                            <Button
-                                variant='default'
-                                onClick={handleShowDetails}
-                                aria-label='Close'
-                                size='xs'
-                                rightSection={<IconClose />}
-                            >
-                                Close
-                            </Button>
-                        </GroupSpaceApart>
-                        <Paper withBorder radius='lg' px='md'>
-                            <MemberDetailsList member={member} />
-                        </Paper>
-                    </Stack>
+                <Collapse expanded={showDetails}>
+                    <Paper withBorder px='md'>
+                        <MemberDetailsList member={member} />
+                    </Paper>
                 </Collapse>
             </Stack>
 
-            <MyAlert Icon={status.icon} title={status.title} color={status.color} variant='light'>
-                <Text size='sm'>{status.message}</Text>
-            </MyAlert>
-
             <Stack gap='xs'>
-                <GroupIcon>
-                    <MyThemeIcon Icon={IconReceiptLong} size={24} />
-                    <Title order={5}>Rent for {dayjs(currentMonthRent.id).format('MMMM YYYY')}</Title>
-                </GroupIcon>
+                <GroupSpaceApart wrap='nowrap'>
+                    <GroupIcon>
+                        <MyThemeIcon Icon={IconReceiptLong} size={24} />
+                        <Title order={4} lineClamp={1} fw={300}>
+                            Rent for {dayjs(currentMonthRent.id).format('MMMM YY')}
+                        </Title>
+                    </GroupIcon>
+                    <Badge
+                        variant='gradient'
+                        gradient={{
+                            from: `var(--mantine-color-${status.color}-8)`,
+                            to: `var(--mantine-color-${status.color}-6)`,
+                            deg: 90
+                        }}
+                        leftSection={<status.icon size={12} />}
+                        size='xs'
+                        style={{
+                            lineClamp: 1
+                        }}
+                    >
+                        {status.status}
+                    </Badge>
+                </GroupSpaceApart>
 
                 <Paper px='sm' withBorder radius='lg'>
                     <RentDetailsList rentHistory={member.currentMonthRent} />
@@ -150,18 +153,19 @@ const MemberDetailsContent = ({ member }: MemberDetailsContentProps) => {
                 <Stack gap='xs'>
                     <GroupIcon>
                         <MyThemeIcon Icon={IconHistory} size={24} />
-                        <Title order={5}>Rent History</Title>
+                        <Title order={4} fw={300}>
+                            Rent History
+                        </Title>
                     </GroupIcon>
                     <Accordion classNames={classesAccordion}>
                         {rentHistory.map((history, i) => (
                             <Accordion.Item key={history.id} value={history.id}>
                                 <Accordion.Control
                                     icon={
-                                        <ThemeIcon size='sm' variant='light' fz={10} fw={700} color='gray.9'>
+                                        <Badge color='gray.4' circle>
                                             {totalCount - i}
-                                        </ThemeIcon>
+                                        </Badge>
                                     }
-                                    onTransitionEnd={handleScrollToItem}
                                 >
                                     <GroupIcon>
                                         <Title order={6}>{dayjs(history.id).format('MMMM YYYY')}</Title>

@@ -3,13 +3,13 @@ import { useDisclosure } from '@mantine/hooks';
 import { useGlobalErrorData } from '../../../../../../contexts';
 import { type Member, ACTION_BUTTON_SIZE, ACTION_ICON_SIZE } from '../../../../../../data/types';
 import {
-    DisplayPriorityIconOnError,
+    PriorityIconOnError,
     ContainedAccordion,
     StatusIndicator,
     MyAvatar,
     GroupIcon
 } from '../../../../../../shared/components';
-import { useActivityMountedKey, useMyNavigation } from '../../../../../../shared/hooks';
+import { useMyNavigation } from '../../../../../../shared/hooks';
 import {
     IconMoreVertical,
     IconCall,
@@ -23,28 +23,72 @@ import { MemberDetailsList } from './MemberDetailsList';
 import { ReactivationModal } from './modals/ReactivationModal';
 import { DeactivationModal } from './modals/DeactivationModal';
 import { DeleteMemberModal } from './modals/DeleteMemberModal';
+import { convertToFloorOrdinal } from '../../../../../../shared/utils';
+import type { Tab } from '../../TabNavigation';
+import { useRef } from 'react';
 
-export function useMemberContentMenu({ member }: { member: Member }) {
+export function useMemberContentMenu({
+    member,
+    openDeactivateModal,
+    openDeleteModal,
+    openActivateModal
+}: MemberContentMenuProps) {
     const { hasErrorForMemberAndForm, setSelectedMember } = useGlobalErrorData();
     const hasDeleteError = hasErrorForMemberAndForm(member.id, 'delete-member');
     const hasDeactivateError = hasErrorForMemberAndForm(member.id, 'deactivate-member');
     const hasError = hasDeleteError || hasDeactivateError;
     const { navigateTo } = useMyNavigation();
-    const key = useActivityMountedKey('member-management-activity');
+    const isNavigatingRef = useRef(false);
+    const isWhatsAppRef = useRef(false);
+    const isCallRef = useRef(false);
+    const isOpenDeactivateModalRef = useRef(false);
+    const isOpenDeleteMemberModalRef = useRef(false);
+    const isOpenActivateModalRef = useRef(false);
+    const selectedMember = () => setSelectedMember(member);
 
     const actions = {
-        setSelectedMember: () => setSelectedMember(member),
-        handleEdit: () => navigateTo('member-action', { memberid: member.id, action: 'edit-member' }),
-        handleWhatsapp: () => window.open(`https://wa.me/${member.phone}`, '_blank'),
-        handleCall: () => window.open(`tel:${member.phone}`, '_blank')
+        handleEdit: () => !isNavigatingRef.current && (isNavigatingRef.current = true),
+        handleWhatsapp: () => !isWhatsAppRef.current && (isWhatsAppRef.current = true),
+        handleCall: () => !isCallRef.current && (isCallRef.current = true),
+        handleOpenDeactivateModal: () => !isOpenDeactivateModalRef.current && (isOpenDeactivateModalRef.current = true),
+        handleOpenDeleteModal: () => !isOpenDeleteMemberModalRef.current && (isOpenDeleteMemberModalRef.current = true),
+        handleOpenActivateModal: () => !isOpenActivateModalRef.current && (isOpenActivateModalRef.current = true),
+        handleOnExitTransitionEnd: () => {
+            if (isNavigatingRef.current) {
+                isNavigatingRef.current = false;
+                navigateTo('member-action', { memberid: member.id, action: 'edit-member' });
+            }
+            if (isWhatsAppRef.current) {
+                isWhatsAppRef.current = false;
+                window.open(`https://wa.me/${member.phone}`, '_blank');
+            }
+            if (isCallRef.current) {
+                isCallRef.current = false;
+                window.open(`tel:${member.phone}`, '_blank');
+            }
+            if (isOpenDeactivateModalRef.current) {
+                isOpenDeactivateModalRef.current = false;
+                selectedMember();
+                openDeactivateModal();
+            }
+            if (isOpenDeleteMemberModalRef.current) {
+                isOpenDeleteMemberModalRef.current = false;
+                selectedMember();
+                openDeleteModal();
+            }
+            if (isOpenActivateModalRef.current) {
+                isOpenActivateModalRef.current = false;
+                selectedMember();
+                openActivateModal();
+            }
+        }
     };
 
     return {
         hasDeleteError,
         hasDeactivateError,
         hasError,
-        actions,
-        key
+        actions
     };
 }
 
@@ -55,22 +99,24 @@ interface MemberContentMenuProps {
     openDeleteModal: () => void;
 }
 
-export const MemberContentMenu = ({
-    member,
-    openDeactivateModal,
-    openActivateModal,
-    openDeleteModal
-}: MemberContentMenuProps) => {
+export const MemberContentMenu = ({ member, ...props }: MemberContentMenuProps) => {
     const {
         hasDeleteError,
         hasDeactivateError,
         hasError,
-        actions: { setSelectedMember, handleEdit, handleWhatsapp, handleCall },
-        key
-    } = useMemberContentMenu({ member });
+        actions: {
+            handleEdit,
+            handleWhatsapp,
+            handleCall,
+            handleOnExitTransitionEnd,
+            handleOpenDeactivateModal,
+            handleOpenDeleteModal,
+            handleOpenActivateModal
+        }
+    } = useMemberContentMenu({ member, ...props });
 
     return (
-        <Menu key={key}>
+        <Menu onExitTransitionEnd={handleOnExitTransitionEnd}>
             <Menu.Target>
                 <ActionIcon
                     variant='white'
@@ -103,32 +149,20 @@ export const MemberContentMenu = ({
                         </Menu.Item>
                         <Menu.Item
                             leftSection={<IconClose />}
-                            rightSection={<DisplayPriorityIconOnError showIcon={hasDeactivateError} />}
-                            onClick={() => {
-                                setSelectedMember();
-                                openDeactivateModal();
-                            }}
+                            rightSection={<PriorityIconOnError showIcon={hasDeactivateError} />}
+                            onClick={handleOpenDeactivateModal}
                         >
                             Deactivate
                         </Menu.Item>
                     </>
                 :   <>
-                        <Menu.Item
-                            onClick={() => {
-                                setSelectedMember();
-                                openActivateModal();
-                            }}
-                            leftSection={<IconCheck />}
-                        >
+                        <Menu.Item onClick={handleOpenActivateModal} leftSection={<IconCheck />}>
                             Reactivate
                         </Menu.Item>
                         <Menu.Item
-                            onClick={() => {
-                                setSelectedMember();
-                                openDeleteModal();
-                            }}
+                            onClick={handleOpenDeleteModal}
                             leftSection={<IconClose />}
-                            rightSection={<DisplayPriorityIconOnError showIcon={hasDeleteError} />}
+                            rightSection={<PriorityIconOnError showIcon={hasDeleteError} />}
                         >
                             Delete
                         </Menu.Item>
@@ -141,9 +175,10 @@ export const MemberContentMenu = ({
 
 interface MembersContentProps {
     members: Member[];
+    activeTab: Tab;
 }
 
-export function MembersContent({ members }: MembersContentProps) {
+export function MembersContent({ members, activeTab }: MembersContentProps) {
     const [deactivationModalOpened, { open: openDeactivationModal, close: closeDeactivationModal }] =
         useDisclosure(false);
     const [deleteMemberModalOpened, { open: openDeleteMemberModal, close: closeDeleteMemberModal }] =
@@ -171,8 +206,8 @@ export function MembersContent({ members }: MembersContentProps) {
                                         </Title>
                                         <GroupIcon>
                                             <IconBed color='dimmed' size={16} />
-                                            <Text size='xs' c='dimmed'>
-                                                {member.floor} Floor — {member.bedType}
+                                            <Text size='xs' c='dimmed' tt='capitalize'>
+                                                {`${convertToFloorOrdinal(member.floor)} — ${member.bed}`}
                                             </Text>
                                         </GroupIcon>
                                     </Stack>
@@ -183,10 +218,11 @@ export function MembersContent({ members }: MembersContentProps) {
                                 openDeactivateModal={openDeactivationModal}
                                 openActivateModal={openActivationModal}
                                 openDeleteModal={openDeleteMemberModal}
+                                key={activeTab !== 'members' ? `${activeTab}_menu_${member.id}` : undefined}
                             />
                         </Center>
                         <Accordion.Panel>
-                            <MemberDetailsList member={member} isAdmin={true} />
+                            <MemberDetailsList member={member} />
                         </Accordion.Panel>
                     </Accordion.Item>
                 ))}
