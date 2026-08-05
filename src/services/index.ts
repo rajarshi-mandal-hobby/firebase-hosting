@@ -12,14 +12,13 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { createFetcher, createKeyedFetcher, createNewFetcher } from './fetcherFactories';
-import { DEFAULT_VALUES, BILLS, ERROR_CAUSE } from '../data/types/constants';
-import type { DefaultRents, ElectricBill } from '../data/types';
 import { simulateNetworkDelay, simulateRandomError } from '../data/utils/serviceUtils';
+import { DB } from '../data/types';
 
 export const fetchDefaultRents = createFetcher(async () => {
     simulateRandomError();
     await simulateNetworkDelay();
-    const docRef = doc(db, DEFAULT_VALUES.COL, DEFAULT_VALUES.DOC);
+    const docRef = doc(db, DB.configCol, DB.defaultValuesDoc);
     const docSnapshot = await getDoc(docRef);
     if (!docSnapshot.exists()) {
         return null;
@@ -29,18 +28,18 @@ export const fetchDefaultRents = createFetcher(async () => {
     return data;
 });
 
-export const fetchDefaultRentsWithCache = createNewFetcher(async () => {
-    simulateRandomError();
-    await simulateNetworkDelay(1500);
-    const docRef = doc(db, DEFAULT_VALUES.COL, DEFAULT_VALUES.DOC);
-    const docSnapshot = await getDoc(docRef);
-    if (!docSnapshot.exists()) {
-        return null;
-    }
+// export const fetchDefaultRentsWithCache = createNewFetcher(async () => {
+//     simulateRandomError();
+//     await simulateNetworkDelay(1500);
+//     const docRef = doc(db, DEFAULT_VALUES.COL, DEFAULT_VALUES.DOC);
+//     const docSnapshot = await getDoc(docRef);
+//     if (!docSnapshot.exists()) {
+//         return null;
+//     }
 
-    const data = docSnapshot.data() as DefaultRents;
-    return data;
-});
+//     const data = docSnapshot.data() as DefaultRents;
+//     return data;
+// });
 
 export const fetchElectricBillForMonth = createKeyedFetcher(async (month: string) => {
     // Test if month is in format YYYY-MM-DD
@@ -56,7 +55,7 @@ export const fetchElectricBillForMonth = createKeyedFetcher(async (month: string
             throw new Error('Invalid month format', { cause: ERROR_CAUSE.INVALID_DATA });
     }
 
-    const docRef = doc(db, BILLS.COL, monthToLoad);
+    const docRef = doc(db, DB.billsCol, monthToLoad);
     const docSnapshot = await getDoc(docRef);
     if (!docSnapshot.exists()) {
         throw new Error('Electric Bill not found', { cause: ERROR_CAUSE.DATA_MISSING });

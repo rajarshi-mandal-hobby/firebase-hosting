@@ -9,5 +9,6 @@ export const NumberInputWithCurrency = NumberInput.withProps({
     allowNegative: false,
     thousandSeparator: ',',
     thousandsGroupStyle: 'lakh',
-    hideControls: true
+    hideControls: true,
+    trimLeadingZeroesOnBlur: true
 });

@@ -1,5 +1,18 @@
-import { pipe, union, string, number, toNumber, integer, minValue, maxValue, transform, check, minWords, trim } from "valibot";
-import { hasAtLeastTwoWords } from "../../shared/utils";
+import {
+    pipe,
+    union,
+    string,
+    number,
+    toNumber,
+    integer,
+    minValue,
+    maxValue,
+    transform,
+    check,
+    minWords,
+    trim
+} from 'valibot';
+import { hasTwoWords } from '../../shared/utils';
 
 export const IntegerSchema = pipe(
     union([string(), number()]),
@@ -24,5 +37,5 @@ export const SentenceSchema = pipe(
     transform((value) => value.trim().replaceAll(/\s+/g, ' ')),
     trim(),
     minWords('en', 2, 'Must contan at least 2 words'),
-    check(hasAtLeastTwoWords, 'Must contain at least one word with two or more letters.')
+    check(hasTwoWords, 'Must contain at least one word with two or more letters.')
 );

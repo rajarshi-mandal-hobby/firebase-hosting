@@ -1,7 +1,8 @@
 import { doc, Timestamp, writeBatch } from 'firebase/firestore';
 import { db } from './src/firebase';
-import type { Member, RentHistory, Bill, BedRents, PaymentStatus, DefaultValues, Floor } from './src/data/types';
+import type { Member, RentHistory, Bill, BedRents, PaymentStatus, DefaultRents, Floor } from './src/data/types';
 import { BED, FLOOR } from './src/data/types';
+import { BaseRentsAndRollingBills } from './src/data/types/DefaultRents';
 
 const RENTS: BedRents = {
     second: { single: 1600, double: 3200, special: 2000 },
@@ -96,14 +97,13 @@ function prepareData() {
             phone: `+91987654321${i}`,
             moveInDate: Timestamp.fromDate(moveInDate),
             securityDeposit: 1000,
-            rentAtJoining: rentConfig.rent,
             advanceDeposit: rentConfig.rent,
             rent: rentConfig.rent,
             totalAgreedDeposit: rentConfig.rent * 2 + 1000,
             floor: rentConfig.floor,
             optedForWifi: rentConfig.wifi,
             bed: rentConfig.bed,
-            note: '',
+            remarks: '',
             isActive: !isDavid,
             ...(isDavid ? { leaveDate: Timestamp.fromDate(davidWilliamsInactiveDate) } : {})
         } satisfies Partial<Member>;
@@ -129,8 +129,11 @@ function prepareData() {
                     continue;
                 }
 
-                // Add the member to the billing data
-                nameIdMap[member.floor][member.id] = member.name;
+                // Add the member to the electric billing data except the first member who joined recently
+                const isNotAlice = member.name !== 'Alice Johnson';
+                if (isNotAlice) {
+                    nameIdMap[member.floor][member.id] = member.name;
+                }
                 // Add the member to the billing data if he opted for wifi
                 if (member.optedForWifi) {
                     wifiIds.push(member.id);
@@ -181,10 +184,7 @@ function prepareData() {
                 members: memberIds.wifi,
                 totalAmount: DEFAULT_WIFI_CHARGE
             },
-            floorIdNameMap: {
-                second: nameIdMap.second,
-                third: nameIdMap.third
-            }
+            idNameMap: { ...nameIdMap.second, ...nameIdMap.third }
         } satisfies Bill);
 
         billIteratorDate.setMonth(billIteratorDate.getMonth() + 1);
@@ -234,12 +234,17 @@ function prepareData() {
             monthCount++;
 
             // Randomly mark some months as partial, paid, overpaid or due
-            const status = ['Partial', 'Paid', 'Overpaid', 'Due'][Math.floor(Math.random() * 4)] as PaymentStatus;
+            let status = ['Partial', 'Paid', 'Overpaid', 'Due'][Math.floor(Math.random() * 4)] as PaymentStatus;
             const totalCharges =
                 rentAmount + perHeadElectricity + perHeadWifiCharge + expense + previousMonthOutstanding;
             let amountPaid = totalCharges;
             let outstanding = 0;
-            if (status === 'Due') {
+            // Alice Johnson should be marked as paid
+            if (member.name === 'Alice Johnson') {
+                status = 'Paid';
+                amountPaid = totalCharges;
+                outstanding = 0;
+            } else if (status === 'Due') {
                 amountPaid = 0;
                 outstanding = totalCharges;
             } else if (status === 'Overpaid') {
@@ -256,11 +261,10 @@ function prepareData() {
                 rent: rentAmount,
                 electricity: perHeadElectricity || 0,
                 wifi: perHeadWifiCharge || 0,
-                expenses: expense ? [{ amount: expense, description: bill.expenses.description }] : [],
+                adjustments: expense ? [{ amount: expense, description: bill.expenses.description }] : [],
                 totalCharges: totalCharges,
                 amountPaid: amountPaid,
                 outstanding,
-                prevOutstanding: previousMonthOutstanding,
                 note:
                     status === 'Partial' ? 'Paid 100 less'
                     : status === 'Overpaid' ? 'Paid 100 extra'
@@ -285,10 +289,9 @@ const seedFirestoreEmulator = async () => {
     console.log('🌱 Seeding Firestore...');
 
     try {
-
         const { membersWithHistory, billingData } = prepareData();
         const batch = writeBatch(db);
-        
+
         // 1. Seed Global Settings
         const defaultValuesRef = doc(db, 'config', 'default-values');
         const currentDate = billingData[billingData.length - 1].generatedAt.toDate();
@@ -304,8 +307,28 @@ const seedFirestoreEmulator = async () => {
                 prevMonth: Timestamp.fromDate(prevDate),
                 currentMonth: Timestamp.fromDate(currentDate)
             }
-        } satisfies DefaultValues);
+        } satisfies DefaultRents);
         console.log('⭕ Default values added...');
+
+        // 1.1. Add Default Rents 2
+        const defaultRents2Ref = doc(db, 'config', 'rents_bills');
+        const currentBillData = billingData[billingData.length - 1];
+        const prevBillData = billingData[billingData.length - 2];
+
+        batch.set(defaultRents2Ref, {
+            defaults: {
+                rents: {
+                    second: { single: RENTS.second.single, double: RENTS.second.double, special: RENTS.second.special },
+                    third: { single: RENTS.third.single, double: RENTS.third.double }
+                },
+                securityDeposit: 1000
+            },
+            bills: {
+                previousMonth: prevBillData,
+                currentMonth: currentBillData
+            }
+        } satisfies BaseRentsAndRollingBills);
+        console.log('⭕ Rent and bills added...');
 
         // 2. Seed Members
         membersWithHistory.forEach((member) => {

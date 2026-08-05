@@ -1,0 +1,18 @@
+.root {
+    --badge-fz-xs: calc(0.625rem * var(--mantine-scale)); /* 10px */
+    --badge-fz-sm: calc(0.6875rem * var(--mantine-scale)); /* 11px */
+    --badge-fz-md: calc(0.75rem * var(--mantine-scale)); /* 12px */
+    --badge-fz-lg: calc(0.875rem * var(--mantine-scale)); /* 14px */
+    text-transform: capitalize;
+    font-feature-settings: 'tnum', 'zero';
+    cursor: inherit;
+}
+
+.section {
+    &[data-position='left'] {
+        margin-inline-end: var(--badge-padding-x);
+    }
+    &[data-position='right'] {
+        margin-inline-start: var(--badge-padding-x);
+    }
+}

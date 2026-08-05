@@ -1,16 +1,18 @@
-import { Center, type CenterProps, type TextProps } from '@mantine/core';
+import { Box, Stack, type BoxComponentProps, type TextProps } from '@mantine/core';
 import { LoaderSleeping } from './LoaderSleeping';
 
 interface LoadingBoxProps {
-    centerProps?: CenterProps;
+    boxProps?: BoxComponentProps;
     textProps?: TextProps;
     message?: string;
 }
 
-export const LoadingBox = ({ centerProps, textProps, message }: LoadingBoxProps) => {
+export const LoadingBox = ({ boxProps, textProps, message }: LoadingBoxProps) => {
     return (
-        <Center my='xl' {...centerProps}>
-            <LoaderSleeping {...textProps} description={message} />
-        </Center>
+        <Box my='xl' {...boxProps}>
+            <Stack align='center' justify='center' gap={0}>
+                <LoaderSleeping {...textProps} message={message} />
+            </Stack>
+        </Box>
     );
 };

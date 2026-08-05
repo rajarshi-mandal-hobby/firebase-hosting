@@ -1,66 +1,43 @@
-import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
-import '@mantine/notifications/styles.css';
+import { MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
-import { createBrowserRouter, RouterProvider, RouterContextProvider } from 'react-router';
-import { AdminDashboard } from './pages/admin-dashboard/AdminDashboard';
-import SignIn from './pages/sign-In/SignIn';
-import { AppContainer } from './shared/components';
-import { authLoader, authMiddleware, lazyImport } from './shared/utils';
-import { theme } from './theme';
 import { Notifications } from '@mantine/notifications';
+import '@mantine/notifications/styles.css';
+import { lazy } from 'react';
+import { createBrowserRouter, RouterProvider } from 'react-router';
+import { AuthProvider } from './contexts';
+import { PATHNAME } from './data/types';
+import SignIn from './pages/sign-In/SignIn';
+import { NotReachable, AppContainer } from './shared/components';
+import { theme } from './theme';
 
-const LoadingBox = lazyImport(() => import('./shared/components'), 'LoadingBox');
-const DefaultRentsPage = lazyImport(
-    () => import('./pages/admin-dashboard/components/default-rents/DefaultRentsPage'),
-    'DefaultRentsPage',
-);
-const GenerateBillsPage = lazyImport(
-    () => import('./pages/admin-dashboard/components/generate-bills/GenerateBillsPage'),
-    'GenerateBillsPage',
-);
-const MemberFormPage = lazyImport(
-    () => import('./pages/admin-dashboard/components/member-form/MemberFormPage'),
-    'MemberFormPage',
-);
-const MemberDetailsPage = lazyImport(
-    () => import('./pages/admin-dashboard/components/member-details/MemberDetails'),
-    'MemberDetailsPage',
-);
-const NotReachable = lazyImport(() => import('./shared/components'), 'NotReachable');
+const AdminDashboard = lazy(() => import('./pages/admin-dashboard/AdminDashboard'));
+const DefaultRentsPage = lazy(() => import('./pages/default-rents/DefaultRentsPage'));
+const GenerateBillsPage = lazy(() => import('./pages/generate-bills/GenerateBillsPage'));
+const MemberDetailsPage = lazy(() => import('./pages/member-details/MemberDetails'));
+const MemberFormPage = lazy(() => import('./pages/member-form/MemberFormPage'));
 
-const router = createBrowserRouter(
-    [
-        {
-            path: '/signin',
-            Component: SignIn,
-            loader: authLoader,
-            hydrateFallbackElement: <LoadingBox message='Authenticating...' />,
-        },
-        {
-            path: '/',
-            Component: AdminDashboard,
-            middleware: [authMiddleware],
-            hydrateFallbackElement: <LoadingBox />,
-            children: [
-                { path: 'default-rents', Component: DefaultRentsPage },
-                { path: 'generate-bills', Component: GenerateBillsPage },
-                { path: 'member-action', Component: MemberFormPage },
-                { path: 'member-details', Component: MemberDetailsPage },
-            ],
-        },
-        {
-            path: '*',
-            Component: NotReachable,
-        },
-    ],
+const router = createBrowserRouter([
     {
-        getContext() {
-            return new RouterContextProvider();
-        },
+        path: PATHNAME.signin,
+        Component: SignIn
     },
-);
+    {
+        path: PATHNAME.home,
+        Component: AdminDashboard,
+        children: [
+            { path: PATHNAME.default_rents, Component: DefaultRentsPage },
+            { path: PATHNAME.generate_bills, Component: GenerateBillsPage },
+            { path: PATHNAME.member_action, Component: MemberFormPage },
+            { path: PATHNAME.member_details, Component: MemberDetailsPage }
+        ]
+    },
+    {
+        path: '*',
+        Component: NotReachable
+    }
+]);
 
 export default function App() {
     return (
@@ -68,7 +45,9 @@ export default function App() {
             <Notifications w='max-content' position='bottom-center' />
             <ModalsProvider>
                 <AppContainer>
-                    <RouterProvider router={router} useTransitions={false} />
+                    <AuthProvider>
+                        <RouterProvider router={router} useTransitions={false} />
+                    </AuthProvider>
                 </AppContainer>
             </ModalsProvider>
         </MantineProvider>

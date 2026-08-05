@@ -1,9 +1,13 @@
-import type { Timestamp } from 'firebase/firestore';
 import type { FlatErrors } from 'valibot';
-import type { ReactNode } from 'react';
 import type { BED_LABEL, FLOOR_LABEL, MEMBER_STATUS_LABEL, MEMBER_STATUS, FLOOR, BED } from './constants';
 
 export * from './constants';
+export type { ReactChildren } from './ReactChildren';
+export type { DefaultRents } from './DefaultRents';
+export type { Member } from './Member';
+export type { Adjustment } from './Adjustment';
+export type { RentHistory } from './RentHistory';
+export type { Bill } from './Bill';
 
 export type MemberStatus = keyof typeof MEMBER_STATUS;
 
@@ -25,76 +29,6 @@ export type BedRents = {
     [F in Floor]: F extends 'second' ? Record<Bed, number> : Record<Exclude<Bed, 'special'>, number>;
 };
 
-export interface DefaultValues {
-    rents: BedRents;
-    wifiCharge: number;
-    securityDeposit: number;
-    billDates: {
-        prevMonth: Timestamp;
-        currentMonth: Timestamp;
-    };
-}
-
-export interface Member {
-    id: string; // Firestore document ID
-    moveInDate: Timestamp;
-    name: string;
-    phone: string;
-    floor: Floor;
-    bed: Bed;
-    rent: number;
-    rentAtJoining: number;
-    securityDeposit: number;
-    advanceDeposit: number;
-    totalAgreedDeposit: number;
-    isActive: boolean;
-    optedForWifi: boolean;
-    note: string;
-    currentMonthRent: RentHistory;
-    leaveDate?: Timestamp;
-}
-
-export interface Expense {
-    amount: number;
-    description: string;
-}
-
-export interface RentHistory {
-    id: string;
-    generatedAt: Timestamp;
-    rent: number;
-    electricity: number;
-    wifi: number;
-    prevOutstanding: number;
-    expenses: Expense[];
-    totalCharges: number;
-    amountPaid: number;
-    outstanding: number;
-    note: string;
-    status: PaymentStatus;
-}
-
-export interface Bill {
-    id: string;
-    generatedAt: Timestamp;
-    electric: {
-        [K in Floor]: {
-            totalAmount: number;
-            members: string[];
-        };
-    };
-    expenses: {
-        members: string[];
-        totalAmount: number;
-        description: string;
-    };
-    wifi: {
-        members: string[];
-        totalAmount: number;
-    };
-    floorIdNameMap: Record<Floor, Record<string, string>>;
-}
-
 type ValidationError = FlatErrors<any>;
 
 export type SaveResult =
@@ -106,6 +40,25 @@ export type SaveResult =
           errors: ValidationError;
       };
 
-export interface ReactChildren {
-    children: ReactNode;
-}
+export type Pathname = '/' | 'member-action' | 'generate-bills' | 'default-rents' | 'member-details' | 'signin';
+
+export const PATHNAME = {
+    home: '/',
+    member_action: 'member-action',
+    generate_bills: 'generate-bills',
+    default_rents: 'default-rents',
+    member_details: 'member-details',
+    signin: 'signin'
+} as const satisfies Record<string, Pathname>;
+
+export const MemberFormActions = ['add', 'reactivate', 'edit'] as const;
+
+export type MemberFormAction = (typeof MemberFormActions)[number];
+
+export const MEMBER_ACTION_QUERY_ID = 'id';
+
+export const MEMBER_ACTION_QUERY = {
+    add: 'member-action?action=add',
+    reactivate: (memberId: string) => `member-action?action=reactivate&${MEMBER_ACTION_QUERY_ID}=${memberId}`,
+    edit: (memberId: string) => `member-action?action=edit&${MEMBER_ACTION_QUERY_ID}=${memberId}`
+} as const satisfies Record<MemberFormAction, string | ((memberId: string) => string)>;

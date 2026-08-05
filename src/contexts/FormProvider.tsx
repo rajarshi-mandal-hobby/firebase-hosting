@@ -185,7 +185,6 @@ export const useGlobalFormStore = <T,>(key: FormKey) => {
         });
 
         try {
-            console.log(FormKeys[key]);
             const fn = httpsCallable(functions, FormKeys[key]);
             const res = await fn(values);
             const saveResult = res.data as unknown as SaveResult;

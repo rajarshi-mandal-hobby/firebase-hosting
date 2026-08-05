@@ -1,10 +1,23 @@
-import { type ButtonProps, Modal, Stack, Collapse, Alert, Button, Text, type ModalProps } from '@mantine/core';
+import {
+    type ButtonProps,
+    Modal,
+    Stack,
+    Collapse,
+    Alert,
+    Button,
+    Text,
+    type ModalProps,
+    Title,
+    Badge
+} from '@mantine/core';
 import type { ReactNode } from 'react';
 import { useGlobalErrorData } from '../../contexts';
-import { IconExclamation } from '../icons';
-import { ALT_TEXT } from '../types';
-import { GroupButtons } from './group-helpers';
+import { IconPriorityHigh } from '../icons';
+
+import { GroupButtons, GroupIcon } from './group-helpers';
 import { MyLoadingOverlay } from './MyLoadingOverlay';
+import type { PaymentStatus } from '../../data/types';
+import { getPaymentStatusConfig, getPaymentStatusIcon } from '../utils';
 
 export interface GlobalModalProps {
     opened: boolean;
@@ -14,6 +27,7 @@ export interface GlobalModalProps {
 interface GlobalModalConfigProps extends GlobalModalProps, ModalProps {
     modalTitle: string;
     memberDescription?: string | ReactNode;
+    status?: PaymentStatus;
     isPending: boolean;
     hasErrorForMemeber: boolean;
     otherErrors?: string | null;
@@ -30,6 +44,7 @@ export const GlobalModal = ({
     onClose,
     modalTitle,
     memberDescription,
+    status,
     isPending,
     hasErrorForMemeber,
     otherErrors,
@@ -47,6 +62,7 @@ export const GlobalModal = ({
     const hasGlobalErrors = errorCount > 0;
     const errorMemberName =
         hasManyMembers ? `${memberNames[0].split(' ')[0]} and ${errorCount - 1} more` : memberNames[0];
+    const paymentStatus = status ? getPaymentStatusConfig(status) : null;
     return (
         <Modal
             opened={opened}
@@ -57,14 +73,14 @@ export const GlobalModal = ({
             size='sm'
             pos='relative'
         >
-            <MyLoadingOverlay visible={isPending} description={selectedMember?.name} />
+            <MyLoadingOverlay visible={isPending} message={selectedMember?.name} />
             <Stack gap='lg'>
                 <Collapse expanded={hasGlobalErrors}>
                     <Alert
                         color='red'
                         p='xs'
                         variant='outline'
-                        icon={<IconExclamation />}
+                        icon={<IconPriorityHigh />}
                         withCloseButton={hasErrorForMemeber && !!onResetError}
                         onClose={onResetError}
                         closeButtonLabel='Clear Error'
@@ -80,13 +96,28 @@ export const GlobalModal = ({
                     </Alert>
                 </Collapse>
 
-                <Stack gap={0}>
-                    <Text fw={500} size='xl'>
-                        {selectedMember?.name ?? ALT_TEXT}
-                    </Text>
-                    {memberDescription &&
-                        (typeof memberDescription === 'string' ?
-                            <Text>{memberDescription ?? ALT_TEXT}</Text>
+                <Stack gap='xs'>
+                    <GroupIcon>
+                        <Title fw={300} order={2} lineClamp={1}>
+                            {selectedMember?.name ?? ALT_TEXT}
+                        </Title>
+                        {!!paymentStatus && (
+                            <Badge
+                                variant='gradient'
+                                gradient={{ from: `${paymentStatus.color}.7`, to: `${paymentStatus.color}.5`, deg: 90 }}
+                                leftSection={<paymentStatus.Icon size={12} />}
+                                size='sm'
+                                style={{
+                                    lineClamp: 1
+                                }}
+                            >
+                                {paymentStatus.paymentStatus}
+                            </Badge>
+                        )}
+                    </GroupIcon>
+                    {memberDescription
+                        && (typeof memberDescription === 'string' ?
+                            <Text>{memberDescription}</Text>
                         :   memberDescription)}
                 </Stack>
 

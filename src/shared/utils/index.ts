@@ -1,20 +1,30 @@
-import type { UseFormReturnType } from '@mantine/form';
 import dayjs from 'dayjs';
 import { lazy } from 'react';
-import type { FloorLabel, FloorAndAll } from '../../data/types';
+import { type FloorLabel, type FloorAndAll, type Floor, type Bed, BED_LABEL, FLOOR_LABEL } from '../../data/types';
+import type { DefaultMantineColor } from '@mantine/core';
 
-export * from './notifications';
-export * from './statusUtils';
+export {
+    notify,
+    notifyClose,
+    notifyCloseAll,
+    notifyError,
+    notifyInfo,
+    notifyLoading,
+    notifySuccess,
+    notifyUpdate
+} from './notification-utils';
+export {
+    getPaymentStatus,
+    getPaymentStatusColor,
+    getPaymentStatusConfig,
+    getPaymentStatusIcon,
+    getPaymentStatusTitle
+} from './payment-status';
 export * from '../hooks/useGlobalFormResult';
 export * from './auth';
-
-/**
- * A utility type that makes all properties of a given type T optional, including nested properties.
- * This is useful for scenarios where you want to create a partial version of a complex object type.
- */
-export type DeepPartial<T> = {
-    [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
+export * from './validation-utils';
+export { getInputResetProps, setFormValues } from './form-utils';
+export { calcOutstanding, calcTotalCharges, calcTotalAdjustments } from './member-utils';
 
 export const toNumber = (value: unknown) => {
     if (!value) return 0;
@@ -25,6 +35,8 @@ export const toNumber = (value: unknown) => {
     }
     return 0;
 };
+
+export const getMemberFirstname = (name: string) => name.split(' ')[0];
 
 /**
  * Utility function to format numbers as per Indian locale
@@ -43,9 +55,9 @@ export const toIndianLocale = (number: unknown, isCurrency = true): string => {
             {
                 style: 'currency',
                 currency: 'INR',
-                currencyDisplay: 'symbol',
+                currencyDisplay: 'narrowSymbol',
                 minimumFractionDigits: hasDecimal ? 2 : 0,
-                maximumFractionDigits: hasDecimal ? 2 : 0,
+                maximumFractionDigits: hasDecimal ? 2 : 0
             }
         :   undefined;
 
@@ -59,7 +71,7 @@ const suffixes = new Map([
     ['one', 'st'],
     ['two', 'nd'],
     ['few', 'rd'],
-    ['other', 'th'],
+    ['other', 'th']
 ]);
 
 /**
@@ -92,9 +104,12 @@ export const formatPhoneNumber = (inputValue: any) => {
     const noSpacesOrLetters = normalizePhoneInput(inputValue);
 
     // 2. Insert a space after every 5 digits using regex
-    const formatted = noSpacesOrLetters.replaceAll(/(\d{5})/g, '$1 ').trim();
+    const parts = [];
+    if (noSpacesOrLetters.length > 0) parts.push(noSpacesOrLetters.substring(0, 4));
+    if (noSpacesOrLetters.length > 4) parts.push(noSpacesOrLetters.substring(4, 7));
+    if (noSpacesOrLetters.length > 7) parts.push(noSpacesOrLetters.substring(7));
 
-    return formatted;
+    return parts.join(' ');
 };
 
 /** Formats a phone number for display by adding the country code prefix.
@@ -104,7 +119,7 @@ export const formatPhoneNumber = (inputValue: any) => {
 export const displayPhoneNumber = (value: number | string) => {
     const phoneString = String(value);
     return phoneString.startsWith('+91') ?
-            phoneString.replaceAll(/(\d{2})(\d{5})/g, '$1 $2 ')
+            phoneString.replace(/(\d{2})(\d{4})(\d{3})(\d{3})/g, '$1 $2 $3 $4')
         :   `+91 ${formatPhoneNumber(value)}`;
 };
 
@@ -157,12 +172,12 @@ export const lazyImport = <T extends Record<string, any>, K extends keyof T>(fac
     lazy(() => factory().then((module) => ({ default: module[name] })));
 
 /** Checks if a sentence contains at least one word with two or more letters.
- * @param sentence - The sentence to check.
+ * @param value - The sentence to check.
  * @returns True if the sentence contains at least one word with two or more letters, false otherwise.
  */
-export const hasAtLeastTwoWords = (sentence: string): boolean => {
-    const words = sentence.split(/\s+/).filter(Boolean);
-    return words.some((word) => word.length >= 2);
+export const hasTwoWords = (value: string): boolean => {
+    const words = value.split(/\s+/).filter(Boolean);
+    return words.length > 1 && words.some((word) => word.length >= 2);
 };
 
 /** Checks if a sentence contains at least two words with two or more letters.
@@ -175,12 +190,14 @@ export const hasTwoLetterTwoWord = (sentence: string): boolean => {
 };
 
 /**
- * Updates multiple form fields with full TypeScript auto-complete.
+ * Checks if a string is a sentence (has at least two words with two or more letters).
+ * @param str - The string to check.
+ * @returns True if the string is a sentence, false otherwise.
  */
-export const setFields = <T, K extends keyof T>(form: UseFormReturnType<T>, fields: Pick<T, K>) => {
-    Object.entries(fields).forEach(([key, value]) => {
-        form.setFieldValue(key, value as any);
-    });
+export const isSentence = (str: string): boolean => {
+    const words = str.trim().split(/\s+/);
+    const hasTwoOrMoreWords = words.length >= 2;
+    return hasTwoOrMoreWords && words.some((word) => word.length >= 2);
 };
 
 /**
@@ -195,3 +212,7 @@ export const convertToFloor = (floor: FloorLabel): FloorAndAll =>
     floor === '2nd' ? 'second'
     : floor === '3rd' ? 'third'
     : 'all';
+
+export const getLightBgColor = (color: DefaultMantineColor) => color.split('.')[0] + '.0';
+
+export const displayFloorBed = (floor: Floor, bed: Bed) => `${FLOOR_LABEL[floor]} Floor — ${BED_LABEL[bed]}`;

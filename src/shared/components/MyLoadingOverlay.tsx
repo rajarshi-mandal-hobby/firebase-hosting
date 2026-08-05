@@ -1,28 +1,16 @@
 import { LoadingOverlay, Paper, type LoadingOverlayProps } from '@mantine/core';
 import { LoaderSleeping } from './LoaderSleeping';
 
-const FactoryLoadingOverlay = LoadingOverlay.withProps({
-    overlayProps: {
-        blur: 2
-    },
-    zIndex: 100,
-    transitionProps: {
-        duration: 150,
-        transition: 'fade',
-        timingFunction: 'ease-in-out'
-    }
-});
-
-interface NewLoadingOverlayProps extends LoadingOverlayProps {
-    description?: string | null;
+interface MyLoadingOverlayProps extends LoadingOverlayProps {
+    message?: string | null;
 }
 
-export const MyLoadingOverlay = ({ description, ...props }: NewLoadingOverlayProps) => (
-    <FactoryLoadingOverlay
+export const MyLoadingOverlay = ({ message, ...props }: MyLoadingOverlayProps) => (
+    <LoadingOverlay
         loaderProps={{
             children: (
-                <Paper p='sm' shadow='xs'>
-                    <LoaderSleeping description={description ?? undefined} />
+                <Paper p='md' shadow='xs' withBorder>
+                    <LoaderSleeping message={message} />
                 </Paper>
             )
         }}

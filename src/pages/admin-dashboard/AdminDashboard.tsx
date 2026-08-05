@@ -1,156 +1,146 @@
-import { Menu, ActionIcon, Stack, Title, Text } from '@mantine/core';
-import { Activity, Fragment, useEffect } from 'react';
-import { ACTION_BUTTON_SIZE, ACTION_ICON_SIZE } from '../../data/types';
-import { GroupSpaceApart, GroupIcon, MyAvatar, ErrorBoundary, SuspenseBox } from '../../shared/components';
-import { useMyNavigation, type Path } from '../../shared/hooks/useNavigation';
-import { useRefreshKey } from '../../shared/hooks/useRefreshKey';
-import { IconMoreVertical, IconRupee, IconLogout, IconBack, IconReceiptLong, IconPersonAdd } from '../../shared/icons';
-import { TabNavigation } from './components/tab-navigation/TabNavigation';
-import { Link, Outlet, replace, useSubmit } from 'react-router';
-import { onAuthStateChanged } from 'firebase/auth';
-import { FormStoreProvider, MembersProvider, RentsProvider, useUser } from '../../contexts';
-import { auth } from '../../firebase';
+import { Stack, Group, Title, ActionIcon, Text, Center } from '@mantine/core';
+import { Activity } from 'react';
+import { Navigate, Outlet } from 'react-router';
+import { MembersProvider, FormStoreProvider, useAuth } from '../../contexts';
+import { ACTION_BUTTON_SIZE, ACTION_ICON_SIZE, PATHNAME } from '../../data/types';
+import { ErrorAlert, GroupSpaceApart, MyAvatar, ErrorBoundary, SuspenseBox, LoadingBox } from '../../shared/components';
+import { useRefreshKey, useMyNavigation } from '../../shared/hooks';
+import { IconArrowBack } from '../../shared/icons';
+import { TabNavigation } from '../tab-navigation/TabNavigation';
+import { AdminMenu } from './components/AdminMenu';
+import { useFormStore } from './hooks/useFormStore';
+import { TITLES } from './types/index.d';
+import { GoogleIcon } from '../../shared/icons/factory';
 
-export const Titles: Record<Path, string> = {
-    '/': 'Rajarshi Mess',
-    'member-action': 'Add Member',
-    'generate-bills': 'Generate Bills',
-    'default-rents': 'Default Rents',
-    'member-details': 'Member Details'
-} as const;
+const useAdminDashboardContent = () => {
+    const [refreshKey, updateRefreshKey] = useRefreshKey();
+    const { user, isAuthState } = useAuth();
+    const {
+        pathname,
+        isHome,
+        paramMemberAction,
+        actions: { goBack }
+    } = useMyNavigation();
 
-export type Title = keyof typeof Titles;
+    const pageTitle =
+        paramMemberAction === 'edit' ? 'Edit Member'
+        : paramMemberAction === 'reactivate' ? 'Reactivate Member'
+        : TITLES[pathname].title;
 
-const useAdminMenu = (path: Path) => {
-    const submit = useSubmit();
-    const handleLogout = async () => submit({ intent: 'logout' }, { method: 'post', action: '/signin', replace: true });
+    const { hasErrors, errorFormNames, clearFormStates } = useFormStore();
 
-    const menuEntries = Object.entries(Titles) as [Path, string][];
-    const menuItems = menuEntries.filter(([p]) => p !== '/' && p !== 'member-details' && p !== path);
+    const hasMoreNames = errorFormNames.length > 1;
+    const firstMemberName = errorFormNames[0];
+    const errorMemberName = hasMoreNames ? `${firstMemberName} and ${errorFormNames.length - 1} more` : firstMemberName;
+    const errorMessage = `${errorMemberName} has failed ${hasMoreNames ? 'transactions' : 'transaction'}!`;
 
-    const getIcon = (path: Path) => {
-        switch (path) {
-            case 'generate-bills':
-                return <IconReceiptLong />;
-            case 'member-action':
-                return <IconPersonAdd />;
-            case 'default-rents':
-                return <IconRupee />;
-            default:
-                return null;
+    return {
+        refreshKey,
+        user,
+        isAuthState,
+        pageTitle,
+        isHome,
+        hasErrors,
+        errorMessage,
+        actions: {
+            goBack,
+            clearFormStates,
+            getMode: (isVisible: boolean) => (isVisible ? 'visible' : 'hidden'),
+            handleRefreshKey: updateRefreshKey
         }
     };
-
-    return { menuItems, handleLogout, getIcon };
 };
 
-const AdminMenu = ({ path }: { path: Path }) => {
-    const { menuItems, handleLogout, getIcon } = useAdminMenu(path);
+const AdminDashboardContent = () => {
+    const {
+        refreshKey,
+        user,
+        isAuthState,
+        pageTitle,
+        isHome,
+        hasErrors,
+        errorMessage,
+        actions: { goBack, getMode, clearFormStates, handleRefreshKey }
+    } = useAdminDashboardContent();
 
-    return (
-        <Menu>
-            <Menu.Target>
-                <ActionIcon color='gray.1' variant='filled' size={ACTION_BUTTON_SIZE}>
-                    <IconMoreVertical size={ACTION_ICON_SIZE} />
-                </ActionIcon>
-            </Menu.Target>
+    if (!isAuthState) {
+        return (
+            <Center h='100vh' style={{ gap: 4 }}>
+                <GoogleIcon iconName='safety_check' size={48} fw={300} />
+                <Title order={4} fw={300}>
+                    Authenticating…
+                </Title>
+            </Center>
+        );
+    }
 
-            <Menu.Dropdown>
-                {menuItems.map(([p, label]) => (
-                    <Fragment key={`admin_menu_${label}`}>
-                        {p === 'default-rents' && <Menu.Divider />}
-                        <Menu.Item leftSection={getIcon(p)} component={Link} to={p} replace={path !== '/'}>
-                            {label}
-                        </Menu.Item>
-                    </Fragment>
-                ))}
-                <Menu.Divider />
-                <Menu.Item onClick={handleLogout} leftSection={<IconLogout color='red' />}>
-                    Sign Out
-                </Menu.Item>
-            </Menu.Dropdown>
-        </Menu>
-    );
-};
+    if (!user) return <Navigate to={PATHNAME.signin} replace />;
 
-export const AdminDashboard = () => {
-    const [refreshKey, setRefreshKey] = useRefreshKey();
-    const user = useUser();
-    const { path, goBack, memberAction } = useMyNavigation();
-    const viewTitle =
-        memberAction === 'edit-member' ? 'Edit Member'
-        : memberAction === 'reactivate-member' ? 'Reactivate Member'
-        : Titles[path];
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                replace('/signin');
-            }
-        });
-        return () => {
-            unsubscribe();
-        };
-    }, []);
+    console.log('🎨 Rendering Admin Dashboard', hasErrors);
 
     return (
         <>
-            <title>{Titles[path]}</title>
-            <ErrorBoundary onRetry={setRefreshKey}>
-                <SuspenseBox>
-                    <MembersProvider>
-                        <FormStoreProvider>
-                            <Stack p='md'>
-                                <GroupSpaceApart h={48}>
-                                    <GroupIcon gap='md'>
-                                        {path === '/' ?
-                                            <>
-                                                <MyAvatar
-                                                    name={user.displayName || 'Admin'}
-                                                    src={user.photoURL}
-                                                    size='md'
-                                                />
-                                                <Stack gap={0}>
-                                                    <Title order={4}>{user.displayName || 'Admin'}</Title>
-                                                    <Text size='xs' c='dimmed'>
-                                                        {user.email}
-                                                    </Text>
-                                                </Stack>
-                                            </>
-                                        :   <>
-                                                <ActionIcon
-                                                    color='gray.1'
-                                                    variant='filled'
-                                                    size={ACTION_BUTTON_SIZE}
-                                                    onClick={goBack}
-                                                >
-                                                    <IconBack size={ACTION_ICON_SIZE} />
-                                                </ActionIcon>
-                                                <Title order={3}>{viewTitle}</Title>
-                                            </>
-                                        }
-                                    </GroupIcon>
-                                    <AdminMenu path={path} />
-                                </GroupSpaceApart>
+            {/* Browser Tab title dynamically changes based on current route */}
+            <title>{pageTitle}</title>
 
-                                <Activity mode={path === '/' ? 'visible' : 'hidden'}>
-                                    <TabNavigation />
-                                </Activity>
+            {/* Header */}
+            <Stack p='md'>
+                <ErrorAlert message={errorMessage} visible={hasErrors} withCloseButton onClose={clearFormStates} />
 
-                                <RentsProvider>
-                                    <Activity mode={path === '/' ? 'hidden' : 'visible'}>
-                                        <ErrorBoundary onRetry={setRefreshKey}>
-                                            <SuspenseBox>
-                                                <Outlet key={refreshKey} />
-                                            </SuspenseBox>
-                                        </ErrorBoundary>
-                                    </Activity>
-                                </RentsProvider>
-                            </Stack>
-                        </FormStoreProvider>
-                    </MembersProvider>
-                </SuspenseBox>
-            </ErrorBoundary>
+                <GroupSpaceApart h={48}>
+                    <Group>
+                        {isHome ?
+                            <>
+                                <MyAvatar name={user?.displayName || 'Admin'} src={user?.photoURL} size='md' />
+                                <Stack gap={0}>
+                                    <Title order={6}>{user?.displayName || 'Admin'}</Title>
+                                    <Text size='xs' c='dimmed'>
+                                        {user?.email}
+                                    </Text>
+                                </Stack>
+                            </>
+                        :   <>
+                                <ActionIcon color='gray.1' variant='filled' size={ACTION_BUTTON_SIZE} onClick={goBack}>
+                                    <IconArrowBack size={ACTION_ICON_SIZE} emphasize />
+                                </ActionIcon>
+                                <Title order={3}>{pageTitle}</Title>
+                            </>
+                        }
+                    </Group>
+
+                    <AdminMenu />
+                </GroupSpaceApart>
+
+                {/* Tabs */}
+                <Activity mode={getMode(isHome)}>
+                    <TabNavigation />
+                </Activity>
+
+                {/* Outlet */}
+                <Activity mode={getMode(!isHome)}>
+                    <ErrorBoundary onRetry={handleRefreshKey}>
+                        <SuspenseBox>
+                            <Outlet key={refreshKey + pageTitle} />
+                        </SuspenseBox>
+                    </ErrorBoundary>
+                </Activity>
+            </Stack>
         </>
     );
 };
+
+export default function AdminDashboard() {
+    const [refreshKey, setRefreshKey] = useRefreshKey();
+
+    return (
+        <ErrorBoundary onRetry={setRefreshKey}>
+            <SuspenseBox>
+                <MembersProvider>
+                    <FormStoreProvider>
+                        <AdminDashboardContent key={refreshKey} />
+                    </FormStoreProvider>
+                </MembersProvider>
+            </SuspenseBox>
+        </ErrorBoundary>
+    );
+}

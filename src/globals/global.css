@@ -1,3 +1,13 @@
+body {
+    font-optical-sizing: auto;
+}
+
+:root[data-mantine-color-scheme='light'],
+:host([data-mantine-color-scheme='light']) {
+    --mantine-color-red-light: var(--mantine-color-red-0);
+    --mantine-color-red-light-hover: var(--mantine-color-red-1);
+}
+
 input::-webkit-calendar-picker-indicator {
     opacity: 0;
 }
@@ -9,6 +19,15 @@ input::-webkit-calendar-picker-indicator {
     }
 }
 
-:root[data-mantine-color-scheme='light'] {
-    --mantine-color-dimmed: var(--mantine-color-gray-7);
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    user-select: none;
+    overflow: clip;
 }

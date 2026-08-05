@@ -14,8 +14,8 @@
         "noUnusedLocals": true,
         "forceConsistentCasingInFileNames": true,
         "allowSyntheticDefaultImports": true,
-        "resolveJsonModule": true, // Added for config imports
-        "isolatedModules": true // Added for transpiler safety
+        "resolveJsonModule": true,
+        "isolatedModules": true
     },
     "compileOnSave": true,
     "include": ["src"]

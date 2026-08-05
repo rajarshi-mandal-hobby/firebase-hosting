@@ -25,6 +25,9 @@
         "noFallthroughCasesInSwitch": true,
         "noUncheckedSideEffectImports": true
     },
-    "include": ["src"],
+    "include": [
+        "src/**/*", // Covers src/types/mantine.d.ts
+        "types/**/*" // (Optional) If you put it in a root /types folder
+    ],
     "exclude": ["node_modules", "dist", "build"]
 }

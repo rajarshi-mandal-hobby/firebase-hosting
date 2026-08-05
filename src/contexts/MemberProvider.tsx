@@ -3,6 +3,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { createContext, use, useEffect, useEffectEvent, useState, useSyncExternalStore, useTransition } from 'react';
 import { db } from '../firebase';
 import type { Member, MemberStatus } from '../data/types';
+import type { FirebaseError } from 'firebase/app';
 
 interface StoreState {
     snapshot: Record<MemberStatus, Member[]>;
@@ -48,14 +49,14 @@ export const membersStore = {
                     membersStore.state = {
                         snapshot: { all, active, inactive },
                         isLoading: false,
-                        error: null,
+                        error: null
                     };
                     membersStore.notify();
                 },
                 (err) => {
                     membersStore.state = { ...membersStore.state, error: err, isLoading: false };
                     membersStore.notify();
-                },
+                }
             );
         }
     },
@@ -80,7 +81,7 @@ export const membersStore = {
     },
 
     getSnapshot: () => membersStore.state,
-    notify: () => Array.from(membersStore.listeners).forEach((l) => l()),
+    notify: () => Array.from(membersStore.listeners).forEach((l) => l())
 };
 
 // Global Visibility Listener
@@ -103,6 +104,29 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
+function initFirestoreConnection() {
+    // if (activeSubscription) return; // Prevent double-triggering
+    // console.log('⚡ First component requested data. Opening Firestore channel...');
+    // const docRef = doc(db, DB.defaultValuesDoc);
+    // activeSubscription = onSnapshot(
+    //     docRef,
+    //     (docSnap) => {
+    //         // RULE FIX: Emits an immutable, frozen state reference shift
+    //         if (docSnap.exists()) {
+    //             currentSnapshot = { data: docSnap.data() as DefaultValues, loading: false, error: null };
+    //         } else {
+    //             currentSnapshot = { data: null, loading: false, error: new Error('Document not found') };
+    //         }
+    //         // Broadcast to React synchronously
+    //         listeners.forEach((emit) => emit());
+    //     },
+    //     (err) => {
+    //         currentSnapshot = { data: null, loading: false, error: err };
+    //         listeners.forEach((emit) => emit());
+    //     }
+    // );
+}
+
 // --- Store Implementation ---
 
 const MembersContext = createContext<StoreState | null>(null);
@@ -123,7 +147,7 @@ export function useMembers(status: MemberStatus = 'active') {
     return {
         members: state.snapshot[status] ?? [],
         isLoading: state.isLoading,
-        error: state.error,
+        error: state.error
     };
 }
 

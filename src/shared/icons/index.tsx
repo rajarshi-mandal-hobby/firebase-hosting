@@ -1,348 +1,43 @@
-import { useMantineTheme } from '@mantine/core';
-import type { SVGProps, FunctionComponent, ReactElement } from 'react';
-import { DEFAULT_SVG_SIZE } from '../types';
+import { createIcon, type IconProps } from './factory';
 
-export interface CustomSvgProps extends SVGProps<SVGSVGElement> {
-    size?: number | string;
-    color?: string;
-}
+export const IconEvent = (props: IconProps) => createIcon('event', props);
+export const IconReceipt = (props: IconProps) => createIcon('receipt_long', props);
+export const IconPersonAdd = (props: IconProps) => createIcon('person_add', props);
+export const IconDataObject = (props: IconProps) => createIcon('data_object', props);
+export const IconMoreVert = (props: IconProps) => createIcon('more_vert', props);
+export const IconArrowBack = (props: IconProps) => createIcon('arrow_back', props);
+export const IconCurrencyRupee = (props: IconProps) => createIcon('currency_rupee', props);
+export const IconAdd_2 = (props: IconProps) => createIcon('add_2', props);
+export const IconLogout = (props: IconProps) => createIcon('logout', props);
+export const IconNote = (props: IconProps) => createIcon('note', props);
+export const IconWarning = (props: IconProps) => createIcon('warning', props);
+export const IconPayments = (props: IconProps) => createIcon('payments', props);
+export const IconUniversalCurrencyAlt = (props: IconProps) => createIcon('universal_currency_alt', props);
+export const IconMoneyBag = (props: IconProps) => createIcon('money_bag', props);
+export const IconWifi = (props: IconProps) => createIcon('wifi', props);
+export const IconLightbulb = (props: IconProps) => createIcon('lightbulb', props);
+export const IconCheck = (props: IconProps) => createIcon('check', props);
+export const IconCheckAlert = (props: IconProps) => createIcon('check_alert', props);
+export const IconPriorityHigh = (props: IconProps) => createIcon('priority_high', props);
+export const IconPersonAlert = (props: IconProps) => createIcon('person_alert', props);
+export const IconPersonCheck = (props: IconProps) => createIcon('person_check', props);
+export const IconPersonRemove = (props: IconProps) => createIcon('person_remove', props);
+export const IconCall = (props: IconProps) => createIcon('call', props);
+export const IconDelete = (props: IconProps) => createIcon('delete', props);
+export const IconKingBed = (props: IconProps) => createIcon('king_bed', props);
+export const IconEdit = (props: IconProps) => createIcon('edit', props);
+export const IconInfo = (props: IconProps) => createIcon('info', props);
+export const IconShare = (props: IconProps) => createIcon('share', props);
+export const IconUndo = (props: IconProps) => createIcon('undo', props);
+export const IconHistory = (props: IconProps) => createIcon('history', props);
+export const IconFilterList = (props: IconProps) => createIcon('filter_list', props);
+export const IconSearch = (props: IconProps) => createIcon('search', props);
+export const IconError = (props: IconProps) => createIcon('error', props);
+export const IconPerson = (props: IconProps) => createIcon('person', props);
+export const IconEditOff = (props: IconProps) => createIcon('edit_off', props);
+export const IconClose = (props: IconProps) => createIcon('close', props);
+export const IconPersonEdit = (props: IconProps) => createIcon('person_edit', props);
 
-export type IconComponent = FunctionComponent<CustomSvgProps>;
-
-const getThemeColor = (color: string, theme: any) => theme.colors?.[color] || color;
-
-const useIconColor = (color?: string) => {
-    const theme = useMantineTheme();
-    return color ? getThemeColor(color, theme) : 'currentColor';
-};
-
-export const createCustomSvg = (svg: ReactElement<CustomSvgProps, 'svg'>, displayName: string): IconComponent => {
-    const CustomIcon = ({ size = DEFAULT_SVG_SIZE, color, style, ...others }: CustomSvgProps) => {
-        const iconColor = useIconColor(color);
-
-        const { viewBox, children, style: originalStyle, width: _width, height: _height, ...originalProps } = svg.props;
-
-        return (
-            <svg
-                xmlns='http://www.w3.org/2000/svg'
-                height={size}
-                width={size}
-                viewBox={viewBox || '0 0 24 24'}
-                style={
-                    {
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        ['--theme-icon-color' as any]: iconColor,
-                        ...originalStyle,
-                        ...style
-                    } as React.CSSProperties
-                }
-                {...originalProps}
-                {...others}
-            >
-                <g style={{ fill: 'var(--theme-icon-color, currentColor)' }}>{children}</g>
-            </svg>
-        );
-    };
-
-    CustomIcon.displayName = displayName;
-    return CustomIcon;
-};
-
-export const IconEdit = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M200-200h57l391-391-57-57-391 391v57Zm-40 80q-17 0-28.5-11.5T120-160v-97q0-16 6-30.5t17-25.5l505-504q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L313-143q-11 11-25.5 17t-30.5 6h-97Zm600-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z' />
-    </svg>,
-    'Edit'
-);
-
-export const IconEditOff = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M817-647 650-481q-11 11-27.5 11.5T594-481q-11-11-11-28t11-28l54-54-57-57-54 54q-11 11-28 11t-28-11q-11-11-11-28t11-28l167-167q12-12 26.5-17.5T705-840q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647ZM200-200h57l195-195-28-29-29-28-195 195v57ZM764-84 509-338 313-143q-11 11-25.5 17t-30.5 6h-97q-17 0-28.5-11.5T120-160v-96q0-16 6-30.5t17-25.5l196-196L84-764q-12-12-11.5-28T85-820q12-12 28.5-12t28.5 12l679 679q12 12 11.5 28.5T820-84q-12 12-28 12t-28-12Zm-4-620-56-56 56 56Zm-169 56 57 57-57-57ZM424-424l-29-28 57 57-28-29Z' />
-    </svg>,
-    'EditOff'
-);
-
-export const IconWarning = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M109-120q-11 0-20-5.5T75-140q-5-9-5.5-19.5T75-180l370-640q6-10 15.5-15t19.5-5q10 0 19.5 5t15.5 15l370 640q6 10 5.5 20.5T885-140q-5 9-14 14.5t-20 5.5H109Zm69-80h604L480-720 178-200Zm330.5-51.5Q520-263 520-280t-11.5-28.5Q497-320 480-320t-28.5 11.5Q440-297 440-280t11.5 28.5Q463-240 480-240t28.5-11.5Zm0-120Q520-383 520-400v-120q0-17-11.5-28.5T480-560q-17 0-28.5 11.5T440-520v120q0 17 11.5 28.5T480-360q17 0 28.5-11.5ZM480-460Z' />
-    </svg>,
-    'Warning'
-);
-
-export const IconHistory = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M480-120q-126 0-223-76.5T131-392q-4-15 6-27.5t27-14.5q16-2 29 6t18 24q24 90 99 147t170 57q117 0 198.5-81.5T760-480q0-117-81.5-198.5T480-760q-69 0-129 32t-101 88h70q17 0 28.5 11.5T360-600q0 17-11.5 28.5T320-560H160q-17 0-28.5-11.5T120-600v-160q0-17 11.5-28.5T160-800q17 0 28.5 11.5T200-760v54q51-64 124.5-99T480-840q75 0 140.5 28.5t114 77q48.5 48.5 77 114T840-480q0 75-28.5 140.5t-77 114q-48.5 48.5-114 77T480-120Zm40-376 100 100q11 11 11 28t-11 28q-11 11-28 11t-28-11L452-452q-6-6-9-13.5t-3-15.5v-159q0-17 11.5-28.5T480-680q17 0 28.5 11.5T520-640v144Z' />
-    </svg>,
-    'History'
-);
-
-export const IconInfo = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M508.5-291.5Q520-303 520-320v-160q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480v160q0 17 11.5 28.5T480-280q17 0 28.5-11.5Zm0-320Q520-623 520-640t-11.5-28.5Q497-680 480-680t-28.5 11.5Q440-657 440-640t11.5 28.5Q463-600 480-600t28.5-11.5ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z' />
-    </svg>,
-    'Info'
-);
-
-export const IconBack = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='m313-440 196 196q12 12 11.5 28T508-188q-12 11-28 11.5T452-188L188-452q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l264-264q11-11 27.5-11t28.5 11q12 12 12 28.5T508-715L313-520h447q17 0 28.5 11.5T800-480q0 17-11.5 28.5T760-440H313Z' />
-    </svg>,
-    'Back'
-);
-
-export const IconSearch = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M380.77-335.39q-102.46 0-173.54-71.07-71.07-71.08-71.07-173.54t71.07-173.54q71.08-71.07 173.54-71.07t173.54 71.07q71.07 71.08 71.07 173.54 0 42.85-14.38 81.85-14.39 39-38.39 67.84l230.16 230.16q8.31 8.3 8.5 20.88.19 12.58-8.5 21.27t-21.08 8.69q-12.38 0-21.07-8.69L530.46-388.16q-30 24.77-69 38.77-39 14-80.69 14Zm0-59.99q77.31 0 130.96-53.66 53.66-53.65 53.66-130.96t-53.66-130.96q-53.65-53.66-130.96-53.66t-130.96 53.66Q196.15-657.31 196.15-580t53.66 130.96q53.65 53.66 130.96 53.66Z' />
-    </svg>,
-    'Search'
-);
-
-export const IconFilter = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M439-201q-22 0-37.5-15.5T386-254q0-22 15.5-37.5T439-307h83q22 0 37.5 15.5T575-254q0 22-15.5 37.5T522-201h-83ZM268-427q-22 0-37.5-15.5T215-480q0-22 15.5-37.5T268-533h423q22 0 37.5 15.5T744-480q0 22-15.5 37.5T691-427H268ZM141-653q-22 0-37.5-15.5T88-706q0-22 15.5-37.5T141-759h678q22 0 37.5 15.5T872-706q0 22-15.5 37.5T819-653H141Z' />
-    </svg>,
-    'Filter'
-);
-
-export const IconPerson = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M367-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47ZM160-240v-32q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v32q0 33-23.5 56.5T720-160H240q-33 0-56.5-23.5T160-240Zm80 0h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q560-607 560-640t-23.5-56.5Q513-720 480-720t-56.5 23.5Q400-673 400-640t23.5 56.5Q447-560 480-560t56.5-23.5ZM480-640Zm0 400Z' />
-    </svg>,
-    'Person'
-);
-
-export const IconCalendarMonth = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-40q0-17 11.5-28.5T280-880q17 0 28.5 11.5T320-840v40h320v-40q0-17 11.5-28.5T680-880q17 0 28.5 11.5T720-840v40h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Z' />
-    </svg>,
-    'CalendarMonth'
-);
-
-export const IconBed = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M80-240v-200q0-27 11-49t29-39v-112q0-50 35-85t85-35h160q23 0 43 8.5t37 23.5q17-15 37-23.5t43-8.5h160q50 0 85 35t35 85v112q18 17 29 39t11 49v200q0 17-11.5 28.5T840-200q-17 0-28.5-11.5T800-240v-40H160v40q0 17-11.5 28.5T120-200q-17 0-28.5-11.5T80-240Zm440-320h240v-80q0-17-11.5-28.5T720-680H560q-17 0-28.5 11.5T520-640v80Zm-320 0h240v-80q0-17-11.5-28.5T400-680H240q-17 0-28.5 11.5T200-640v80Zm-40 200h640v-80q0-17-11.5-28.5T760-480H200q-17 0-28.5 11.5T160-440v80Zm640 0H160h640Z' />
-    </svg>,
-    'Bed'
-);
-
-export const IconWifi = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M422.65-154.96q-23.42-23.42-23.42-57.35 0-33.92 23.42-57.34 23.43-23.42 57.35-23.42t57.35 23.42q23.42 23.42 23.42 57.34 0 33.93-23.42 57.35-23.43 23.42-57.35 23.42t-57.35-23.42ZM617.5-505.23q64.81 24 117.11 66.39 15 11.53 15.5 29.88t-12.88 31.73q-12.77 12.77-31.42 12.88-18.66.12-33.66-10.8-39.53-30.23-88.61-47.54T480-440q-54.46 0-103.54 17.31-49.08 17.31-88.61 47.54-15 10.92-33.66 10.5-18.65-.43-31.42-13.2-12.77-13.38-12.58-31.73.2-18.34 15.2-29.88 52.3-42.38 117.11-66.08 64.81-23.69 137.5-23.69t137.5 24Zm93.77-222.42Q819.08-686.07 904-611.07q15 12.76 15.81 31.61.8 18.85-12.58 32.23-13.15 13.15-32 12.69-18.84-.46-34.23-13-73.15-62.84-165.35-97.65Q583.46-680 480-680q-103.46 0-195.65 34.81-92.2 34.81-165.35 97.65-15.39 12.54-34.23 13-18.85.46-32-12.69-13.38-13.38-12.58-32.23Q41-598.31 56-611.07q84.92-75 192.73-116.58Q356.54-769.23 480-769.23q123.46 0 231.27 41.58Z' />
-    </svg>,
-    'Wifi'
-);
-
-export const IconBulb = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M423.5-103.5Q400-127 400-160h160q0 33-23.5 56.5T480-80q-33 0-56.5-23.5ZM360-200q-17 0-28.5-11.5T320-240q0-17 11.5-28.5T360-280h240q17 0 28.5 11.5T640-240q0 17-11.5 28.5T600-200H360Zm-30-120q-69-41-109.5-110T180-580q0-125 87.5-212.5T480-880q125 0 212.5 87.5T780-580q0 81-40.5 150T630-320H330Zm24-80h252q45-32 69.5-79T700-580q0-92-64-156t-156-64q-92 0-156 64t-64 156q0 54 24.5 101t69.5 79Zm126 0Z' />
-    </svg>,
-    'Bulb'
-);
-
-export const IconPayments = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M560-440q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm400 240H120q-33 0-56.5-23.5T40-240v-400q0-17 11.5-28.5T80-680q17 0 28.5 11.5T120-640v400h640q17 0 28.5 11.5T800-200q0 17-11.5 28.5T760-160ZM280-400v-320 320Z' />
-    </svg>,
-    'Payments'
-);
-
-export const IconUniversalCurrency = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M160-200q-33 0-56.5-23.5T80-280v-400q0-33 23.5-56.5T160-760h640q33 0 56.5 23.5T880-680v400q0 33-23.5 56.5T800-200H160Zm0-80h640v-400H160v400Zm540-100h-70q-13 0-21.5 8.5T600-350q0 13 8.5 21.5T630-320h90q17 0 28.5-11.5T760-360v-90q0-13-8.5-21.5T730-480q-13 0-21.5 8.5T700-450v70Zm-220 20q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35ZM260-580h70q13 0 21.5-8.5T360-610q0-13-8.5-21.5T330-640h-90q-17 0-28.5 11.5T200-600v90q0 13 8.5 21.5T230-480q13 0 21.5-8.5T260-510v-70ZM160-280v-400 400Z' />
-    </svg>,
-    'UniversalCurrency'
-);
-
-export const IconRupee = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='m533-140.5-240-249q-5-5-7.75-12.25t-2.75-14.75v-23q0-16 11.25-27t27.25-11h99q54 0 93.5-32.5t47.5-86H280q-15.5 0-26.5-11t-11-26.5q0-15.5 11-26.5t26.5-11h272.5q-15-37.5-51.25-61.25T420-756H280q-15.5 0-26.5-11t-11-26.5q0-15.5 11-26.5t26.5-11h400q15.5 0 26.5 11t11 26.5q0 15.5-11 26.5T680-756h-92q15.5 18.5 27 40t17.5 45H680q15.5 0 26.5 11t11 26.5q0 15.5-11 26.5T680-596h-43.5q-8 85-69.25 139.25T420-402.5h-35l202 210q17 18 7.25 40.75T560-129q-8 0-14.75-3T533-140.5Z' />
-    </svg>,
-    'Rupee'
-);
-export const IconMoneyBag = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M336-120q-91 0-153.5-62.5T120-336q0-38 13-74t37-65l142-171-68-136q-10-20 1.5-39t34.5-19h400q23 0 34.5 19t1.5 39l-68 136 142 171q24 29 37 65t13 74q0 91-63 153.5T624-120H336Zm144-200q-33 0-56.5-23.5T400-400q0-33 23.5-56.5T480-480q33 0 56.5 23.5T560-400q0 33-23.5 56.5T480-320Zm-95-360h190l40-80H345l40 80Zm-49 480h288q57 0 96.5-39.5T760-336q0-24-8.5-46.5T728-423L581-600H380L232-424q-15 18-23.5 41t-8.5 47q0 57 39.5 96.5T336-200Z' />
-    </svg>,
-    'MoneyBag'
-);
-
-export const IconNote = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M200-200h360v-160q0-17 11.5-28.5T600-400h160v-360H200v560Zm0 80q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v367q0 16-6 30.5T817-337L623-143q-11 11-25.5 17t-30.5 6H200Zm240-280H320q-17 0-28.5-11.5T280-440q0-17 11.5-28.5T320-480h120q17 0 28.5 11.5T480-440q0 17-11.5 28.5T440-400Zm200-160H320q-17 0-28.5-11.5T280-600q0-17 11.5-28.5T320-640h320q17 0 28.5 11.5T680-600q0 17-11.5 28.5T640-560ZM200-200v-560 560Z' />
-    </svg>,
-    'Note'
-);
-
-export const IconCall = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M798-120q-125 0-247-54.5T329-329Q229-429 174.5-551T120-798q0-18 12-30t30-12h162q14 0 25 9.5t13 22.5l26 140q2 16-1 27t-11 19l-97 98q20 37 47.5 71.5T387-386q31 31 65 57.5t72 48.5l94-94q9-9 23.5-13.5T670-390l138 28q14 4 23 14.5t9 23.5v162q0 18-12 30t-30 12ZM241-600l66-66-17-94h-89q5 41 14 81t26 79Zm358 358q39 17 79.5 27t81.5 13v-88l-94-19-67 67ZM241-600Zm358 358Z' />
-    </svg>,
-    'Call'
-);
-
-export const IconCheck = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='m382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z' />
-    </svg>,
-    'Check'
-);
-
-export const IconAdd = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-200q-17 0-28.5-11.5T440-240v-200Z' />
-    </svg>,
-    'Add'
-);
-
-export const IconClose = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z' />
-    </svg>,
-    'Close'
-);
-
-export const IconDoneAll = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M76.92-444.92q-8.92-8.93-8.8-20.89.11-11.96 9.42-21.27 9.31-8.69 21.08-9 11.76-.3 21.07 9l148.93 148.93 10-10q5.84 2.77 12.27 6.88 6.42 4.12 12.65 10.35 9.31 9.3 9 21.07-.31 11.77-9.62 21.08l-9.61 9.62q-10.85 10.23-25.31 10.53-14.46.31-25.31-10.53L76.92-444.92ZM494-338.77l346.92-346.92q8.93-8.92 20.89-8.81 11.96.12 21.27 9.42 8.69 9.31 9 21.08.3 11.77-9 21.08L519.31-279.15q-10.85 10.84-25.31 10.84-14.46 0-25.31-10.84L302.92-444.92q-8.3-8.31-8.5-20.58-.19-12.27 8.5-21.58 9.31-9.3 21.39-9.3 12.07 0 21.38 9.3L494-338.77Zm162.46-303.54L501.23-487.08q-8.31 8.31-20.58 8.5-12.27.2-21.57-8.5-9.31-9.3-9.31-21.38 0-12.08 9.31-21.38l155.23-155.24q8.31-8.3 20.57-8.5 12.27-.19 21.58 8.5 9.31 9.31 9.31 21.39 0 12.07-9.31 21.38Z' />
-    </svg>,
-    'DoneAll'
-);
-
-export const IconPriorityHigh = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M480-120q-33 0-56.5-23.5T400-200q0-33 23.5-56.5T480-280q33 0 56.5 23.5T560-200q0 33-23.5 56.5T480-120Zm0-240q-33 0-56.5-23.5T400-440v-320q0-33 23.5-56.5T480-840q33 0 56.5 23.5T560-760v320q0 33-23.5 56.5T480-360Z' />
-    </svg>,
-    'PriorityHigh'
-);
-
-export const IconExclamation = IconPriorityHigh;
-
-export const IconLogout = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h240q17 0 28.5 11.5T480-800q0 17-11.5 28.5T440-760H200v560h240q17 0 28.5 11.5T480-160q0 17-11.5 28.5T440-120H200Zm487-320H400q-17 0-28.5-11.5T360-480q0-17 11.5-28.5T400-520h287l-75-75q-11-11-11-27t11-28q11-12 28-12.5t29 11.5l143 143q12 12 12 28t-12 28L669-309q-12 12-28.5 11.5T612-310q-11-12-10.5-28.5T613-366l74-74Z' />
-    </svg>,
-    'Logout'
-);
-
-export const IconUndo = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M320-200q-17 0-28.5-11.5T280-240q0-17 11.5-28.5T320-280h244q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l76 76q11 11 11 28t-11 28q-11 11-28 11t-28-11L188-572q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l144-144q11-11 28-11t28 11q11 11 11 28t-11 28l-76 76h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H320Z' />
-    </svg>,
-    'Undo'
-);
-
-export const IconPersonAdd = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M720-520h-80q-17 0-28.5-11.5T600-560q0-17 11.5-28.5T640-600h80v-80q0-17 11.5-28.5T760-720q17 0 28.5 11.5T800-680v80h80q17 0 28.5 11.5T920-560q0 17-11.5 28.5T880-520h-80v80q0 17-11.5 28.5T760-400q-17 0-28.5-11.5T720-440v-80Zm-473-7q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47ZM40-240v-32q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v32q0 33-23.5 56.5T600-160H120q-33 0-56.5-23.5T40-240Zm80 0h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q440-607 440-640t-23.5-56.5Q393-720 360-720t-56.5 23.5Q280-673 280-640t23.5 56.5Q327-560 360-560t56.5-23.5ZM360-640Zm0 400Z' />
-    </svg>,
-    'PersonAdd'
-);
-
-export const IconReceiptLong = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M240-80q-50 0-85-35t-35-85v-80q0-17 11.5-28.5T160-320h80v-536q0-7 6-9.5t11 2.5l29 29q6 6 14 6t14-6l32-32q6-6 14-6t14 6l32 32q6 6 14 6t14-6l32-32q6-6 14-6t14 6l32 32q6 6 14 6t14-6l32-32q6-6 14-6t14 6l32 32q6 6 14 6t14-6l32-32q6-6 14-6t14 6l32 32q6 6 14 6t14-6l29-29q5-5 11-2.5t6 9.5v656q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h320q17 0 28.5 11.5T680-280v80q0 17 11.5 28.5T720-160ZM400-680h160q17 0 28.5 11.5T600-640q0 17-11.5 28.5T560-600H400q-17 0-28.5-11.5T360-640q0-17 11.5-28.5T400-680Zm0 120h160q17 0 28.5 11.5T600-520q0 17-11.5 28.5T560-480H400q-17 0-28.5-11.5T360-520q0-17 11.5-28.5T400-560Zm280-40q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z' />
-    </svg>,
-    'ReceiptLong'
-);
-
-export const IconMoreVertical = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z' />
-    </svg>,
-    'MoreVertical'
-);
-
-export const IconQrCode = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M120-520v-320h320v320H120Zm80-80h160v-160H200v160Zm-80 480v-320h320v320H120Zm80-80h160v-160H200v160Zm320-320v-320h320v320H520Zm80-80h160v-160H600v160Zm160 480v-80h80v80h-80ZM520-360v-80h80v80h-80Zm80 80v-80h80v80h-80Zm-80 80v-80h80v80h-80Zm80 80v-80h80v80h-80Zm80-80v-80h80v80h-80Zm0-160v-80h80v80h-80Zm80 80v-80h80v80h-80Z' />
-    </svg>,
-    'QrCode'
-);
-
-export const IconUpiAlt = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M440-360h60v-80h100q17 0 28.5-11.5T640-480v-80q0-17-11.5-28.5T600-600H440v240Zm240 0h60v-240h-60v240ZM500-500v-40h80v40h-80ZM240-360h120q17 0 28.5-11.5T400-400v-200h-60v180h-80v-180h-60v200q0 17 11.5 28.5T240-360Zm-80 200q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h640v-480H160v480Zm0 0v-480 480Z' />
-    </svg>,
-    'UpiAlt'
-);
-
-export const IconWhatsapp = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360' fill='none'>
-        <path
-            fillRule='evenodd'
-            clipRule='evenodd'
-            d='M307.546 52.5655C273.709 18.685 228.706 0.0171895 180.756 0C81.951 0 1.53846 80.404 1.50408 179.235C1.48689 210.829 9.74646 241.667 25.4319 268.844L0 361.736L95.0236 336.811C121.203 351.096 150.683 358.616 180.679 358.625H180.756C279.544 358.625 359.966 278.212 360 179.381C360.017 131.483 341.392 86.4547 307.546 52.5741V52.5655ZM180.756 328.354H180.696C153.966 328.346 127.744 321.16 104.865 307.589L99.4242 304.358L43.034 319.149L58.0834 264.168L54.5423 258.53C39.6304 234.809 31.749 207.391 31.7662 179.244C31.8006 97.1036 98.6334 30.2707 180.817 30.2707C220.61 30.2879 258.015 45.8015 286.145 73.9665C314.276 102.123 329.755 139.562 329.738 179.364C329.703 261.513 262.871 328.346 180.756 328.346V328.354ZM262.475 216.777C257.997 214.534 235.978 203.704 231.869 202.209C227.761 200.713 224.779 199.966 221.796 204.452C218.814 208.939 210.228 219.029 207.615 222.011C205.002 225.002 202.389 225.372 197.911 223.128C193.434 220.885 179.003 216.158 161.891 200.902C148.578 189.024 139.587 174.362 136.975 169.875C134.362 165.389 136.7 162.965 138.934 160.739C140.945 158.728 143.412 155.505 145.655 152.892C147.899 150.279 148.638 148.406 150.133 145.423C151.629 142.432 150.881 139.82 149.764 137.576C148.646 135.333 139.691 113.287 135.952 104.323C132.316 95.5909 128.621 96.777 125.879 96.6309C123.266 96.5019 120.284 96.4762 117.293 96.4762C114.302 96.4762 109.454 97.5935 105.346 102.08C101.238 106.566 89.6691 117.404 89.6691 139.441C89.6691 161.478 105.716 182.785 107.959 185.776C110.202 188.767 139.544 234.001 184.469 253.408C195.153 258.023 203.498 260.782 210.004 262.845C220.731 266.257 230.494 265.776 238.212 264.624C246.816 263.335 264.71 253.786 268.44 243.326C272.17 232.866 272.17 223.893 271.053 222.028C269.936 220.163 266.945 219.037 262.467 216.794L262.475 216.777Z'
-            fill='currentColor'
-        />
-    </svg>,
-    'Whatsapp'
-);
-
-export const IconShare = createCustomSvg(
-    <svg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='#1f1f1f'>
-        <path d='M680-80q-50 0-85-35t-35-85q0-6 3-28L282-392q-16 15-37 23.5t-45 8.5q-50 0-85-35t-35-85q0-50 35-85t85-35q24 0 45 8.5t37 23.5l281-164q-2-7-2.5-13.5T560-760q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-24 0-45-8.5T598-672L317-508q2 7 2.5 13.5t.5 14.5q0 8-.5 14.5T317-452l281 164q16-15 37-23.5t45-8.5q50 0 85 35t35 85q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T720-200q0-17-11.5-28.5T680-240q-17 0-28.5 11.5T640-200q0 17 11.5 28.5T680-160ZM200-440q17 0 28.5-11.5T240-480q0-17-11.5-28.5T200-520q-17 0-28.5 11.5T160-480q0 17 11.5 28.5T200-440Zm508.5-291.5Q720-743 720-760t-11.5-28.5Q697-800 680-800t-28.5 11.5Q640-777 640-760t11.5 28.5Q663-720 680-720t28.5-11.5ZM680-200ZM200-480Zm480-280Z' />
-    </svg>,
-    'Share'
-);
-
-export const IconUpi = ({ size = DEFAULT_SVG_SIZE }: { size?: number }) => (
-    <svg
-        xmlns='http://www.w3.org/2000/svg'
-        width={size}
-        height={size * 0.5} // Maintain aspect ratio (2:1)
-        viewBox='0 0 120 60'
-        fillRule='evenodd'
-        style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0, // Prevent icon from shrinking in flex containers
-            width: size,
-            height: size
-        }}
-    >
-        <path d='M95.678 42.9L110 29.835l-6.784-13.516z' fill='#097939' />
-        <path d='M90.854 42.9l14.322-13.065-6.784-13.516z' fill='#ed752e' />
-        <path
-            d='M22.41 16.47l-6.03 21.475 21.407.15 5.88-21.625h5.427l-7.05 25.14c-.27.96-1.298 1.74-2.295 1.74H12.31c-1.664 0-2.65-1.3-2.2-2.9l6.724-23.98zm66.182-.15h5.427l-7.538 27.03h-5.58zM49.698 27.582l27.136-.15 1.81-5.707H51.054l1.658-5.256 29.4-.27c1.83-.017 2.92 1.4 2.438 3.167L81.78 29.49c-.483 1.766-2.36 3.197-4.19 3.197H53.316L50.454 43.8h-5.28z'
-            fill='#747474'
-        />
-    </svg>
-);
-
-export const IconFirebase = ({ size = DEFAULT_SVG_SIZE }: { size?: number }) => (
-    <svg
-        xmlns='http://www.w3.org/2000/svg'
-        width={size}
-        height={size}
-        viewBox='0 0 600 600'
-        fill='none'
-        style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0, // Prevent icon from shrinking in flex containers
-            width: size,
-            height: size
-        }}
-    >
-        <path
-            d='M213.918 560.499C237.166 569.856 262.387 575.408 288.87 576.333C324.71 577.585 358.792 570.175 389.261 556.099C352.724 541.744 319.634 520.751 291.392 494.651C273.086 523.961 246.01 547.113 213.918 560.499Z'
-            fill='#FF9100'
-        />
-        <path
-            d='M291.389 494.66C226.923 435.038 187.815 348.743 191.12 254.092C191.228 251.019 191.39 247.947 191.58 244.876C180.034 241.89 167.98 240.068 155.576 239.635C137.821 239.015 120.626 241.217 104.393 245.788C87.1838 275.933 76.7989 310.521 75.5051 347.569C72.1663 443.18 130.027 526.723 213.914 560.508C246.007 547.121 273.082 523.998 291.389 494.66Z'
-            fill='#FFC400'
-        />
-        <path
-            d='M291.39 494.657C306.378 470.671 315.465 442.551 316.523 412.254C319.306 332.559 265.731 264.003 191.581 244.873C191.391 247.944 191.229 251.016 191.121 254.089C187.816 348.74 226.924 435.035 291.39 494.657Z'
-            fill='#FF9100'
-        />
-        <path
-            d='M308.231 20.8584C266 54.6908 232.652 99.302 212.475 150.693C200.924 180.129 193.665 211.748 191.546 244.893C265.696 264.023 319.272 332.579 316.489 412.273C315.431 442.57 306.317 470.663 291.355 494.677C319.595 520.804 352.686 541.77 389.223 556.124C462.56 522.224 514.593 449.278 517.606 362.997C519.558 307.096 498.08 257.273 467.731 215.219C435.68 170.742 308.231 20.8584 308.231 20.8584Z'
-            fill='#DD2C00'
-        />
-    </svg>
-);
+export { IconWhatsApp } from './IconWhatsApp';
+export { IconFirebase } from './IconFirebase';
+export { IconGoogle } from './IconGoogle';
