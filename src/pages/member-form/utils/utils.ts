@@ -8,7 +8,7 @@ import {
     FLOOR_LABEL
 } from '../../../data/types';
 import { formatPhoneNumber, toIndianLocale, toNumber } from '../../../shared/utils';
-import type { MemberFormData, MemberFormSummary } from '../types';
+import type { MemberFormData, MemberFormDataTransformed, MemberFormSummary } from '../types';
 import type { UseFormReturnType } from '@mantine/form';
 
 export const getInitialValues = (
@@ -45,7 +45,7 @@ export const getInitialValues = (
 };
 
 export const calcTotalDeposit = (rentAmount: unknown, securityDeposit: unknown): number =>
-    toNumber(rentAmount) * 2 + toNumber(securityDeposit);
+    toNumber(rentAmount) + toNumber(securityDeposit);
 
 export const normalizeNameInput = (value: string) => {
     return value
@@ -56,38 +56,55 @@ export const normalizeNameInput = (value: string) => {
         .trim();
 };
 
+const capitalizeWord = (word?: string | null) =>
+    word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '';
+
 export const generateMemberActionNote = (
-    values: MemberFormData,
+    values: MemberFormDataTransformed,
     memberAction: MemberFormAction,
     form: UseFormReturnType<MemberFormData>,
     member: Member | null,
-    summary: MemberFormSummary
+    summary: MemberFormSummary,
+    isPreviousDateSelected: boolean
 ) => {
-    const notes: string[] = [];
+    const logs: string[] = [];
     const dateText = `#${dayjs().format('DD-MM-YYYY')} — ${
         memberAction === 'edit' ? 'Updated'
         : memberAction === 'reactivate' ? 'Reactivated'
         : 'Added'
     }`;
 
-    notes.push(dateText);
+    logs.push(dateText);
 
     if (memberAction === 'add') {
-        notes.push(`Rent and Advance Deposit - ${toIndianLocale(summary.rent)} each.`);
-        notes.push(`Security Deposit - ${toIndianLocale(summary.securityDeposit)}.`);
-        notes.push(`Total Deposit Amount - ${toIndianLocale(summary.totalDeposit)}.`);
-        if (summary.outstanding > 0) {
-            notes.push(
-                `Paid: ${toIndianLocale(values.amountPaid)}. Outstanding: ${toIndianLocale(summary.outstanding)}. Balance will ${values.forwardOutstanding ? "forward to next month's bill." : 'NOT be added to current bill.'}`
-            );
+        if (isPreviousDateSelected) {
+            logs.push('Past date selected');
         }
-    }
+        logs.push(`Floor & Bed: ${capitalizeWord(values.floor)} — ${capitalizeWord(values.bed)}`);
+        logs.push(`Rent & Advance Deposit: ₹${summary.rent} each`);
+        logs.push(`Security Deposit: ₹${summary.securityDeposit}`);
+        logs.push(`Total Advance Deposit: ₹${summary.totalDeposit}`);
 
-    if (memberAction !== 'add') {
-        Object.entries(form.getDirty()).forEach(([f, changed]) => {
-            const field = f as keyof MemberFormData;
-            if (!changed) return;
-            if (field === 'amountPaid' || field === 'forwardOutstanding' || field === 'recalculate') return;
+        if (values.optedForWifi) {
+            let wifiMsg = `Opted for Wifi: ₹${summary.wifi}`;
+            if (isPreviousDateSelected) {
+                wifiMsg += `. Previous Month: ₹${summary.total - (summary.totalDeposit + summary.rent + summary.wifi)}`;
+            }
+
+            logs.push(wifiMsg);
+        }
+
+        let payableMsg = `Total Payable: ₹${summary.total} → Paid: ${toIndianLocale(values.amountPaid)}`;
+        if (summary.outstanding > 0) {
+            payableMsg += ` → Outstanding of ${toIndianLocale(summary.outstanding)} was ${values.forwardOutstanding ? '' : 'NOT'} added to current bill.`;
+        }
+        logs.push(payableMsg);
+    } else {
+        Object.entries(form.getDirty()).forEach(([f, hasChanged]) => {
+            const field = f as keyof MemberFormDataTransformed;
+            if (!hasChanged) return;
+            if (field === 'amountPaid' || field === 'forwardOutstanding' || field === 'recalculate' || field === 'note')
+                return;
 
             let previousValue = member?.[field];
             let changedValue = values[field];
@@ -109,19 +126,19 @@ export const generateMemberActionNote = (
             }
 
             if (typeof previousValue === 'string' && typeof changedValue === 'string') {
-                previousValue = previousValue.toUpperCase();
-                changedValue = changedValue.toUpperCase();
+                previousValue = capitalizeWord(previousValue);
+                changedValue = capitalizeWord(changedValue);
             }
 
             const normalizeKey = field.replace(/([A-Z])/g, ' $1').replace(/^[a-z]/, (match) => match.toUpperCase());
 
-            notes.push(`${normalizeKey} changed from ${previousValue} to ${changedValue}`);
+            logs.push(`${normalizeKey} changed from ${previousValue} to ${changedValue}`);
         });
 
         const hasAmountPaidChanged = form.isDirty('amountPaid');
 
         if (hasAmountPaidChanged) {
-            notes.push(
+            logs.push(
                 `Deposit Amount changed from ${toIndianLocale(member?.totalAgreedDeposit)} to ${toIndianLocale(values.amountPaid)}. Outstanding Amount of ${toIndianLocale(summary.outstanding)} will be ${values.forwardOutstanding ? 'forwarded' : 'not forwarded'}.`
             );
         }
@@ -133,13 +150,13 @@ export const generateMemberActionNote = (
             adminNote = adminNote.replace('-', '').trim();
         }
 
-        notes.push(adminNote);
+        logs.push(adminNote);
     }
 
-    let finalNote = notes.length ? notes.join('\n- ') : '';
-    if (member?.remarks) {
-        finalNote += `\n${member.remarks}`;
-    }
+    // let finalNote = logs.length ? logs.join('\n- ') : '';
+    // if (member?.logs) {
+    //     finalNote += `\n${member.logs}`;
+    // }
 
-    return finalNote;
+    return logs;
 };

@@ -27,7 +27,7 @@ import {
 import type { MemberDetailsFormProps, MemberFormSummary, MemberFormData, MemberFormDataTransformed } from '../types';
 import { Timestamp } from 'firebase/firestore';
 import { addMember } from './add-member-util';
-import { calcTotalAdjustments } from '../../../shared/utils/member-utils';
+import { calcTotalAdjustments, calcTotalCharges } from '../../../shared/utils/member-utils';
 
 export const useMemberDetailsForm = ({ rentsAndBills, member, members, memberAction }: MemberDetailsFormProps) => {
     const isAdding = memberAction === 'add';
@@ -43,14 +43,15 @@ export const useMemberDetailsForm = ({ rentsAndBills, member, members, memberAct
 
     const [isPending, startAction] = useTransition();
 
-    const [summary, setSummary] = useState<MemberFormSummary>(() => ({
+    const [summary, setSummary] = useState<MemberFormSummary>({
         rent: member?.rent ?? 0,
         securityDeposit: member?.securityDeposit ?? 0,
         totalDeposit: member?.totalAgreedDeposit ?? 0,
         wifi: 0,
+        prevWifi: 0,
         outstanding: 0,
         total: 0
-    }));
+    });
 
     const resetSummary = () => {
         setSummary({
@@ -59,6 +60,7 @@ export const useMemberDetailsForm = ({ rentsAndBills, member, members, memberAct
             totalDeposit: member?.totalAgreedDeposit ?? 0,
             outstanding: 0,
             wifi: 0,
+            prevWifi: 0,
             total: 0
         });
     };
@@ -80,8 +82,7 @@ export const useMemberDetailsForm = ({ rentsAndBills, member, members, memberAct
                     rent: 0,
                     securityDeposit: 0,
                     totalDeposit: 0,
-                    outstanding: 0,
-                    total: prev.wifi
+                    outstanding: prev.wifi + prev.prevWifi
                 }));
             }
 
@@ -90,23 +91,21 @@ export const useMemberDetailsForm = ({ rentsAndBills, member, members, memberAct
                 const rent = bed && bed in floorRent ? floorRent[bed] : 0;
                 const securityDeposit = rent ? defaultRents.securityDeposit : 0;
                 const totalDeposit = calcTotalDeposit(rent, securityDeposit);
-                let total = totalDeposit + summary.wifi;
 
-                let outstanding = 0;
+                let outstanding = totalDeposit;
+                let total = 0;
                 if (isEditing) {
-                    total = total - member.totalAgreedDeposit;
-                    outstanding = total;
-                    console.log('outstanding', outstanding);
-                    setFormValues(form, {
-                        amountPaid: outstanding === 0 ? '' : outstanding,
-                        forwardOutstanding: outstanding !== 0
-                    });
+                    outstanding = totalDeposit - member.totalAgreedDeposit;
                 } else {
-                    setFormValues(form, {
-                        amountPaid: '',
-                        forwardOutstanding: false
-                    });
+                    outstanding = totalDeposit + rent + summary.wifi + summary.prevWifi;
+                    total = outstanding;
+                    console.log('outstanding', total);
                 }
+
+                setFormValues(form, {
+                    amountPaid: isEditing ? outstanding || '' : '',
+                    forwardOutstanding: !isString(amountPaid)
+                });
 
                 setSummary((prev) => ({
                     ...prev,
@@ -120,6 +119,7 @@ export const useMemberDetailsForm = ({ rentsAndBills, member, members, memberAct
 
             if (optedForWifi !== previous.optedForWifi || moveInDate !== previous.moveInDate) {
                 let wifi = 0;
+                let prevWifi = 0;
 
                 if (optedForWifi && !member?.optedForWifi) {
                     const wifiAmount = currentMonthBillData.wifi.totalAmount;
@@ -130,48 +130,45 @@ export const useMemberDetailsForm = ({ rentsAndBills, member, members, memberAct
                     if (isPrevMonth && !isEditing) {
                         const prevWifiAmount = prevMonthBillData.wifi.totalAmount;
                         const prevTotalWifiMembers = prevMonthBillData.wifi.members.length + 1;
-                        wifi += Math.ceil(prevWifiAmount / prevTotalWifiMembers);
+                        prevWifi = Math.ceil(prevWifiAmount / prevTotalWifiMembers);
                     }
                 } else {
                     wifi = 0;
+                    prevWifi = 0;
                 }
 
-                // const total = summary.totalDeposit + wifi;
-                let total = summary.totalDeposit + wifi;
-                let outstanding = 0;
-
+                let outstanding = summary.totalDeposit;
+                let total = 0;
                 if (isEditing) {
-                    total -= member.totalAgreedDeposit;
-                    outstanding = total;
-                    setFormValues(form, {
-                        amountPaid: outstanding || '',
-                        forwardOutstanding: outstanding !== 0
-                    });
+                    outstanding = summary.totalDeposit - member.totalAgreedDeposit;
                 } else {
-                    setFormValues(form, {
-                        amountPaid: '',
-                        forwardOutstanding: false
-                    });
+                    outstanding = summary.totalDeposit + summary.rent + wifi + prevWifi;
+                    total = outstanding;
                 }
+
+                setFormValues(form, {
+                    amountPaid: isEditing ? outstanding || '' : ''
+                });
 
                 setSummary((prev) => ({
                     ...prev,
                     wifi,
-                    total,
-                    outstanding
+                    prevWifi,
+                    outstanding,
+                    total
                 }));
             }
 
             if (!isEditing && amountPaid !== previous.amountPaid) {
                 startTransition(() => {
-                    const outstanding = isString(amountPaid) ? 0 : summary.total - amountPaid;
-                    form.setFieldValue('forwardOutstanding', outstanding !== 0);
-
+                    const outstanding = isString(amountPaid) ? summary.total : summary.total - amountPaid;
+                    form.setFieldValue('forwardOutstanding', !isString(amountPaid) && !!outstanding);
                     setSummary((prev) => ({ ...prev, outstanding }));
                 });
             }
 
-            if (isEditing && (floor === member.floor || !bed)) {
+            const isRecalculateDisabled = (isEditing && member.floor === floor && member.bed === bed) || !floor || !bed;
+            if (isRecalculateDisabled) {
                 form.setFieldValue('recalculate', false);
             }
         },
@@ -262,165 +259,172 @@ export const useMemberDetailsForm = ({ rentsAndBills, member, members, memberAct
 
             // Member has opted for wifi
             const hasOptedForWifi = !member.optedForWifi && optedForWifi;
+            const hasBedChanged = bed !== member.bed;
+            const hasFloorChanged = floor !== member.floor;
 
-            if (forwardOutstanding) {
-                const monthRent = { ...member.currentMonthRent };
-                const adjustments = [...monthRent.adjustments];
-                if (hasOptedForWifi) {
-                    adjustments.push({
-                        amount: summary.wifi,
-                        description: 'Opted for wifi'
-                    });
-                }
-                const hasBedChanged = bed !== member.bed;
-                if (hasBedChanged) {
-                    adjustments.push({
-                        amount: summary.rent,
-                        description: `Changed bed to ${BED_LABEL[bed]}`
-                    });
-                }
+            const monthRent = { ...updatedMember.currentMonthRent };
+            const remarks: string[] = [...(monthRent.remarks || [])];
 
-                const totalCharges = monthRent.totalCharges + amountPaid;
-                monthRent.status = getPaymentStatus(monthRent.amountPaid, totalCharges);
-                monthRent.outstanding = calcOutstanding(totalCharges, monthRent.amountPaid);
-                const paymentNote = monthRent.status === 'Paid' ? '' : 'Status changed due to updation.';
-                updatedMember.currentMonthRent = {
-                    ...monthRent,
-                    totalCharges,
-                    adjustments,
-                    note: paymentNote
-                };
-            }
-
-            console.log('updated member', updatedMember.currentMonthRent);
-
-            // If the floor is changed or member has opted for wifi, then update the electric or wifi bills of all active members.
             if (recalculate || hasOptedForWifi) {
-                let recalculatedElectricBills = {} as Record<Floor, number>;
-                if (recalculate) {
-                    // Get the electric data of each floor, remove the member from the current floor and add him to the selected floor
-                    const uElectricData = Object.fromEntries(
-                        Object.entries(currentMonthBillData.electric).map(([_floor, memberMap]) => {
-                            let updatedMembers = [...memberMap.members];
-                            if (_floor === floor) {
-                                updatedMembers.push(member.id);
-                            } else {
-                                updatedMembers = updatedMembers.filter((m) => m !== member.id);
-                            }
-                            return [_floor, { ...memberMap, members: updatedMembers }];
-                        })
-                    ) as Record<Floor, { totalAmount: number; members: string[] }>;
+                monthRent.generatedAt = timestampNow;
 
-                    // Calculate bills for each floor
-                    recalculatedElectricBills = Object.entries(uElectricData).reduce(
-                        (acc, [_floor, electricData]) => {
-                            const totalFloorMembers = electricData.members.length;
-                            const electricity = Math.ceil(electricData.totalAmount / totalFloorMembers);
-                            return { ...acc, [_floor]: electricity };
-                        },
-                        {} as Record<Floor, number>
-                    );
-
-                    // Update the member
-                    const monthRent = updatedMember.currentMonthRent;
-                    const electricDiff = recalculatedElectricBills[updatedMember.floor] - monthRent.electricity;
-                    const adjustments = [
-                        ...monthRent.adjustments,
-                        {
-                            amount: electricDiff,
-                            description: `Electric bill changed from ${toIndianLocale(monthRent.electricity)} to ${toIndianLocale(recalculatedElectricBills[updatedMember.floor])} due to floor change.`
-                        }
-                    ];
-                    const totalCharges = monthRent.totalCharges + electricDiff;
-                    const status = getPaymentStatus(monthRent.amountPaid, totalCharges);
-                    const outstanding = calcOutstanding(totalCharges, monthRent.amountPaid);
-
-                    updatedMember.currentMonthRent = {
-                        ...monthRent,
-                        adjustments,
-                        totalCharges,
-                        status,
-                        outstanding,
-                        note: status === 'Paid' ? '' : 'Status changed due to updation.'
-                    };
+                if (hasOptedForWifi) {
+                    monthRent.wifi = summary.wifi;
+                    remarks.push('Opted for wifi.');
                 }
 
-                console.log('updated member after recalculation', updatedMember.currentMonthRent);
+                // Get the electric data of each floor, remove the member from the current floor and add him to the selected floor
+                let recalculatedElectricBills: Record<Floor, number> | null = null;
+                if (recalculate) {
+                    if (hasFloorChanged) {
+                        const uElectricData = Object.fromEntries(
+                            Object.entries(currentMonthBillData.electric).map(([_floor, memberMap]) => {
+                                let updatedMembers = [...memberMap.members];
+                                if (_floor === floor) {
+                                    updatedMembers.push(member.id);
+                                } else {
+                                    updatedMembers = updatedMembers.filter((m) => m !== member.id);
+                                }
+                                return [_floor, { ...memberMap, members: updatedMembers }];
+                            })
+                        ) as Record<Floor, { totalAmount: number; members: string[] }>;
+
+                        // Calculate bills for each floor
+                        recalculatedElectricBills = Object.entries(uElectricData).reduce(
+                            (acc, [_floor, electricData]) => {
+                                const totalFloorMembers = electricData.members.length || 1;
+                                const electricity = Math.ceil(electricData.totalAmount / totalFloorMembers);
+                                return { ...acc, [_floor]: electricity };
+                            },
+                            {} as Record<Floor, number>
+                        );
+
+                        monthRent.electricity = recalculatedElectricBills[updatedMember.floor];
+                        remarks.push(
+                            `Electric bill updated to ₹${monthRent.electricity} due to shift to ${FLOOR_LABEL[updatedMember.floor]} floor.`
+                        );
+                    }
+
+                    // Upddate the member's current month rent based on the new rent
+                    monthRent.rent = summary.rent;
+
+                    if (hasBedChanged) {
+                        remarks.push(
+                            `Rent updated from ₹${member.rent} to ₹${updatedMember.rent} due to bed changed to ${BED_LABEL[bed]}.`
+                        );
+                    }
+                }
 
                 // Loop and Update Other Active Member Records
+                const updatedMemberFirstname = name.split(' ')[0];
                 for (const m of members) {
                     if (!m.isActive || m.id === member.id) continue;
 
                     const mMonthRent = {
                         ...m.currentMonthRent,
                         generatedAt: timestampNow
-                    } as const satisfies RentHistory;
+                    };
 
                     let shouldUpdate = false;
-                    const isMemberSame = m.id === member.id;
 
-                    const isMemberNew = mMonthRent.electricity === 0;
+                    const mRemarks = [...(m.logs ?? [])];
 
-                    const mElectricity =
-                        isMemberNew ? 0 : (recalculatedElectricBills[m.floor] ?? mMonthRent.electricity);
-                    const mWifi = hasOptedForWifi && m.optedForWifi ? summary.wifi : mMonthRent.wifi;
+                    let mElectricity = mMonthRent.electricity;
+                    if (recalculate && recalculatedElectricBills) {
+                        const isMemberNew = mMonthRent.electricity === 0;
+                        mElectricity = isMemberNew ? 0 : recalculatedElectricBills[m.floor];
 
-                    const mAdjustments: Adjustment[] = [...mMonthRent.adjustments];
-
-                    const electricDiff = mElectricity - mMonthRent.electricity;
-                    if (electricDiff) {
-                        mAdjustments.push({
-                            amount: electricDiff,
-                            description:
-                                `${name.split(' ')[0]} shifted from ${FLOOR_LABEL[member.floor]} to ${FLOOR_LABEL[floor]} floor.`
-                                + `The electricity bill changed from ${toIndianLocale(mMonthRent.electricity)} to ${toIndianLocale(mElectricity)}. `
-                        });
-
-                        shouldUpdate = true;
+                        const electricDiff = mElectricity - mMonthRent.electricity;
+                        if (electricDiff) {
+                            shouldUpdate = true;
+                        }
                     }
 
-                    const wifiDiff = mWifi - mMonthRent.wifi;
-                    if (wifiDiff) {
-                        mAdjustments.push({
-                            amount: wifiDiff,
-                            description:
-                                `${name.split(' ')[0]} ${optedForWifi ? 'added' : 'removed'} wifi.`
-                                + `The wifi charge changed from ${toIndianLocale(mMonthRent.wifi)} to ${toIndianLocale(mWifi)}.`
-                        });
+                    let mWifi = mMonthRent.wifi;
+                    if (hasOptedForWifi && m.optedForWifi) {
+                        mWifi = summary.wifi;
 
-                        shouldUpdate = true;
+                        const wifiDiff = mWifi - mMonthRent.wifi;
+                        if (wifiDiff) {
+                            shouldUpdate = true;
+                        }
                     }
 
                     // If no change, continue to next member
                     if (!shouldUpdate) continue;
 
-                    const mTotalCharges = mMonthRent.totalCharges + calcTotalAdjustments(mAdjustments);
+                    const mTotalCharges = calcTotalCharges({
+                        rent: m.rent,
+                        wifi: mWifi,
+                        electricity: mElectricity,
+                        adjustments: mMonthRent.adjustments
+                    });
                     const mStatus = getPaymentStatus(mMonthRent.amountPaid, mTotalCharges);
                     const mOutstanding = calcOutstanding(mTotalCharges, mMonthRent.amountPaid);
 
-                    const updatedNote = () =>
-                        !mMonthRent.note.trim() ? ''
-                        : mMonthRent.note.endsWith('.') ? mMonthRent.note + ' '
-                        : mMonthRent.note + '. ';
-                    const mNote =
-                        mStatus === 'Paid' ? '' : (
-                            updatedNote() + `Payment status changed as ${name.split(' ')[0]} changed floor.`
-                        );
+                    const opening = `${mMonthRent.status !== mStatus ? 'Payment status' : 'Charges'} changed as ${updatedMemberFirstname}`;
+                    const flTxt = ` shifted from ${FLOOR_LABEL[member.floor]} to ${FLOOR_LABEL[floor]} floor`;
+                    const wifiTxt = ` opted for wifi`;
+                    const closing =
+                        hasFloorChanged && hasOptedForWifi && m.optedForWifi ? flTxt + ' and' + wifiTxt + '.'
+                        : hasOptedForWifi && m.optedForWifi ? wifiTxt + '.'
+                        : flTxt + '.';
+                    mRemarks.push(opening + closing);
 
                     const updatedHistory: RentHistory = {
                         ...mMonthRent,
                         electricity: mElectricity,
                         wifi: mWifi,
-                        adjustments: mAdjustments,
                         totalCharges: mTotalCharges,
                         status: mStatus,
                         outstanding: mOutstanding,
-                        note: mNote
+                        remarks: mRemarks
                     };
 
                     console.log('updated history', m.name, m.floor, updatedHistory);
                 }
             }
+
+            // The total advance deposit amount has changed
+            if (amountPaid) {
+                const msg = `Total advance deposit has changed from ${toIndianLocale(member.totalAgreedDeposit)} to ${toIndianLocale(summary.totalDeposit)} creating ${amountPaid > 0 ? 'an excess' : 'a deficiency'} of ${toIndianLocale(amountPaid)}`;
+                if (forwardOutstanding) {
+                    monthRent.adjustments = [
+                        ...monthRent.adjustments,
+                        {
+                            amount: amountPaid,
+                            description: `${msg} which has been adjusted with the current month's rent.`
+                        }
+                    ];
+                } else {
+                    remarks.push(`${msg} which has been paid upfront.`);
+                }
+            }
+
+            const totalCharges = calcTotalCharges({
+                rent: monthRent.rent,
+                electricity: monthRent.electricity,
+                wifi: monthRent.wifi,
+                adjustments: monthRent.adjustments
+            });
+            monthRent.totalCharges = totalCharges;
+
+            const totalChargesDiff = totalCharges - monthRent.totalCharges;
+            if (totalChargesDiff) {
+                remarks.push(
+                    `Total charges changed from ${toIndianLocale(monthRent.totalCharges)} to ${toIndianLocale(totalCharges)}.`
+                );
+            }
+
+            monthRent.status = getPaymentStatus(monthRent.amountPaid, totalCharges);
+            if (member.currentMonthRent.status !== monthRent.status) {
+                remarks.push('Status changed due to updation.');
+            }
+            monthRent.outstanding = calcOutstanding(totalCharges, monthRent.amountPaid);
+            monthRent.remarks = remarks;
+            updatedMember.currentMonthRent = monthRent;
+
+            console.log('updated member after recalculation', updatedMember);
         }
     };
 

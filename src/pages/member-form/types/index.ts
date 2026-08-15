@@ -42,5 +42,6 @@ export interface MemberFormSummary {
     totalDeposit: number;
     outstanding: number;
     wifi: number;
+    prevWifi: number;
     total: number;
 }

@@ -26,7 +26,8 @@ import {
     IconPersonAlert,
     IconPersonAdd,
     IconPersonEdit,
-    IconPerson
+    IconPerson,
+    IconInfo
 } from '../../../shared/icons';
 import {
     notifyError,
@@ -68,7 +69,14 @@ export const MemberForm = ({ rentsAndBills, member, memberAction, members }: Mem
                 (values) => {
                     const updatedValues = {
                         ...values,
-                        note: generateMemberActionNote(values, memberAction, form, member, summary)
+                        logs: generateMemberActionNote(
+                            values,
+                            memberAction,
+                            form,
+                            member,
+                            summary,
+                            isPreviousDateSelected
+                        )
                     };
                     modals.openConfirmModal({
                         title: 'Confirm Action',
@@ -197,13 +205,17 @@ export const MemberForm = ({ rentsAndBills, member, memberAction, members }: Mem
                     {/* Additional Details */}
                     <Paper withBorder p='sm' mt='xs'>
                         <Switch
-                            label='WiFi Opt-in'
+                            label={`WiFi Opt-in ${
+                                isAdding || (!!member && !member.optedForWifi) ?
+                                    `(${toIndianLocale(summary.wifi)}/mo)`
+                                :   ''
+                            }`}
                             size='sm'
                             description={
                                 member?.optedForWifi ? 'Member has opted for Wi-Fi' : (
                                     <>
                                         Toggle if the member is opting for Wifi. Wifi charges for opted-in members will
-                                        be recalculated.
+                                        be recalculated within this billing cycle itself.
                                         <br />
                                         To avoid recalculating, you can add him while generating next month's bill.
                                     </>
@@ -259,7 +271,15 @@ export const MemberForm = ({ rentsAndBills, member, memberAction, members }: Mem
                             className={checkboxCard.root}
                             my='xs'
                             p='sm'
-                            disabled={!formValues.bed || member?.floor === formValues.floor}
+                            disabled={
+                                (!!member
+                                    // Member floor has not changed
+                                    && member.floor === formValues.floor
+                                    && member.bed === formValues.bed)
+                                // Floor or Bed is null
+                                || !formValues.floor
+                                || !formValues.bed
+                            }
                             key={form.key('recalculate')}
                             {...form.getInputProps('recalculate', { type: 'checkbox' })}
                         >
@@ -267,11 +287,11 @@ export const MemberForm = ({ rentsAndBills, member, memberAction, members }: Mem
                                 <Checkbox.Indicator radius='xl' className={checkboxCard.indicator} />
 
                                 <div>
-                                    <Text className={checkboxCard.label}>Recalculate Electric Bill</Text>
+                                    <Text className={checkboxCard.label}>Adjust for Current Month</Text>
                                     <Text className={checkboxCard.description}>
-                                        If checked, then the electric bills of all active members for current billing
-                                        cycle, will be recalculated. If left unchecked, then electric bills will be
-                                        calculated on next billing cycle according to the floor.
+                                        If checked, the rent and electric bills for each floor (if floor changed) will
+                                        be adjusted in the current billing cycle. Leave unchecked, to add him in next
+                                        month's bill.
                                     </Text>
                                 </div>
                             </Group>
@@ -302,21 +322,19 @@ export const MemberForm = ({ rentsAndBills, member, memberAction, members }: Mem
                                 {
                                     label: 'Total Deposit',
                                     iconName: 'payments',
-                                    value: toIndianLocale(summary.totalDeposit),
-                                    valueFw: 700
+                                    value: toIndianLocale(summary.rent + summary.securityDeposit),
+                                    valueFw: isEditing ? 700 : undefined
                                 },
-                                {
-                                    label: 'Wi-Fi Charge',
-                                    iconName: 'wifi',
-                                    value: toIndianLocale(summary.wifi)
-                                },
-                                {
-                                    label: 'Total',
-                                    iconName: 'payments',
-                                    value: toIndianLocale(summary.total),
-                                    labelFw: 600,
-                                    valueFw: 900
-                                }
+                                ...(!isEditing ?
+                                    [
+                                        {
+                                            label: 'Total Payable',
+                                            iconName: 'payments' as const,
+                                            value: toIndianLocale(summary.total),
+                                            valueFw: 700
+                                        }
+                                    ]
+                                :   [])
                             ]}
                         />
                         {/* If there is member */}
@@ -349,62 +367,56 @@ export const MemberForm = ({ rentsAndBills, member, memberAction, members }: Mem
                                 />
                             </MyAlert>
                         )}
-
-                        <Paper p='md'>
-                            <Stack gap='lg'>
-                                <Stack gap='xs'>
-                                    <SimpleGrid cols={2}>
-                                        <NumberInputWithCurrency
-                                            label='Amount Paying Now'
-                                            placeholder='Enter amount'
-                                            required
-                                            rightSection={isEditing && <IconEditOff />}
-                                            readOnly={isEditing}
-                                            disabled={!(formValues.bed && formValues.floor)}
-                                            key={form.key('amountPaid')}
-                                            {...form.getInputProps('amountPaid')}
-                                            {...(!isEditing && getInputResetProps(form, 'amountPaid'))}
-                                        />
-                                    </SimpleGrid>
-                                    <Checkbox
-                                        label={
-                                            <>
-                                                Forward <q>{toIndianLocale(summary.outstanding)}</q> outstanding amount?
-                                            </>
-                                        }
-                                        description={
-                                            <>
-                                                If checked, any outstanding will be added to current month's expenses.
-                                                <br />
-                                                Otherwise, you are ensuring that either the member has paid the full
-                                                amount, or, you are forfeiting it!
-                                            </>
-                                        }
-                                        disabled={summary.outstanding === 0}
-                                        key={form.key('forwardOutstanding')}
-                                        {...form.getInputProps('forwardOutstanding', { type: 'checkbox' })}
-                                    />
-                                </Stack>
-
-                                <Textarea
-                                    label={
-                                        <GroupIcon>
-                                            <IconNote />
-                                            <Text fw={500}>Notes (Optional)</Text>
-                                        </GroupIcon>
-                                    }
-                                    description='Note will auto-generate. Use this for any additional remarks'
-                                    placeholder='Any additional remarks only'
-                                    maxRows={3}
-                                    resize='block'
-                                    key={form.key('note')}
-                                    {...form.getInputProps('note')}
-                                    {...getInputResetProps(form, 'note')}
-                                />
-                            </Stack>
-                        </Paper>
                     </Stack>
                 </MyAlert>
+
+                <Stack gap='lg'>
+                    <NumberInputWithCurrency
+                        label={isEditing ? 'Adjusted Deposit Amount' : 'Amount Paying Now'}
+                        placeholder='Enter amount'
+                        required
+                        rightSection={isEditing && <IconEditOff />}
+                        readOnly={isEditing}
+                        disabled={!(formValues.bed && formValues.floor)}
+                        w={200}
+                        key={form.key('amountPaid')}
+                        {...form.getInputProps('amountPaid')}
+                        {...(!isEditing && getInputResetProps(form, 'amountPaid'))}
+                    />
+
+                    <Checkbox
+                        label={
+                            <>
+                                Forward <q>{toIndianLocale(summary.outstanding)}</q> outstanding amount?
+                            </>
+                        }
+                        description={
+                            <>
+                                If checked, any outstanding will be added to current month's expenses. Otherwise, you
+                                are ensuring that the member has paid the full amount!
+                            </>
+                        }
+                        disabled={summary.outstanding === 0}
+                        key={form.key('forwardOutstanding')}
+                        {...form.getInputProps('forwardOutstanding', { type: 'checkbox' })}
+                    />
+
+                    <Textarea
+                        label={
+                            <GroupIcon>
+                                <IconNote />
+                                <Text fw={500}>Notes (Optional)</Text>
+                            </GroupIcon>
+                        }
+                        description='Note will auto-generate. Use this for any additional remarks'
+                        placeholder='Any additional remarks only'
+                        maxRows={3}
+                        resize='block'
+                        key={form.key('note')}
+                        {...form.getInputProps('note')}
+                        {...getInputResetProps(form, 'note')}
+                    />
+                </Stack>
 
                 {/* Actions */}
                 <Space h='md' />

@@ -17,7 +17,7 @@ export interface BaseRentsAndRollingBills {
         securityDeposit: number;
     };
     bills: {
-        previousMonth: Bill;
-        currentMonth: Bill;
+        previousMonth?: Bill;
+        currentMonth?: Bill;
     };
 }

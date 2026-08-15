@@ -17,9 +17,10 @@ export interface RentHistory {
     totalCharges: number;
     amountPaid: number;
     outstanding: number;
+    remarks?: string[];
     /**
-     * @deprecated - use remarks instead.
+     * @deprecated Use remarks instead
      */
-    note: string;
+    note?: string;
     status: PaymentStatus;
 }

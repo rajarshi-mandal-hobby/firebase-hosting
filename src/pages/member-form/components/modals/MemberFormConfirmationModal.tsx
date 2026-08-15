@@ -8,7 +8,7 @@ import type { MemberFormDataTransformed, MemberFormSummary } from '../../types';
 import dayjs from 'dayjs';
 
 interface MemberFormConfirmationModalProps {
-    values: MemberFormDataTransformed;
+    values: MemberFormDataTransformed & { logs: string[] };
     summary: MemberFormSummary;
 }
 
@@ -62,9 +62,18 @@ export const MemberFormConfirmationModal = ({ values, summary }: MemberFormConfi
         {
             label: 'Total Deposit',
             iconName: 'payments',
-            value: toIndianLocale(summary.totalDeposit),
-            valueFw: 700
+            value: toIndianLocale(summary.totalDeposit)
         },
+        ...(summary.total ?
+            [
+                {
+                    label: 'Total Payable',
+                    iconName: 'payments' as const,
+                    value: toIndianLocale(summary.total),
+                    valueFw: 700
+                }
+            ]
+        :   []),
         {
             label: 'Amount Paid',
             iconName: 'money_bag',
@@ -81,16 +90,19 @@ export const MemberFormConfirmationModal = ({ values, summary }: MemberFormConfi
             valueFw: 700
         });
     }
+
+    const displayLog = values.logs.length ? values.logs.join('\n- ') : '';
+
     return (
         <Stack gap='sm' mb='xl'>
             <SummaryGrid {...{ items }} />
             <Textarea
                 label={
                     <GroupIcon>
-                        <IconNote /> Joining Notes
+                        <IconNote /> Logs
                     </GroupIcon>
                 }
-                value={values.note}
+                value={displayLog}
                 maxRows={3}
                 autosize
                 resize='vertical'

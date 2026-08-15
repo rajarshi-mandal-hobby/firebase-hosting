@@ -42,7 +42,7 @@ export const useDeactivationModal = (member: Member) => {
         mode: 'uncontrolled',
         initialValues: {
             leaveMonth: memberLeaveDate,
-            note: member.remarks
+            note: member.logs
         },
         onValuesChange({ leaveMonth }) {
             setSelectedDate(leaveMonth);
@@ -102,7 +102,7 @@ export const useDeactivationModal = (member: Member) => {
 
         const data: Partial<Member> = {
             leaveDate: Timestamp.fromDate(dayjs(leaveMonth).endOf('month').toDate()),
-            remarks: note,
+            logs: note,
             isActive
         };
 

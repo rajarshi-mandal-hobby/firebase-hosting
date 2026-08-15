@@ -1,2 +1,9 @@
-const a = 0;
-if (a) console.log(a);
+const a = {
+    0: {
+        msg: 'hello'
+    }
+};
+
+const b = { ...a['1'] };
+
+console.log(b.msg);

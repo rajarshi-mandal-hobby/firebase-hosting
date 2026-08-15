@@ -108,7 +108,7 @@ export const MemberDetailsList = ({ member }: MemberDetailsListProps) => {
                     <TableRow heading='Leave Date' value={formatDate(member.leaveDate)} icon={<IconFirebase />} />
                 )}
 
-                {!!member.remarks && (
+                {!!member.logs && (
                     <>
                         <Table.Tr bd={'none'}>
                             <Table.Td px={0} pb={0}>
@@ -124,7 +124,7 @@ export const MemberDetailsList = ({ member }: MemberDetailsListProps) => {
                             <Table.Td colSpan={2} px={0}>
                                 <Textarea
                                     variant='filled'
-                                    value={member.remarks}
+                                    value={member.logs}
                                     resize='vertical'
                                     minRows={2}
                                     maxRows={3}

@@ -99,11 +99,11 @@ function prepareData() {
             securityDeposit: 1000,
             advanceDeposit: rentConfig.rent,
             rent: rentConfig.rent,
-            totalAgreedDeposit: rentConfig.rent * 2 + 1000,
+            totalAgreedDeposit: rentConfig.rent + 1000,
             floor: rentConfig.floor,
             optedForWifi: rentConfig.wifi,
             bed: rentConfig.bed,
-            remarks: '',
+            logs: [],
             isActive: !isDavid,
             ...(isDavid ? { leaveDate: Timestamp.fromDate(davidWilliamsInactiveDate) } : {})
         } satisfies Partial<Member>;
@@ -155,7 +155,7 @@ function prepareData() {
         });
 
         // Add expense for odd months
-        const shouldAddExpenses = (billIteratorDate.getMonth() + 1) % 2 === 1;
+        const shouldAddExpenses = (billIteratorDate.getMonth() + 1) % 2 === 0;
         const randomExpText = shouldAddExpenses ? getRandom(expenseTexts) : '';
         const randomExpAmount = shouldAddExpenses ? getRandom(expenseAmounts) : 0;
         const randomMembers =
@@ -235,6 +235,7 @@ function prepareData() {
 
             // Randomly mark some months as partial, paid, overpaid or due
             let status = ['Partial', 'Paid', 'Overpaid', 'Due'][Math.floor(Math.random() * 4)] as PaymentStatus;
+
             const totalCharges =
                 rentAmount + perHeadElectricity + perHeadWifiCharge + expense + previousMonthOutstanding;
             let amountPaid = totalCharges;
@@ -261,7 +262,16 @@ function prepareData() {
                 rent: rentAmount,
                 electricity: perHeadElectricity || 0,
                 wifi: perHeadWifiCharge || 0,
-                adjustments: expense ? [{ amount: expense, description: bill.expenses.description }] : [],
+                adjustments:
+                    expense ? [{ amount: expense, description: bill.expenses.description }]
+                    : previousMonthOutstanding ?
+                        [
+                            {
+                                amount: previousMonthOutstanding,
+                                description: 'Previous month outstanding'
+                            }
+                        ]
+                    :   [],
                 totalCharges: totalCharges,
                 amountPaid: amountPaid,
                 outstanding,

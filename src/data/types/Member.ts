@@ -14,7 +14,7 @@ export interface Member {
     totalAgreedDeposit: number;
     isActive: boolean;
     optedForWifi: boolean;
-    remarks: string;
+    logs: string[];
     currentMonthRent: RentHistory;
     updatedAt?: Timestamp;
     leaveDate?: Timestamp;
